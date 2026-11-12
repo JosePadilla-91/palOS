@@ -49,6 +49,7 @@ typedef struct Client {
     WinType type;
     bool framed, mapped, iconic, fullscreen, maxv, maxh, above, below, sticky, modal;
     bool skip_taskbar, skip_pager, focused, sheet, input_hint, take_focus, can_delete;
+    bool fixed;             /* can't be resized (minimum size = maximum size): no maximise */
     bool snapped;           /* put in a half or quarter by dragging to an edge */
     bool decorated;         /* the app didn't ask for no decoration (Motif hints) */
     int ignore_unmaps;

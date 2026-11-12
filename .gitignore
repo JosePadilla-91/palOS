@@ -3,3 +3,5 @@ private/
 oauth.json
 *.o
 src/paladin-wm/paladin-wm
+src/paladin-authenticate/paladin-authenticate
+src/kibble/host/kibble-host

@@ -145,6 +145,7 @@ void deco_draw(Client *c)
         int st = active ? 0 : 3;
         if (c->hover) st = 1;
         if (c->pressed == i + 1 && c->hover == i + 1) st = 2;
+        if (i == 2 && c->fixed) st = 3;      /* a window that can't change size has no maximise */
         cairo_surface_t *b = btn_img[i][st] ? btn_img[i][st] : btn_img[i][0];
         if (b) {
             double k = (double)BTN / cairo_image_surface_get_width(b);

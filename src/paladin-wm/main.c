@@ -392,6 +392,8 @@ static void handle_property(XPropertyEvent *e)
             c->min_h = (h.flags & PMinSize) ? h.min_height : 0;
             c->max_w = (h.flags & PMaxSize) ? h.max_width : 0;
             c->max_h = (h.flags & PMaxSize) ? h.max_height : 0;
+            c->fixed = (h.flags & PMinSize) && (h.flags & PMaxSize) && c->min_w == c->max_w && c->min_h == c->max_h;
+            if (c->framed) deco_draw(c);
         }
     }
 }

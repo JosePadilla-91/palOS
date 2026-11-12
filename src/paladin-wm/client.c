@@ -553,6 +553,7 @@ static void place(Client *c, XWindowAttributes *wa, bool startup)
     if (XGetWMNormalHints(dpy, c->win, &h, &sup)) {
         if (h.flags & PMinSize) { c->min_w = h.min_width; c->min_h = h.min_height; }
         if (h.flags & PMaxSize) { c->max_w = h.max_width; c->max_h = h.max_height; }
+        c->fixed = (h.flags & PMinSize) && (h.flags & PMaxSize) && h.min_width == h.max_width && h.min_height == h.max_height;
         user_pos = (h.flags & USPosition) || ((h.flags & PPosition) && (wa->x || wa->y));
     }
     c->x = wa->x; c->y = wa->y; c->w = wa->width; c->h = wa->height;
@@ -805,7 +806,7 @@ void handle_net_state(Client *c, long action, Atom a1, Atom a2)
 /* ---------------------------------------------------------------- the pointer */
 static int edges_at(Client *c, int fx, int fy)
 {
-    if (!c->framed || c->fullscreen || (c->maxv && c->maxh)) return 0;
+    if (!c->framed || c->fullscreen || c->fixed || (c->maxv && c->maxh)) return 0;
     XWindowAttributes wa;
     if (!XGetWindowAttributes(dpy, c->frame, &wa)) return 0;
     int m = margin(c), g = m + BW + (int)(3 * scale), corner = (int)(16 * scale) + m;
@@ -850,6 +851,7 @@ void start_moveresize(Client *c, int direction, int rx, int ry, int button)
 
 static void title_double_click(Client *c)
 {
+    if (c->fixed) return;
     if (c->maxv && c->maxh) set_maximized(c, false, false);
     else set_maximized(c, true, true);
 }
