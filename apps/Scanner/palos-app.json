@@ -1,0 +1,11 @@
+{
+ "name": "Scanner",
+ "id": "palos-scanner",
+ "command": "palos-scanner",
+ "icon": "palos-scanner",
+ "version": "1.0.0",
+ "folder": "Utilities",
+ "kind": "shared",
+ "runtime": "kibble",
+ "fallback": "electron-44"
+}

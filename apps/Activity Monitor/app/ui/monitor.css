@@ -1,0 +1,25 @@
+body { display: flex; flex-direction: column; }
+#tabs { display: flex; gap: 2px; padding: 8px 10px 0; background: var(--panel); border-bottom: 1px solid var(--line); }
+#tabs button { border: 0; border-radius: 6px 6px 0 0; background: transparent; padding: 7px 16px; color: var(--dim); }
+#tabs button.on { background: var(--bg); color: var(--fg); font-weight: 600; box-shadow: 0 1px 0 var(--bg); }
+main { flex: 1; min-height: 0; position: relative; }
+.view { position: absolute; inset: 0; padding: 14px 18px; overflow: auto; }
+.hidden { display: none; }
+.bar { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; } .grow { flex: 1; } .dim { color: var(--dim); }
+.tablewrap { position: absolute; left: 18px; right: 18px; top: 56px; bottom: 14px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th { position: sticky; top: 0; background: var(--panel); text-align: left; padding: 6px 10px; font-weight: 600; border-bottom: 1px solid var(--line); cursor: default; white-space: nowrap; }
+th.num, td.num { text-align: right; } th .arr { color: var(--dim); font-size: 10px; margin-left: 4px; }
+td { padding: 3px 10px; white-space: nowrap; max-width: 380px; overflow: hidden; text-overflow: ellipsis; }
+tr.sel td { background: var(--accent); color: var(--on); } tr:nth-child(even):not(.sel) td { background: color-mix(in srgb, var(--fg) 4%, transparent); }
+h2 { margin: 0 0 8px; font-size: 15px; font-weight: 600; }
+canvas { width: 100%; height: 170px; display: block; background: var(--card); border: 1px solid var(--line); border-radius: 8px; margin-bottom: 12px; }
+.stats { display: flex; flex-wrap: wrap; gap: 8px 28px; margin: 4px 0 14px; } .stat b { display: block; font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; } .stat span { color: var(--dim); font-size: 11px; }
+#cores { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.core { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font-size: 11px; }
+.meter { height: 8px; background: var(--field); border-radius: 4px; overflow: hidden; margin-top: 4px; } .meter i { display: block; height: 100%; background: var(--accent2); transition: width .5s; } .meter i.hot { background: var(--warn); } .meter i.crit { background: var(--bad); }
+.stack { display: flex; height: 18px; border-radius: 9px; overflow: hidden; background: var(--field); } .stack i { display: block; height: 100%; }
+.row { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; } .row .top { display: flex; justify-content: space-between; margin-bottom: 4px; font-weight: 600; } .row .top span { font-weight: 400; color: var(--dim); }
+.empty { color: var(--dim); padding: 30px; text-align: center; }
+
+#diskchart { height: 140px; }

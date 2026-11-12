@@ -1,0 +1,21 @@
+[Desktop Entry]
+TryExec=/Applications/Utilities/Duet.app
+X-Palos-App=/Applications/Utilities/Duet.app
+X-Palos-Folder=Utilities
+X-AppImage-Name=Duet
+Type=Application
+Name=Duet
+GenericName=Startup Disk
+GenericName[fr]=Disque de démarrage
+GenericName[fr_CA]=Disque de démarrage
+Comment=Choose whether this computer starts palOS or Windows
+Comment[fr]=Choisir si cet ordinateur démarre palOS ou Windows
+Comment[fr_CA]=Choisir si cet ordinateur démarre palOS ou Windows
+Keywords=windows;dual boot;boot;startup disk;restart;duet;bootcamp;démarrage;
+Exec="/Applications/Utilities/Duet.app"
+Icon=palos-duet
+Terminal=false
+StartupNotify=true
+StartupWMClass=Duet
+Categories=Utility;System;
+X-AppImage-Version=1.0.0

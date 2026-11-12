@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; script-src 'self'">
+<title>Bundler</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="app">
+    <section id="drop" aria-label="Drop files here">
+      <img src="../../icons/bundler-wide.png" alt="" width="200">
+      <div class="dropbody">
+        <h1>Drop to unpack or bundle</h1>
+        <p>Archives become a folder with the same name. Files and folders become a zip.</p>
+        <div class="actions">
+          <button id="btn-unpack" class="primary">Unpack…</button>
+          <button id="btn-bundle">Bundle…</button>
+          <button id="btn-pack">Make .pack…</button>
+        </div>
+      </div>
+    </section>
+
+    <div id="banner" hidden>
+      <span>Open ZIP files with Bundler by default?</span>
+      <span class="banner-actions">
+        <button id="banner-yes" class="small primary">Make default</button>
+        <button id="banner-no" class="small">Not now</button>
+      </span>
+    </div>
+
+    <section id="jobs" aria-live="polite"></section>
+
+    <footer>
+      <label><input type="checkbox" id="opt-reveal"> Open the result when finished</label>
+      <label><input type="checkbox" id="opt-collapse"> Skip a doubled folder (Project/Project)</label>
+      <label class="fmt">Bundle as
+        <select id="opt-format">
+          <option value="zip">Zip</option>
+          <option value="gz">Tar, gzip</option>
+          <option value="xz">Tar, xz</option>
+          <option value="bz2">Tar, bzip2</option>
+        </select>
+      </label>
+    </footer>
+  </main>
+  <script src="renderer.js"></script>
+</body>
+</html>

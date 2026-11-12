@@ -1,0 +1,66 @@
+#!/usr/bin/python3 -I
+"""Terminal's pty host: runs the person's shell in a pseudo-terminal and relays it to Terminal.
+
+stdin  (from Terminal): frames  b'D' + u32 length + bytes   keystrokes and pastes
+                                b'R' + u16 cols + u16 rows  window size
+stdout (to Terminal):   the shell's output, as it comes
+Exits with the shell's exit status.
+"""
+import fcntl, os, pty, pwd, select, signal, struct, sys, termios
+
+shell = os.environ.get('SHELL') or pwd.getpwuid(os.getuid()).pw_shell or '/bin/bash'
+cwd = sys.argv[1] if len(sys.argv) > 1 and os.path.isdir(sys.argv[1]) else os.path.expanduser('~')
+pid, fd = pty.fork()
+if pid == 0:
+    os.chdir(cwd)
+    env = dict(os.environ, TERM='xterm-256color', COLORTERM='truecolor', TERM_PROGRAM='palOS-Terminal')
+    for k in ('ELECTRON_RUN_AS_NODE', 'CHROME_DESKTOP', 'APPDIR', 'APPIMAGE', 'ARGV0', 'OWD', 'PALOS_APP'):
+        env.pop(k, None)
+    os.execvpe(shell, ['-' + os.path.basename(shell)], env)
+
+inp = sys.stdin.buffer.raw
+out = sys.stdout.buffer.raw
+buf = b''
+
+
+def resize(cols, rows):
+    try:
+        fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', rows, cols, 0, 0))
+        os.kill(pid, signal.SIGWINCH)
+    except OSError:
+        pass
+
+
+while True:
+    try:
+        r, _, _ = select.select([fd, inp], [], [])
+    except InterruptedError:
+        continue
+    if fd in r:
+        try:
+            data = os.read(fd, 65536)
+        except OSError:
+            data = b''
+        if not data:
+            break
+        out.write(data)
+    if inp in r:
+        chunk = os.read(inp.fileno(), 65536)
+        if not chunk:
+            os.kill(pid, signal.SIGHUP)
+            break
+        buf += chunk
+        while buf:
+            if buf[:1] == b'D' and len(buf) >= 5:
+                n = struct.unpack('<I', buf[1:5])[0]
+                if len(buf) < 5 + n:
+                    break
+                os.write(fd, buf[5:5 + n]); buf = buf[5 + n:]
+            elif buf[:1] == b'R' and len(buf) >= 5:
+                resize(*struct.unpack('<HH', buf[1:5])); buf = buf[5:]
+            elif buf[:1] in (b'D', b'R'):
+                break
+            else:
+                buf = b''
+_, status = os.waitpid(pid, 0)
+sys.exit(os.waitstatus_to_exitcode(status) if hasattr(os, 'waitstatus_to_exitcode') else 0)

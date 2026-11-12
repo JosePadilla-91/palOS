@@ -1,0 +1,22 @@
+[Unit]
+Description=Time Turner backup service
+After=local-fs.target network-online.target dbus.service
+Wants=network-online.target
+
+[Service]
+Type=dbus
+BusName=com.timeturner.Daemon
+ExecStart=/usr/lib/time-turner/time-turnerd
+Restart=on-failure
+RestartSec=5
+# Backups run in the background without slowing the computer down.
+Nice=10
+IOSchedulingClass=idle
+CPUSchedulingPolicy=batch
+# Give a running backup a moment to stop cleanly.
+KillSignal=SIGTERM
+TimeoutStopSec=30
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target

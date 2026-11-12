@@ -1,0 +1,10 @@
+PRETTY_NAME="palOS 27 Clownfish"
+NAME="palOS"
+VERSION_ID="27"
+VERSION="27 (Clownfish)"
+VERSION_CODENAME=noble
+PALOS_CODENAME=clownfish
+ID=palos
+ID_LIKE=debian
+VENDOR_NAME="Joe Lucas"
+LOGO=palos-logo

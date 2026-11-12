@@ -1,0 +1,125 @@
+#!/usr/bin/python3
+"""palOS update reminders: started with the desktop; checks every few hours whether the package
+lists (refreshed daily by apt) have palOS updates waiting, and says so once per new batch.
+Only palOS's own updates count: Ubuntu's system updates are never announced or offered.
+Clicking the notification opens the palOS Store's Updates."""
+import json
+import os
+import subprocess
+import sys
+import time
+
+import apt_pkg
+import gi
+
+gi.require_version('Notify', '0.7')
+from gi.repository import GLib, Notify  # noqa: E402
+try:
+    from palos_l10n import tr as _
+except Exception:  # noqa: BLE001
+    _ = str
+
+STATE = os.path.join(os.environ.get('XDG_CACHE_HOME', os.path.expanduser('~/.cache')), 'palos-store', 'notified.json')
+FIRST_DELAY = 90          # seconds after login
+EVERY = 4 * 3600
+
+
+def palos_update(ver):
+    """palOS updates come only from palOS's own software source (Origin or Label "palOS"); Ubuntu's own
+    system updates are never offered (palOS isn't updated from Ubuntu's store)."""
+    try:
+        return any((pf.origin or '').lower() == 'palos' or (pf.label or '').lower() == 'palos' for pf, _ in ver.file_list)
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def pending():
+    apt_pkg.init_config()
+    apt_pkg.init_system()
+    cache = apt_pkg.Cache(None)
+    dc = apt_pkg.DepCache(cache)
+    dc.upgrade(True)
+    names, security = [], 0
+    for p in cache.packages:
+        if dc.marked_upgrade(p) or (dc.marked_install(p) and p.current_ver is None):
+            v = dc.get_candidate_ver(p)
+            if not v or not palos_update(v):
+                continue
+            names.append(p.name)
+            if v and any((pf.archive or '').endswith('-security') for pf, _ in v.file_list):
+                security += 1
+    return sorted(names), security
+
+
+def load():
+    try:
+        return json.load(open(STATE))
+    except (OSError, ValueError):
+        return {}
+
+
+def save(d):
+    os.makedirs(os.path.dirname(STATE), exist_ok=True)
+    with open(STATE, 'w') as f:
+        json.dump(d, f)
+
+
+loop = GLib.MainLoop()
+note = None
+
+
+def open_store(*_):
+    subprocess.Popen(['palos-store', '--updates'], start_new_session=True)
+
+
+def check():
+    global note
+    try:
+        names, security = pending()
+    except Exception as e:  # noqa: BLE001
+        print('palos update check:', e, file=sys.stderr)
+        return True
+    reboot = os.path.exists('/run/reboot-required')
+    st = load()
+    key = ','.join(names)
+    if names and key != st.get('last'):
+        n = len(names)
+        body = f'{n} update{"s are" if n != 1 else " is"} ready to install'
+        if security:
+            body += f', including {security} security fix{"es" if security != 1 else ""}'
+        note = Notify.Notification.new(_('Updates for palOS'), _(body + '.'), 'palos-store')
+        note.set_hint('desktop-entry', GLib.Variant('s', 'palos-store'))
+        try:
+            note.add_action('default', _('Show Updates'), open_store)
+            note.add_action('show', _('Show Updates'), open_store)
+        except Exception:  # noqa: BLE001
+            pass
+        note.show()
+        st['last'] = key
+        save(st)
+    elif reboot and not st.get('reboot-told', 0) > time.time() - 86400:
+        note = Notify.Notification.new(_('Restart to finish updating'), _('Some updates start working after you restart your computer.'), 'palos-store')
+        note.show()
+        st['reboot-told'] = time.time()
+        save(st)
+    return True
+
+
+def main():
+    try:
+        if 'boot=casper' in open('/proc/cmdline').read().split():
+            return      # the live session from the USB stick: nothing to update there
+    except OSError:
+        pass
+    if '--once' in sys.argv:
+        names, security = pending()
+        print(len(names), 'updates,', security, 'security')
+        return
+    Notify.init('palOS Store')
+    GLib.timeout_add_seconds(FIRST_DELAY, lambda: (check(), False)[1])
+    GLib.timeout_add_seconds(EVERY, check)
+    loop.run()
+
+
+if __name__ == '__main__':
+    main()

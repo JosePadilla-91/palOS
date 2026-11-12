@@ -1,0 +1,21 @@
+[Desktop Entry]
+X-AppImage-Name=Bluetooth Manager
+Type=Application
+Name=Bluetooth Manager
+Name[fr]=Gestionnaire Bluetooth
+Name[fr_CA]=Gestionnaire Bluetooth
+GenericName=Bluetooth Settings
+GenericName[fr]=Réglages Bluetooth
+GenericName[fr_CA]=Réglages Bluetooth
+Comment=Pair and connect headphones, speakers, keyboards, mice and phones
+Comment[fr]=Jumeler et connecter écouteurs, haut-parleurs, claviers, souris et téléphones
+Comment[fr_CA]=Jumeler et connecter écouteurs, haut-parleurs, claviers, souris et téléphones
+Keywords=bluetooth;pair;headphones;speaker;keyboard;mouse;wireless;jumeler;écouteurs;
+Exec=AppRun
+Icon=palos-bluetooth
+Terminal=false
+StartupNotify=true
+StartupWMClass=Bluetooth Manager
+Categories=Settings;HardwareSettings;
+X-Palos-Folder=Utilities
+X-AppImage-Version=1.0.0

@@ -1,0 +1,14 @@
+{
+  "name": "chancery-presentation",
+  "version": "1.0.0",
+  "description": "Chancery Presentation — a presentation app for palOS",
+  "main": "dist/main/main.js",
+  "productName": "Chancery Presentation",
+  "author": {
+    "name": "Chancery",
+    "email": "joe.lucas0413@gmail.com"
+  },
+  "license": "MIT",
+  "dependencies": {},
+  "homepage": "https://github.com/chancery/chancery-presentation"
+}

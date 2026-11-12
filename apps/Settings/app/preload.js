@@ -1,0 +1,7 @@
+'use strict';
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
+contextBridge.exposeInMainWorld('sys', {
+  call: (ch, ...a) => ipcRenderer.invoke(ch, ...a),
+  on: (ch, fn) => { const h = (_, ...a) => fn(...a); ipcRenderer.on(ch, h); return () => ipcRenderer.removeListener(ch, h); },
+  pathFor: (file) => { try { return webUtils.getPathForFile(file); } catch { return ''; } },
+});

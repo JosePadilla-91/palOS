@@ -1,0 +1,15 @@
+Package: palos-network
+Status: install ok installed
+Priority: optional
+Section: net
+Installed-Size: 868
+Maintainer: palOS <joe.lucas0413@gmail.com>
+Architecture: all
+Version: 1.0.0
+Depends: network-manager
+Description: Advanced Network Settings for palOS
+ Every saved Wi-Fi, Ethernet and VPN connection with all its settings:
+ addresses and DNS (IPv4 and IPv6), private Wi-Fi addresses, metered
+ connections, priority, proxy, Wi-Fi security including enterprise sign-in, and
+ VPN settings. Imports OpenVPN, WireGuard and Cisco VPN configuration files.
+ In English and French.

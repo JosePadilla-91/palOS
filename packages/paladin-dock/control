@@ -1,0 +1,18 @@
+Package: paladin-dock
+Status: install ok installed
+Priority: optional
+Section: x11
+Maintainer: Paladin Dock Maintainer <joe.lucas0413@gmail.com>
+Architecture: all
+Version: 2.6.0
+Depends: python3 (>= 3.10), python3-gi, python3-gi-cairo, python3-cairo, gir1.2-gtk-3.0, python3-xlib
+Recommends: compiz, compiz-plugins, python3-compizconfig, udisks2, gvfs
+Conffiles:
+ /etc/paladin-dock/config.json 45367bd3056b53b44723b4c1b92f577e
+ /etc/xdg/autostart/paladin-dock.desktop 95e024c98e473fd4cb0bc25199939be0
+Description: Leopard-style application dock for X11
+ A dock with a 3D glass shelf and icon reflections along the bottom of the
+ screen, or a 3D side panel on the left. Hover magnification, launch bounce,
+ running-app lights, stacks (fan and grid), minimized-window tiles,
+ drag to rearrange or remove with a poof, removable volumes and Trash.
+ Under Compiz, windows minimize into the dock with the Magic Lamp effect.

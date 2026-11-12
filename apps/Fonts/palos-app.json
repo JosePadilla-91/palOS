@@ -1,0 +1,11 @@
+{
+ "name": "Fonts",
+ "id": "palos-fonts",
+ "command": "palos-fonts",
+ "icon": "palos-fonts",
+ "version": "27.0.0",
+ "folder": "Utilities",
+ "kind": "shared",
+ "runtime": "kibble",
+ "fallback": "electron-44"
+}

@@ -1,0 +1,241 @@
+#!/usr/bin/python3 -I
+"""paladin-appd: registers palOS .apps, the way a Mac just knows what's in Applications.
+
+  paladin-appd --system     /Applications (and its folders): entries, icons, file types and commands for
+                            everyone (run as root: at start-up and whenever /Applications changes)
+  paladin-appd --user       ~/Applications for this person (their session runs it when the folder changes)
+  paladin-appd --info FILE  what a .app is (JSON)
+  paladin-appd --adopt FILE give an AppImage from elsewhere palOS's runtime (palos-open-app does this)
+
+A .app is a complete AppImage. Adding one to Applications makes it appear in Seeker's Applications, the
+Dock and Scout, with its icon and the files it opens; removing it removes all of that. Nothing is
+installed anywhere else, and nothing is left behind.
+"""
+import hashlib, json, os, re, shutil, subprocess, sys, tempfile
+
+SYSTEM = {'apps': ['/Applications'], 'share': '/usr/local/share', 'bin': '/usr/local/bin', 'state': '/var/lib/paladin-appd/state.json'}
+HOME = os.path.expanduser('~')
+USER = {'apps': [os.path.join(HOME, 'Applications')], 'share': os.path.join(HOME, '.local/share'), 'bin': os.path.join(HOME, '.local/bin'),
+        'state': os.path.join(os.environ.get('XDG_STATE_HOME') or os.path.join(HOME, '.local/state'), 'paladin-appd.json')}
+
+
+def is_app(path):
+    if not path.endswith('.app') or not os.path.isfile(path):
+        return False
+    try:
+        with open(path, 'rb') as f:
+            head = f.read(11)
+        return head[:4] == b'\x7fELF' and head[8:11] == b'AI\x02'
+    except OSError:
+        return False
+
+
+RUNTIME = '/usr/lib/paladin-appd/runtime-x86_64'
+
+
+def has_libfuse2():
+    for d in ('/usr/lib/x86_64-linux-gnu', '/lib/x86_64-linux-gnu', '/usr/lib', '/usr/lib64'):
+        if os.path.exists(os.path.join(d, 'libfuse.so.2')):
+            return True
+    return False
+
+
+def adopt(app):
+    """An AppImage from elsewhere may start with the old runtime that needs libfuse.so.2, which palOS doesn't
+    have, so it would never open. Its files are fine: palOS puts its own runtime in front of them, the same
+    one every palOS .app starts with. Done again if the app later updates itself back to its maker's copy."""
+    try:
+        end = elf_end(app)
+        with open(app, 'rb') as f:
+            head = f.read(end)
+        if b'libfuse.so.2' not in head or has_libfuse2() or not os.path.exists(RUNTIME):
+            return False
+        if not os.access(os.path.dirname(app), os.W_OK):
+            return False
+        st = os.stat(app)
+        tmp = os.path.join(os.path.dirname(app), '.' + os.path.basename(app) + '.palos')
+        with open(RUNTIME, 'rb') as r, open(app, 'rb') as src, open(tmp, 'wb') as out:
+            shutil.copyfileobj(r, out)
+            src.seek(end)
+            shutil.copyfileobj(src, out, 4 << 20)
+        os.chmod(tmp, st.st_mode | 0o111)
+        try:
+            os.chown(tmp, st.st_uid, st.st_gid)
+        except OSError:
+            pass
+        os.replace(tmp, app)
+        print(f'paladin-appd: {app}: now starts with the palOS runtime', file=sys.stderr)
+        return True
+    except OSError as e:
+        print(f'paladin-appd: {app}: {e}', file=sys.stderr)
+        try:
+            os.remove(tmp)
+        except (OSError, UnboundLocalError):
+            pass
+        return False
+
+
+def find_apps(dirs):
+    for top in dirs:
+        if not os.path.isdir(top):
+            continue
+        for dp, dns, fns in os.walk(top):
+            dns[:] = [d for d in dns if not d.startswith('.') and not d.endswith('.app')]
+            for f in sorted(fns):
+                p = os.path.join(dp, f)
+                if is_app(p):
+                    yield top, p
+
+
+def elf_end(path):
+    """where the AppImage's files start: right after its runtime (an ELF file), so nothing has to run"""
+    import struct
+    with open(path, 'rb') as f:
+        h = f.read(64)
+    if h[4] == 2:   # 64-bit
+        shoff, = struct.unpack_from('<Q', h, 0x28); shentsize, shnum = struct.unpack_from('<HH', h, 0x3A)
+    else:
+        shoff, = struct.unpack_from('<I', h, 0x20); shentsize, shnum = struct.unpack_from('<HH', h, 0x2E)
+    return shoff + shentsize * shnum
+
+
+def extract(app, tmp):
+    """the .app's palOS metadata, desktop entry, icons and file types (without running the app)"""
+    off = str(elf_end(app))
+    pats = ['palos-app.json', '*.desktop', '.DirIcon', 'usr/share/icons', 'usr/share/mime/packages']
+    subprocess.run(['unsquashfs', '-q', '-n', '-o', off, '-d', tmp, app] + pats, capture_output=True, timeout=120)
+    meta = {}
+    try:
+        meta = json.load(open(os.path.join(tmp, 'palos-app.json')))
+    except (OSError, ValueError):
+        pass
+    desk = [f for f in os.listdir(tmp) if f.endswith('.desktop')] if os.path.isdir(tmp) else []
+    return meta, (os.path.join(tmp, desk[0]) if desk else None)
+
+
+def quote(p):
+    return '"' + p.replace('\\', '\\\\').replace('"', '\\"').replace('$', '\\$').replace('`', '\\`') + '"'
+
+
+def register(top, app, cfg, made):
+    with tempfile.TemporaryDirectory(prefix='appd-') as tmp:
+        root = os.path.join(tmp, 'x')
+        try:
+            meta, dfile = extract(app, root)
+        except Exception as e:
+            print(f'paladin-appd: {app}: {e}', file=sys.stderr)
+            return
+        name = meta.get('name') or os.path.basename(app)[:-4]
+        did = meta.get('id') or 'palos-app-' + re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
+        rel = os.path.relpath(os.path.dirname(app), top)
+        folder = '' if rel == '.' else rel.split(os.sep)[0]
+        # the desktop entry, pointing at the .app wherever it is now
+        text = open(dfile, encoding='utf-8').read() if dfile else f'[Desktop Entry]\nType=Application\nName={name}\nIcon={did}\nExec=AppRun %U\n'
+
+        def fix_exec(m):
+            rest = m.group(2)
+            return f'Exec={quote(app)}{rest}'
+        text = re.sub(r'^(Exec=)AppRun(.*)$', lambda m: fix_exec(m), text, flags=re.M)
+        text = re.sub(r'^X-Palos-Folder=.*\n', '', text, flags=re.M)
+        extra = f'TryExec={app}\nX-Palos-App={app}\n' + (f'X-Palos-Folder={folder}\n' if folder else '')
+        text = text.replace('[Desktop Entry]\n', '[Desktop Entry]\n' + extra, 1)
+        dd = os.path.join(cfg['share'], 'applications'); os.makedirs(dd, exist_ok=True)
+        dest = os.path.join(dd, did + '.desktop')
+        with open(dest, 'w', encoding='utf-8') as f:
+            f.write(text)
+        made.append(dest)
+        # icons and file types
+        icons = os.path.join(root, 'usr/share/icons')
+        if os.path.isdir(icons):
+            for dp, _, fns in os.walk(icons):
+                for fn in fns:
+                    src = os.path.join(dp, fn)
+                    d = os.path.join(cfg['share'], 'icons', os.path.relpath(dp, icons)); os.makedirs(d, exist_ok=True)
+                    shutil.copy2(src, d); made.append(os.path.join(d, fn))
+        elif os.path.exists(os.path.join(root, '.DirIcon')):      # only the .app's own icon: that serves
+            d = os.path.join(cfg['share'], 'icons/hicolor/256x256/apps'); os.makedirs(d, exist_ok=True)
+            dst = os.path.join(d, (meta.get('icon') or did) + '.png')
+            try:
+                shutil.copy2(os.path.join(root, '.DirIcon'), dst); made.append(dst)
+            except OSError:
+                pass
+        mime = os.path.join(root, 'usr/share/mime/packages')
+        if os.path.isdir(mime):
+            d = os.path.join(cfg['share'], 'mime/packages'); os.makedirs(d, exist_ok=True)
+            for fn in os.listdir(mime):
+                shutil.copy2(os.path.join(mime, fn), os.path.join(d, fn)); made.append(os.path.join(d, fn))
+        # the app's command (nave, chess, palos-disks…) for Terminal and for the rest of palOS
+        cmd = meta.get('command')
+        if cmd and re.fullmatch(r'[A-Za-z0-9._+-]+', cmd):
+            os.makedirs(cfg['bin'], exist_ok=True)
+            b = os.path.join(cfg['bin'], cmd)
+            with open(b, 'w') as f:
+                f.write(f'#!/bin/sh\n# {name}.app (palOS registers this; it goes when the .app goes)\nexec {quote(app)} "$@"\n')
+            os.chmod(b, 0o755); made.append(b)
+
+
+def refresh(cfg):
+    share = cfg['share']
+    for c in (['update-desktop-database', '-q', os.path.join(share, 'applications')], ['update-mime-database', os.path.join(share, 'mime')],
+              ['gtk-update-icon-cache', '-q', '-t', '-f', os.path.join(share, 'icons/hicolor')]):
+        if shutil.which(c[0]) and os.path.isdir(c[-1]):
+            subprocess.run(c, capture_output=True)
+
+
+def sync(cfg):
+    try:
+        state = json.load(open(cfg['state']))
+    except (OSError, ValueError):
+        state = {}
+    apps = list(find_apps(cfg['apps']))
+    for _, app in apps:
+        adopt(app)
+    sig = {app: f'{os.path.getmtime(app)}:{os.path.getsize(app)}' for _, app in apps}
+    old = state.get('apps', {})
+    if sig == {k: v['sig'] for k, v in old.items()}:
+        return False
+    keep = {}
+    # forget .apps that are gone or changed
+    for app, info in old.items():
+        if sig.get(app) != info['sig']:
+            for f in info['files']:
+                try:
+                    os.remove(f)
+                except OSError:
+                    pass
+        else:
+            keep[app] = info
+    for top, app in apps:
+        if app in keep:
+            continue
+        made = []
+        register(top, app, cfg, made)
+        keep[app] = {'sig': sig[app], 'files': made}
+    os.makedirs(os.path.dirname(cfg['state']), exist_ok=True)
+    with open(cfg['state'], 'w') as f:
+        json.dump({'apps': keep}, f, indent=1)
+    refresh(cfg)
+    return True
+
+
+def main():
+    a = sys.argv[1:]
+    if a[:1] == ['--info'] and len(a) == 2:
+        with tempfile.TemporaryDirectory() as tmp:
+            meta, _ = extract(a[1], os.path.join(tmp, 'x'))
+        print(json.dumps(meta))
+    elif a[:1] == ['--adopt'] and len(a) == 2:
+        # palos-open-app: an AppImage run from anywhere gets palOS's runtime first (0: it can run as it is now)
+        adopt(a[1])
+        with open(a[1], 'rb') as f:
+            sys.exit(1 if b'libfuse.so.2' in f.read(elf_end(a[1])) and not has_libfuse2() else 0)
+    elif a[:1] == ['--system']:
+        sync(SYSTEM)
+    elif a[:1] == ['--user'] or not a:
+        sync(USER)
+    else:
+        print(__doc__); sys.exit(2)
+
+
+if __name__ == '__main__':
+    main()

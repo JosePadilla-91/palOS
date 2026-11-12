@@ -1,0 +1,8 @@
+#!/bin/sh
+set -e
+if [ "$1" = configure ]; then
+  command -v gtk-update-icon-cache >/dev/null 2>&1 && gtk-update-icon-cache -q -t -f /usr/share/icons/palOS || true
+  # thumbnails made before (programs had none): let them be made again
+  for h in /home/*; do rm -rf "$h/.cache/thumbnails/fail" 2>/dev/null || true; done
+fi
+exit 0

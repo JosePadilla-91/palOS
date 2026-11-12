@@ -1,0 +1,19 @@
+[Desktop Entry]
+X-AppImage-Name=Chancery Sheets
+Name=Chancery Sheets
+Exec=AppRun %U
+Terminal=false
+Type=Application
+Icon=chancery-sheets
+StartupWMClass=chancery-sheets
+GenericName=Spreadsheet
+GenericName[fr]=Tableur
+GenericName[fr_CA]=Tableur
+Comment=Chancery Sheets is a spreadsheet editor with an Excel-compatible formula engine, formatting, charts, sorting, filtering and support for XLSX, XLSM, XLS, ODS, CSV, TSV and its own SPST format.
+Comment[fr]=Chancery Sheets est un tableur doté d’un moteur de formules compatible avec Excel, de mise en forme, de graphiques, de tri, de filtres et de la prise en charge des formats XLSX, XLSM, XLS, ODS, CSV, TSV et SPST.
+Comment[fr_CA]=Chancery Sheets est un tableur doté d’un moteur de formules compatible avec Excel, de mise en forme, de graphiques, de tri, de filtres et de la prise en charge des formats XLSX, XLSM, XLS, ODS, CSV, TSV et SPST.
+Keywords=spreadsheet;excel;calc;xlsx;ods;csv;
+Categories=Office;
+StartupNotify=true
+MimeType=application/x-chancery-spst;application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;application/vnd.ms-excel.sheet.macroEnabled.12;application/vnd.ms-excel;application/vnd.oasis.opendocument.spreadsheet;text/csv;text/tab-separated-values;
+X-AppImage-Version=1.0

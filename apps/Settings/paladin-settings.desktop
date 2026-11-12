@@ -1,0 +1,37 @@
+[Desktop Entry]
+X-AppImage-Name=Settings
+Type=Application
+Name=Settings
+Name[fr]=Réglages
+Name[fr_CA]=Réglages
+GenericName=System Settings
+GenericName[fr]=Réglages du système
+GenericName[fr_CA]=Réglages du système
+Comment=Wi-Fi, appearance, displays, sound, users and more
+Comment[fr]=Wi-Fi, apparence, écrans, son, utilisateurs et plus
+Comment[fr_CA]=Wi-Fi, apparence, écrans, son, utilisateurs et plus
+Exec=AppRun %U
+Icon=paladin-settings
+Terminal=false
+Categories=Settings;DesktopSettings;X-GNOME-Settings-Panel;
+Keywords=Preferences;Settings;Wi-Fi;Network;Appearance;Dark;Dock;Display;Monitor;Sound;Volume;Users;Password;Time;Power;
+StartupWMClass=Settings
+OnlyShowIn=Paladin;
+Actions=wifi;appearance;display;sound;
+X-AppImage-Version=1.0.0
+
+[Desktop Action wifi]
+Name=Wi-Fi
+Exec=AppRun wifi
+
+[Desktop Action appearance]
+Name=Appearance
+Exec=AppRun appearance
+
+[Desktop Action display]
+Name=Displays
+Exec=AppRun display
+
+[Desktop Action sound]
+Name=Sound
+Exec=AppRun sound

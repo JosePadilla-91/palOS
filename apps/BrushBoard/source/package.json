@@ -1,0 +1,24 @@
+{
+  "name": "brushboard",
+  "productName": "BrushBoard",
+  "version": "1.8.0",
+  "description": "BrushBoard — a photo editing studio with Python extensions",
+  "author": {
+    "name": "BrushBoard Project",
+    "email": "joe.lucas0413@gmail.com"
+  },
+  "license": "MIT",
+  "homepage": "https://example.invalid/brushboard",
+  "main": "electron/main.cjs",
+  "dependencies": {
+    "fflate": "^0.8.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://example.invalid/brushboard.git"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "desktopName": "brushboard.desktop"
+}

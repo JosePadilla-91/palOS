@@ -1,0 +1,19 @@
+#!/bin/sh
+# The palOS setup screen (an X session for the palos-setup user, started by the login screen while
+# first-boot setup is armed). No window manager: one full-screen window.
+xsetroot -solid '#1e2e40' 2>/dev/null
+xsetroot -cursor_name left_ptr 2>/dev/null
+xset s off -dpms 2>/dev/null
+command -v numlockx >/dev/null 2>&1 && numlockx on
+# The welcome film has sound: wait (up to 10 s) until palOS's sound system answers with a real output. Setup starts
+# the moment the computer does, and sound cards (and the graphics card's HDMI sound) are often found a moment later.
+i=0
+while [ $i -lt 40 ]; do
+  pactl list short sinks 2>/dev/null | awk -F'\t' '$2 != "auto_null"' | grep -q . && break
+  sleep 0.25; i=$((i + 1))
+done
+mkdir -p "$HOME/.cache" 2>/dev/null
+echo "$(date '+%F %T') sound: $(pactl list short sinks 2>/dev/null | cut -f2 | tr '\n' ' ')(default: $(pactl get-default-sink 2>/dev/null || echo none); waited $((i / 4)) s)" >> "$HOME/.cache/palos-setup.log" 2>/dev/null
+# sound to the headset if one is plugged in, otherwise the best connected output
+[ -x /usr/lib/paladin-session/palos-sound-router ] && /usr/lib/paladin-session/palos-sound-router >/dev/null 2>&1 &
+PALOS_SETUP_FROM=session exec /usr/lib/palos-firstboot/run-setup

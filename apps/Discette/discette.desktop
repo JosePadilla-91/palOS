@@ -1,0 +1,18 @@
+[Desktop Entry]
+X-AppImage-Name=Discette
+Name=Discette
+Exec=AppRun %U
+Terminal=false
+Type=Application
+Icon=discette
+StartupWMClass=Discette
+GenericName=Music Player
+GenericName[fr]=Lecteur de musique
+GenericName[fr_CA]=Lecteur de musique
+Keywords=music;audio;player;video;itunes;playlist;
+Comment=Discette manages and plays your music, movies and TV shows, with a cover carousel, smart playlists and USB/MTP device sync.
+Comment[fr]=Discette gère et lit votre musique, vos films et vos séries télé, avec un carrousel de pochettes, des listes de lecture intelligentes et la synchronisation avec les appareils USB/MTP.
+Comment[fr_CA]=Discette gère et lit votre musique, vos films et vos séries télé, avec un carrousel de pochettes, des listes de lecture intelligentes et la synchronisation avec les appareils USB/MTP.
+MimeType=audio/mpeg;audio/mp3;audio/x-mp3;audio/mp4;audio/x-m4a;audio/x-m4b;audio/aac;audio/x-aac;audio/flac;audio/x-flac;audio/ogg;audio/x-vorbis+ogg;audio/vorbis;audio/opus;audio/x-opus+ogg;audio/wav;audio/x-wav;audio/vnd.wave;audio/x-ms-wma;audio/x-ape;audio/x-wavpack;audio/x-aiff;audio/aiff;audio/x-matroska;audio/webm;video/mp4;video/x-matroska;video/webm;
+Categories=AudioVideo;
+X-AppImage-Version=1.0

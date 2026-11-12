@@ -1,0 +1,11 @@
+{
+ "name": "Disk Utility",
+ "id": "palos-disks",
+ "command": "palos-disks",
+ "icon": "palos-disks",
+ "version": "1.0.0",
+ "folder": "Utilities",
+ "kind": "shared",
+ "runtime": "kibble",
+ "fallback": "electron-44"
+}

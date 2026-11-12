@@ -1,0 +1,30 @@
+[Desktop Entry]
+Type=Application
+Name=Seeker
+GenericName=File Browser
+GenericName[fr]=Navigateur de fichiers
+GenericName[fr_CA]=Navigateur de fichiers
+Comment=Browse your files and folders
+Comment[fr]=Parcourir vos fichiers et dossiers
+Comment[fr_CA]=Parcourir vos fichiers et dossiers
+Exec=paladin-seeker %U
+Icon=paladin-seeker
+Terminal=false
+Categories=System;FileTools;FileManager;Utility;Core;
+MimeType=inode/directory;x-scheme-handler/trash;application/vnd.debian.binary-package;application/x-deb;
+Keywords=files;folders;finder;browser;desktop;
+StartupWMClass=paladin-seeker
+StartupNotify=false
+Actions=new-window;home;trash;
+
+[Desktop Action new-window]
+Name=New Seeker Window
+Exec=paladin-seeker
+
+[Desktop Action home]
+Name=Home
+Exec=paladin-seeker ~
+
+[Desktop Action trash]
+Name=Trash
+Exec=paladin-seeker trash:///

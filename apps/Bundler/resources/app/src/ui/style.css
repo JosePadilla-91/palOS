@@ -1,0 +1,82 @@
+:root {
+  --bg: #eceef0;
+  --surface: #f8f9fa;
+  --line: #cfd3d8;
+  --text: #1d2125;
+  --muted: #5d656d;
+  --steel-hi: #dfe3e7;
+  --steel-lo: #aab1b8;
+  --board-hi: #cfa570;
+  --board-lo: #a37645;
+  --walnut: #4a2f20;
+  --danger: #b3261e;
+  --focus: #2f6fb3;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e2225; --surface: #272c30; --line: #3a4147; --text: #e7eaec; --muted: #9aa3ab;
+    --steel-hi: #4a5158; --steel-lo: #2f353a; --danger: #f2877f; --focus: #7db4ee;
+  }
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, "Noto Sans", sans-serif; }
+#app { display: flex; flex-direction: column; height: 100%; padding: 18px 20px 12px; gap: 14px; }
+
+#drop {
+  flex: 0 0 auto; text-align: center; padding: 20px 20px 18px;
+  border: 1.5px dashed var(--line); border-radius: 12px; transition: border-color .12s, background .12s;
+}
+body.dragging #drop { border-color: var(--board-lo); background: color-mix(in srgb, var(--board-hi) 18%, transparent); }
+#drop img { display: block; margin: 0 auto 6px; pointer-events: none; }
+h1 { font-size: 17px; font-weight: 650; margin: 0 0 4px; }
+#drop p { margin: 0 auto 14px; color: var(--muted); max-width: 34ch; }
+.actions { display: flex; gap: 8px; justify-content: center; }
+
+button, select {
+  font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--line);
+  border-radius: 7px; padding: 5px 14px; cursor: pointer;
+}
+button:hover { border-color: var(--steel-lo); }
+button:active { background: var(--steel-hi); }
+button.primary { background: var(--walnut); border-color: var(--walnut); color: #f6eee6; }
+button.primary:hover { filter: brightness(1.12); }
+button.small { padding: 2px 10px; font-size: 13px; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+#banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 8px 12px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line);
+}
+#banner[hidden] { display: none; }
+.banner-actions { display: flex; gap: 6px; flex: none; }
+
+#jobs { flex: 1 1 auto; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+.job { background: var(--surface); border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; }
+.job-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.job-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.job-btns { display: flex; gap: 6px; flex: none; }
+.job-sub { color: var(--muted); font-size: 12.5px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-height: 18px; }
+.job.error .job-sub { color: var(--danger); white-space: normal; }
+
+/* ang progress bar: clamp rail na humihigpit habang umuusad */
+.rail { position: relative; height: 10px; margin-top: 8px; border-radius: 5px;
+  background: linear-gradient(var(--steel-lo), var(--steel-hi)); box-shadow: inset 0 1px 2px rgba(0,0,0,.25); }
+.fill { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: 5px; background: linear-gradient(var(--board-hi), var(--board-lo)); transition: width .12s linear; }
+.knob { position: absolute; top: -3px; width: 7px; height: 16px; margin-left: -3px; border-radius: 3px; background: var(--walnut); box-shadow: 0 1px 2px rgba(0,0,0,.4); transition: left .12s linear; }
+.job:not(.running) .rail { display: none; }
+
+footer { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 6px 18px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12.5px; }
+footer label { display: inline-flex; align-items: center; gap: 6px; }
+footer select { padding: 1px 6px; font-size: 12.5px; }
+
+/* kapag may jobs na, liit ang drop zone para sakto ang listahan */
+body.has-jobs #drop { display: flex; align-items: center; gap: 14px; text-align: left; padding: 10px 14px; }
+body.has-jobs #drop img { width: 96px; height: auto; margin: 0; flex: none; }
+body.has-jobs #drop p { display: none; }
+body.has-jobs h1 { font-size: 15px; margin-bottom: 8px; }
+body.has-jobs .actions { justify-content: flex-start; }
+body.has-jobs #banner { display: none; }
+
+@media (prefers-reduced-motion: reduce) { .fill, .knob { transition: none; } }

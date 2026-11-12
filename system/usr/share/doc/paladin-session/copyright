@@ -1,0 +1,6 @@
+Paladin session, title bar, GTK and cursor themes. Original artwork.
+
+The GTK 3 theme in usr/share/themes/Paladin*/gtk-3.0 is built from the Adwaita theme
+sources of GTK 3.24.41 with Paladin colors and window buttons.
+  Copyright: The GTK Team
+  License: LGPL-2.1+ (see /usr/share/common-licenses/LGPL-2.1)

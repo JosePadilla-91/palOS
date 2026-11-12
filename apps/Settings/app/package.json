@@ -1,0 +1,8 @@
+{
+  "name": "paladin-settings",
+  "productName": "Settings",
+  "version": "1.0.0",
+  "description": "System Settings for Paladin",
+  "main": "main.js",
+  "license": "MIT"
+}

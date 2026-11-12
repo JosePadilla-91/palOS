@@ -1,0 +1,12 @@
+{
+  "name": "paladin-calendar",
+  "productName": "Calendar",
+  "version": "0.1.0",
+  "description": "Plan your days, meetings and birthdays",
+  "author": "Paladin Project <maintainers@paladin.invalid>",
+  "homepage": "https://paladin.invalid",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "out/main/index.js",
+  "desktopName": "paladin-calendar.desktop"
+}

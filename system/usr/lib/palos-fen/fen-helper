@@ -1,0 +1,84 @@
+#!/usr/bin/python3
+"""Fen's picture converter. Reads JSON requests on stdin, one per line, answers on stdout:
+  {"id":1,"cmd":"convert","src":IN,"dst":OUT.png}         full picture as PNG (TIFF, HEIC, camera RAW...)
+  {"id":2,"cmd":"thumb","src":IN,"dst":OUT.png,"size":128} a small PNG for the filmstrip
+Pictures are turned the right way up from their camera orientation. Camera RAW files show the
+picture the camera embedded (what the camera's own screen shows)."""
+import json
+import os
+import subprocess
+import sys
+
+import gi
+gi.require_version('GdkPixbuf', '2.0')
+from gi.repository import GdkPixbuf, GLib  # noqa: E402
+
+RAW = {'cr2', 'cr3', 'crw', 'nef', 'nrw', 'arw', 'srf', 'sr2', 'dng', 'raf', 'orf', 'rw2', 'pef', 'srw', 'x3f', 'raw', 'rwl', 'mrw',
+       'kdc', 'dcr', '3fr', 'erf', 'mef', 'mos', 'iiq'}
+
+
+def load(src, size=None):
+    ext = os.path.splitext(src)[1].lstrip('.').lower()
+    if ext in RAW:
+        data = None
+        for cmd in (['dcraw', '-e', '-c', src], ['exiftool', '-b', '-JpgFromRaw', src], ['exiftool', '-b', '-PreviewImage', src]):
+            try:
+                out = subprocess.run(cmd, capture_output=True, timeout=60).stdout
+            except (OSError, subprocess.TimeoutExpired):
+                continue
+            if out and len(out) > 1000:
+                data = out
+                break
+        if data is None:
+            # no embedded picture: develop the raw file (slower)
+            out = subprocess.run(['dcraw', '-w', '-c', src], capture_output=True, timeout=180).stdout
+            if not out:
+                raise RuntimeError('This camera RAW file can’t be shown.')
+            data = out
+        loader = GdkPixbuf.PixbufLoader()
+        if size:
+            loader.connect('size-prepared', lambda l, w, h: l.set_size(*fit(w, h, size)))
+        loader.write(data)
+        loader.close()
+        pb = loader.get_pixbuf()
+    elif size:
+        pb = GdkPixbuf.Pixbuf.new_from_file_at_scale(src, size, size, True)
+    else:
+        pb = GdkPixbuf.Pixbuf.new_from_file(src)
+    pb = pb.apply_embedded_orientation() or pb
+    if size and max(pb.get_width(), pb.get_height()) > size:
+        w, h = fit(pb.get_width(), pb.get_height(), size)
+        pb = pb.scale_simple(w, h, GdkPixbuf.InterpType.BILINEAR)
+    return pb
+
+
+def fit(w, h, size):
+    k = min(1.0, size / max(w, h))
+    return max(1, round(w * k)), max(1, round(h * k))
+
+
+def save(pb, dst):
+    tmp = dst + '.part'
+    pb.savev(tmp, 'png', ['compression'], ['1'])
+    os.replace(tmp, dst)
+
+
+for line in sys.stdin:
+    try:
+        req = json.loads(line)
+    except ValueError:
+        continue
+    rid = req.get('id')
+    try:
+        if req['cmd'] == 'convert':
+            save(load(req['src']), req['dst'])
+        elif req['cmd'] == 'thumb':
+            save(load(req['src'], int(req.get('size', 128))), req['dst'])
+        else:
+            raise RuntimeError('unknown command')
+        res = {'id': rid, 'ok': True, 'result': req['dst']}
+    except (GLib.Error, RuntimeError, OSError, subprocess.SubprocessError) as e:
+        msg = getattr(e, 'message', None) or str(e)
+        res = {'id': rid, 'ok': False, 'error': msg}
+    sys.stdout.write(json.dumps(res) + '\n')
+    sys.stdout.flush()

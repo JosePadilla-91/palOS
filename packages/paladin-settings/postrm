@@ -1,0 +1,10 @@
+#!/bin/sh
+set -e
+if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+  rm -rf /opt/paladin-settings/runtime /opt/paladin-settings/runtime.new
+  rmdir /opt/paladin-settings 2>/dev/null || true
+  if command -v apparmor_parser >/dev/null 2>&1 && [ -d /sys/kernel/security/apparmor ]; then
+    apparmor_parser -R /etc/apparmor.d/paladin-settings 2>/dev/null || true
+  fi
+fi
+exit 0

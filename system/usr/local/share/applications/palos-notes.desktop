@@ -1,0 +1,22 @@
+[Desktop Entry]
+TryExec=/Applications/Notes.app
+X-Palos-App=/Applications/Notes.app
+X-AppImage-Name=Notes
+Type=Application
+Name=Notes
+Name[fr]=Notes
+Name[fr_CA]=Notes
+GenericName=Notes
+GenericName[fr]=Notes
+GenericName[fr_CA]=Notes
+Comment=Notes on a yellow legal pad
+Comment[fr]=Des notes sur un bloc-notes jaune
+Comment[fr_CA]=Des notes sur un bloc-notes jaune
+Keywords=notes;notes;memo;todo;checklist;write;
+Exec="/Applications/Notes.app"
+Icon=palos-notes
+Terminal=false
+StartupNotify=true
+StartupWMClass=Notes
+Categories=Office;Utility;
+X-AppImage-Version=1.0.0

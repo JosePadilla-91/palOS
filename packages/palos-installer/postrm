@@ -1,0 +1,7 @@
+#!/bin/sh
+set -e
+if [ "$1" = remove ] || [ "$1" = purge ] || [ "$1" = abort-install ]; then
+  if [ -L /usr/sbin/sfdisk ] && [ "$(readlink /usr/sbin/sfdisk)" = /usr/lib/palos-installer/sfdisk ]; then rm -f /usr/sbin/sfdisk; fi
+  dpkg-divert --package palos-installer --remove --rename --divert /usr/sbin/sfdisk.palos-real /usr/sbin/sfdisk >/dev/null || true
+fi
+exit 0

@@ -1,0 +1,691 @@
+#!/usr/bin/python3
+"""palOS Store catalog: the archive's AppStream metadata and apt's package database, plus the Snap Store.
+
+Runs as the user, started by the Store window. Speaks JSON lines on stdin/stdout:
+    request  {"id": 1, "cmd": "search", "args": {"q": "photo"}}
+    reply    {"id": 1, "ok": true, "result": ...}   or   {"id": 1, "ok": false, "error": "..."}
+Nothing here changes the system; installing and removing go through store-helper (pkexec).
+Commands starting with "snap-" talk to the network or to snapd and run on their own threads, so a slow
+Snap Store never holds up the .deb catalog.
+"""
+import glob
+import http.client
+import json
+import socket
+import time
+import urllib.parse
+import urllib.request
+import os
+import re
+import sys
+import threading
+import traceback
+import xml.etree.ElementTree as ET
+
+import apt_pkg
+import gi
+
+gi.require_version('AppStream', '1.0')
+from gi.repository import AppStream  # noqa: E402
+
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+import snapstore  # noqa: E402
+
+# palOS's own packages: always installed, never offered for removal
+CORE = re.compile(r'^(paladin-|palos-|calamares|casper$|ubuntu-minimal$|linux-|grub|shim|systemd|xorg$|xserver-xorg|lightdm$|network-manager$|pipewire|wireplumber|sudo$|apt$|dpkg$|python3$|base-files$|compiz)')
+
+CATEGORIES = [
+    ('AudioVideo', 'Music & Video'),
+    ('Graphics', 'Graphics & Photography'),
+    ('Office', 'Productivity'),
+    ('Network', 'Internet'),
+    ('Development', 'Developer Tools'),
+    ('Game', 'Games'),
+    ('Education', 'Education'),
+    ('Science', 'Science'),
+    ('Utility', 'Utilities'),
+    ('System', 'System'),
+]
+
+# Discover page: a hand-picked shelf (package names; anything missing from the archive is skipped)
+FEATURED = ['gimp', 'inkscape', 'krita', 'blender', 'vlc', 'audacity', 'kdenlive', 'obs-studio',
+            'libreoffice-writer', 'darktable', 'shotcut', 'steam-installer', 'keepassxc', 'foliate',
+            'celluloid', 'shotwell', 'freecad', 'gnucash', 'remmina', 'transmission-gtk', 'rhythmbox',
+            'lutris', 'musescore3', 'qbittorrent', 'filezilla', 'thonny', 'stellarium', 'supertuxkart']
+
+# apps that come with palOS (shown with a palOS tag under Installed)
+SUITE = re.compile(r'^(paladin-|palos-|discette$|vid-view$|cutting-floor$|brushboard$|composer$|time-turner$|chancery-|site-knitter$)')
+
+ICON_DIRS = ['/var/lib/swcatalog/icons', '/var/cache/swcatalog/icons', '/var/lib/app-info/icons', '/usr/share/swcatalog/icons']
+
+
+_out_lock = threading.Lock()
+
+
+def out(obj):
+    line = json.dumps(obj, ensure_ascii=False) + '\n'
+    with _out_lock:
+        sys.stdout.write(line)
+        sys.stdout.flush()
+
+
+# Packages that only install once 32-bit (i386) support is switched on, when apt can't tell yet
+NEEDS_32BIT = re.compile(r'(^|[-:])i386$|^lib32|^steam-libs-')
+KNOWN_32BIT_APPS = {'steam-installer', 'steam', 'steam-devices'}
+
+
+def foreign_i386():
+    try:
+        return 'i386' in apt_pkg.get_architectures()
+    except Exception:  # noqa: BLE001
+        return False
+
+
+class Catalog:
+    def __init__(self):
+        self.lock = threading.RLock()
+        self.apps = {}        # id -> component
+        self.by_pkg = {}      # pkgname -> id
+        self.order = []       # ids, by name
+        self.cache = None
+        self.depcache = None
+        self.load()
+
+    # ------------------------------------------------------------------ loading
+    def load_apt(self):
+        apt_pkg.init_config()
+        apt_pkg.init_system()
+        self.cache = apt_pkg.Cache(None)
+        self.depcache = apt_pkg.DepCache(self.cache)
+        self.policy = apt_pkg.Policy(self.cache)
+        self.policy.init_defaults()
+        try:
+            self.policy.read_pinfile(apt_pkg.config.find_file('Dir::Etc::Preferences'))
+        except Exception:  # noqa: BLE001
+            pass
+        for f in glob.glob(os.path.join(apt_pkg.config.find_dir('Dir::Etc::PreferencesParts'), '*')):
+            try:
+                self.policy.read_pinfile(f)
+            except Exception:  # noqa: BLE001
+                pass
+
+    def pkg(self, name):
+        try:
+            return self.cache[name]
+        except KeyError:
+            return None
+
+    def candidate(self, p):
+        try:
+            v = self.policy.get_candidate_ver(p)
+        except Exception:  # noqa: BLE001
+            v = self.depcache.get_candidate_ver(p)
+        if v is None:
+            return None
+        # a version pinned below zero (snapd, the stock upgrade tools...) can't be installed
+        try:
+            if self.policy.get_priority(v) < 0:
+                return None
+        except Exception:  # noqa: BLE001
+            pass
+        return v
+
+    @staticmethod
+    def needs_snap(v):
+        for group in (v.depends_list.get('Depends', []) + v.depends_list.get('PreDepends', [])):
+            for d in group:
+                if d.target_pkg.name == 'snapd':
+                    return True
+        return False
+
+    def offerable(self, name):
+        """A package the Store can offer: in the archive, installable, and a real .deb (not a stub that only
+        installs a snap: the snap itself is listed from the Snap Store instead)."""
+        p = self.pkg(name)
+        if p is None:
+            return False
+        if p.current_ver is not None:
+            return not self.needs_snap(p.current_ver)
+        v = self.candidate(p)
+        return v is not None and not self.needs_snap(v)
+
+    def load(self):
+        with self.lock:
+            self.load_apt()
+            pool = AppStream.Pool()
+            try:
+                pool.load(None)
+            except TypeError:
+                pool.load()
+            box = pool.get_components_by_kind(AppStream.ComponentKind.DESKTOP_APP)
+            comps = box.as_array() if hasattr(box, 'as_array') else [box.index_safe(i) for i in range(box.get_size())]
+            self.pool = pool
+            apps, by_pkg = {}, {}
+            for c in comps:
+                pk = c.get_pkgname()
+                if not pk or not self.offerable(pk):
+                    continue
+                cid = c.get_id()
+                if cid in apps:
+                    continue
+                apps[cid] = c
+                by_pkg.setdefault(pk, cid)
+            self.apps, self.by_pkg = apps, by_pkg
+            self.order = sorted(apps, key=lambda i: (apps[i].get_name() or i).lower())
+
+    # ------------------------------------------------------------------ presenting
+    def icon(self, c):
+        best, best_w = None, -1
+        stock = None
+        for ic in c.get_icons() or []:
+            k = ic.get_kind()
+            fn = ic.get_filename() if hasattr(ic, 'get_filename') else None
+            name = ic.get_name() if hasattr(ic, 'get_name') else None
+            w = ic.get_width() or 0
+            if k in (AppStream.IconKind.CACHED, AppStream.IconKind.LOCAL):
+                path = fn if fn and os.path.isabs(fn) and os.path.exists(fn) else self.find_cached(name or fn, w)
+                if path and w > best_w:
+                    best, best_w = path, w
+            elif k == AppStream.IconKind.STOCK and name:
+                stock = name
+        if best:
+            return {'file': best}
+        if stock:
+            return {'name': stock}
+        return None
+
+    @staticmethod
+    def find_cached(name, w):
+        if not name:
+            return None
+        name = os.path.basename(name)
+        sizes = ['128x128', '64x64', '128x128@2', '64x64@2', '48x48']
+        if w:
+            sizes.insert(0, f'{w}x{w}')
+        for base in ICON_DIRS:
+            for origin in glob.glob(os.path.join(base, '*')):
+                for s in sizes:
+                    p = os.path.join(origin, s, name)
+                    if os.path.exists(p):
+                        return p
+        return None
+
+    def state(self, pk):
+        p = self.pkg(pk)
+        if p is None:
+            return 'missing'
+        if p.current_ver is not None:
+            v = self.candidate(p)
+            if v is not None and v.ver_str != p.current_ver.ver_str and apt_pkg.version_compare(v.ver_str, p.current_ver.ver_str) > 0:
+                return 'update'
+            return 'installed'
+        return 'available'
+
+    def card(self, cid):
+        c = self.apps[cid]
+        pk = c.get_pkgname()
+        launch = None
+        try:
+            la = c.get_launchable(AppStream.LaunchableKind.DESKTOP_ID)
+            if la and la.get_entries():
+                launch = la.get_entries()[0]
+        except Exception:  # noqa: BLE001
+            pass
+        if not launch and cid.endswith('.desktop'):
+            launch = cid
+        return {'id': cid, 'name': c.get_name() or pk, 'summary': c.get_summary() or '', 'pkg': pk, 'source': 'deb',
+                'icon': self.icon(c), 'state': self.state(pk), 'core': bool(CORE.match(pk)), 'launch': launch}
+
+    @staticmethod
+    def description(markup):
+        """AppStream description markup -> [{'p': text} | {'ul': [text...]}] (no HTML reaches the page)."""
+        if not markup:
+            return []
+        try:
+            root = ET.fromstring('<d>' + markup + '</d>')
+        except ET.ParseError:
+            return [{'p': re.sub(r'<[^>]+>', '', markup).strip()}]
+        blocks = []
+        for el in root:
+            text = lambda e: re.sub(r'\s+', ' ', ''.join(e.itertext())).strip()  # noqa: E731
+            if el.tag == 'p':
+                t = text(el)
+                if t:
+                    blocks.append({'p': t})
+            elif el.tag in ('ul', 'ol'):
+                items = [text(li) for li in el if li.tag == 'li' and text(li)]
+                if items:
+                    blocks.append({'ul': items, 'ordered': el.tag == 'ol'})
+        return blocks
+
+    def details(self, cid):
+        c = self.apps.get(cid)
+        if c is None:
+            raise KeyError('That app is no longer in the catalog.')
+        d = self.card(cid)
+        p = self.pkg(d['pkg'])
+        v = (p.current_ver if p.current_ver is not None and d['state'] == 'installed' else self.candidate(p)) if p else None
+        shots = []
+        try:
+            ss_list = c.get_screenshots_all()
+        except AttributeError:
+            ss_list = c.get_screenshots()
+        for ss in ss_list or []:
+            imgs = ss.get_images() if hasattr(ss, 'get_images') else ss.get_images_all()
+            src = [i for i in imgs if i.get_kind() == AppStream.ImageKind.SOURCE] or list(imgs)
+            if src:
+                best = max(src, key=lambda i: i.get_width() or 0)
+                shots.append({'url': best.get_url(), 'caption': ss.get_caption() or ''})
+            if len(shots) >= 6:
+                break
+        dev = ''
+        try:
+            dv = c.get_developer()
+            dev = dv.get_name() if dv else ''
+        except AttributeError:
+            dev = c.get_developer_name() or ''
+        d.update({
+            'description': self.description(c.get_description()),
+            'screenshots': shots,
+            'developer': dev or '',
+            'license': c.get_project_license() or '',
+            'homepage': c.get_url(AppStream.UrlKind.HOMEPAGE) or '',
+            'version': v.ver_str if v else '',
+            'download': v.size if v else 0,
+            'size': v.installed_size if v else 0,
+            'section': v.section if v else '',
+            'categories': list(c.get_categories() or []),
+        })
+        return d
+
+    # ------------------------------------------------------------------ queries
+    def home(self):
+        feat = [self.by_pkg[p] for p in FEATURED if p in self.by_pkg]
+        cats = []
+        for key, title in CATEGORIES:
+            n = sum(1 for i in self.order if key in (self.apps[i].get_categories() or []))
+            if n:
+                cats.append({'key': key, 'title': title, 'count': n})
+        return {'featured': [self.card(i) for i in feat], 'categories': cats, 'total': len(self.order)}
+
+    def category(self, key, offset=0, limit=60):
+        ids = [i for i in self.order if key in (self.apps[i].get_categories() or [])]
+        # apps with screenshots and a cached icon first: they're the better-described ones
+        ids.sort(key=lambda i: (0 if self.icon(self.apps[i]) and 'file' in (self.icon(self.apps[i]) or {}) else 1))
+        return {'total': len(ids), 'items': [self.card(i) for i in ids[offset:offset + limit]]}
+
+    def search(self, q, limit=80):
+        q = (q or '').strip()
+        if not q:
+            return []
+        try:
+            box = self.pool.search(q)
+            comps = box.as_array() if hasattr(box, 'as_array') else [box.index_safe(i) for i in range(box.get_size())]
+        except Exception:  # noqa: BLE001
+            comps = []
+        ids, seen = [], set()
+        for c in comps:
+            cid = c.get_id()
+            if cid in self.apps and cid not in seen:
+                seen.add(cid)
+                ids.append(cid)
+        # also plain name matches, in case the index missed them
+        ql = q.lower()
+        for i in self.order:
+            if i not in seen and ql in (self.apps[i].get_name() or '').lower():
+                seen.add(i)
+                ids.append(i)
+        return [self.card(i) for i in ids[:limit]]
+
+    def installed(self):
+        items = [self.card(i) for i in self.order if self.state(self.apps[i].get_pkgname()) in ('installed', 'update')]
+        # apps whose launcher palOS hides on purpose (a terminal editor, a duplicate tool...) aren't listed
+        items = [c for c in items if not (c['launch'] and os.path.exists(f"/usr/share/applications/{c['launch']}.palos-hidden"))]
+        # apps installed from .deb files that aren't in the archive's catalog (the palOS suite, downloads...)
+        known = {c['pkg'] for c in items}
+        for f in sorted(glob.glob('/usr/share/applications/*.desktop')):
+            info = self.desktop_entry(f)
+            if not info:
+                continue
+            pk = self.owner(f)
+            if not pk or pk in known:
+                continue
+            known.add(pk)
+            items.append({'id': 'deb:' + pk, 'name': info['name'], 'summary': info.get('comment', ''), 'pkg': pk,
+                          'icon': {'name': info['icon']} if info.get('icon') and not info['icon'].startswith('/') else ({'file': info['icon']} if info.get('icon') else None),
+                          'state': self.state(pk), 'core': bool(CORE.match(pk)), 'local': True, 'suite': bool(SUITE.match(pk)), 'launch': os.path.basename(f)})
+        items.sort(key=lambda c: c['name'].lower())
+        return items
+
+    @staticmethod
+    def desktop_entry(path):
+        try:
+            text = open(path, encoding='utf-8', errors='replace').read()
+        except OSError:
+            return None
+        sec = re.search(r'^\[Desktop Entry\]\s*$(.*?)(?=^\[|\Z)', text, re.M | re.S)
+        if not sec:
+            return None
+        kv = {}
+        for line in sec.group(1).splitlines():
+            m = re.match(r'^([A-Za-z0-9-]+)=(.*)$', line)
+            if m and m.group(1) not in kv:
+                kv[m.group(1)] = m.group(2).strip()
+        if kv.get('Type', 'Application') != 'Application' or kv.get('NoDisplay', '').lower() == 'true' or kv.get('Hidden', '').lower() == 'true':
+            return None
+        if kv.get('OnlyShowIn') and 'Paladin' not in kv['OnlyShowIn']:
+            return None
+        return {'name': kv.get('Name', os.path.basename(path)), 'comment': kv.get('Comment', ''), 'icon': kv.get('Icon', '')}
+
+    _owners = None
+
+    def owner(self, path):
+        if self._owners is None:
+            owners = {}
+            for lst in glob.glob('/var/lib/dpkg/info/*.list'):
+                pk = os.path.basename(lst)[:-5].split(':')[0]
+                try:
+                    for line in open(lst, encoding='utf-8', errors='replace'):
+                        if line.startswith('/usr/share/applications/') and line.rstrip().endswith('.desktop'):
+                            owners[line.rstrip()] = pk
+                except OSError:
+                    pass
+            self._owners = owners
+        return self._owners.get(path)
+
+    # ------------------------------------------------------------------ plans (what an action will do)
+    def plan(self, action, pkgs):
+        dc = apt_pkg.DepCache(self.cache)
+        dc.read_pinfile() if hasattr(dc, 'read_pinfile') else None
+        missing = [p for p in pkgs if self.pkg(p) is None]
+        if missing:
+            return {'ok': False, 'error': 'Not in the software catalog: ' + ', '.join(missing)}
+        with dc.action_group() if hasattr(dc, 'action_group') else _Null():
+            for name in pkgs:
+                p = self.pkg(name)
+                if action == 'install':
+                    dc.mark_install(p, True, True)
+                else:
+                    dc.mark_delete(p, False)
+            if action == 'remove':
+                # like apt-get remove: whatever depends on what's going goes too
+                for _ in range(60):
+                    broken = [p for p in self.cache.packages if p.current_ver is not None and not dc.marked_delete(p) and dc.is_inst_broken(p)]
+                    if not broken:
+                        break
+                    for p in broken:
+                        dc.mark_delete(p, False)
+        # apt's resolver can also give up quietly: the app simply isn't marked for installing
+        unmarked = [n for n in pkgs if action == 'install' and self.pkg(n).current_ver is None and not dc.marked_install(self.pkg(n))]
+        if (dc.broken_count or unmarked) and action == 'install' and not foreign_i386() and self.needs_32bit(pkgs):
+            return {'ok': True, 'needs32': True, 'install': list(pkgs), 'remove': [], 'upgrade': [], 'download': 0, 'space': 0}
+        if dc.broken_count or unmarked:
+            if action == 'remove':
+                return {'ok': False, 'error': 'This can’t be removed on its own: other software still needs it.'}
+            return {'ok': False, 'error': 'This can’t be installed right now: some of what it needs isn’t available. Try Check for Updates first.'}
+        add, rem, up = [], [], []
+        for p in self.cache.packages:
+            if dc.marked_install(p):
+                add.append(p.name)
+            elif dc.marked_delete(p):
+                rem.append(p.name)
+            elif dc.marked_upgrade(p):
+                up.append(p.name)
+        bad = [p for p in rem if CORE.match(p) or (self.pkg(p) and self.pkg(p).essential)]
+        if action == 'install':
+            snap = [n for n in add if self.pkg(n) and self.candidate(self.pkg(n)) and self.needs_snap(self.candidate(self.pkg(n)))]
+            if snap:
+                return {'ok': False, 'error': 'This package only installs a snap. Get the app from its Snap Store page instead.'}
+            if rem:
+                return {'ok': False, 'error': 'Installing this would remove ' + ', '.join(rem[:6]) + '. palOS won’t do that from the Store.'}
+        if bad:
+            return {'ok': False, 'error': 'Removing this would also remove part of palOS (' + ', '.join(bad[:4]) + ').'}
+        return {'ok': True, 'install': add, 'remove': rem, 'upgrade': up,
+                'download': dc.deb_size if hasattr(dc, 'deb_size') else 0, 'space': dc.usr_size if hasattr(dc, 'usr_size') else 0}
+
+    def needs_32bit(self, pkgs):
+        """Does installing these fail only because 32-bit (i386) support is off?"""
+        seen, todo = set(), list(pkgs)
+        while todo and len(seen) < 400:
+            name = todo.pop()
+            if name in seen:
+                continue
+            seen.add(name)
+            if name in KNOWN_32BIT_APPS:
+                return True
+            p = self.pkg(name)
+            v = self.candidate(p) if p is not None else None
+            if v is None:
+                continue
+            for group in v.depends_list.get('Depends', []) + v.depends_list.get('PreDepends', []):
+                for d in group:
+                    t = d.target_pkg
+                    if not t.has_versions and not t.has_provides and NEEDS_32BIT.search(t.name):
+                        return True
+                    if t.has_versions and t.current_ver is None:
+                        todo.append(t.name)
+        return False
+
+
+    @staticmethod
+    def palos_update(ver):
+        """palOS updates come only from palOS's own software source (Origin or Label "palOS"); Ubuntu's own
+        system updates are never offered (palOS isn't updated from Ubuntu's store)."""
+        try:
+            return any((pf.origin or '').lower() == 'palos' or (pf.label or '').lower() == 'palos' for pf, _ in ver.file_list)
+        except Exception:  # noqa: BLE001
+            return False
+
+    def updates(self):
+        dc = apt_pkg.DepCache(self.cache)
+        try:
+            dc.upgrade(True)
+        except SystemError as e:
+            return {'error': str(e), 'items': []}
+        items = []
+        for p in self.cache.packages:
+            if dc.marked_upgrade(p) or (dc.marked_install(p) and p.current_ver is None):
+                v = dc.get_candidate_ver(p)
+                if v is None or not self.palos_update(v):
+                    continue
+                sec = False
+                for pf, _ in v.file_list:
+                    if (pf.archive or '').endswith('-security'):
+                        sec = True
+                cid = self.by_pkg.get(p.name)
+                c = self.apps.get(cid) if cid else None
+                items.append({'pkg': p.name, 'from': p.current_ver.ver_str if p.current_ver else '', 'to': v.ver_str,
+                              'new': p.current_ver is None, 'security': sec, 'size': v.size,
+                              'app': {'id': cid, 'name': c.get_name(), 'icon': self.icon(c)} if c else None})
+        held = []      # (Ubuntu's own updates aren't offered, so nothing is "held back")
+        removes = []
+        items.sort(key=lambda i: (i['app'] is None, (i['app'] or {}).get('name', '') or i['pkg']))
+        lists = '/var/lib/apt/lists'
+        try:
+            checked = max(os.path.getmtime(os.path.join(lists, f)) for f in os.listdir(lists) if f.endswith('Release'))
+        except ValueError:
+            checked = 0
+        return {'items': items, 'held': held, 'remove': removes, 'download': dc.deb_size,
+                'checked': checked, 'reboot': os.path.exists('/run/reboot-required') or os.path.exists('/var/run/reboot-required')}
+
+    def drivers(self):
+        try:
+            from UbuntuDrivers import detect
+        except ImportError:
+            return {'available': False, 'devices': []}
+        try:
+            devs = detect.system_device_drivers(self.cache) or {}
+        except Exception as e:  # noqa: BLE001
+            return {'available': True, 'error': str(e), 'devices': []}
+        return {'available': True, 'devices': driver_devices(devs, self)}
+
+
+def driver_devices(devs, cat):
+    """ubuntu-drivers' device table -> what the Drivers tab lists."""
+    out = []
+    for dev_id, info in sorted(devs.items()):
+        drivers = []
+        for pk, d in sorted((info.get('drivers') or {}).items()):
+            p = cat.pkg(pk)
+            v = cat.candidate(p) if p is not None else None
+            drivers.append({'pkg': pk, 'free': bool(d.get('free')), 'recommended': bool(d.get('recommended')),
+                            'builtin': bool(d.get('builtin')), 'from_distro': bool(d.get('from_distro')),
+                            'installed': bool(p is not None and p.current_ver is not None) or bool(d.get('builtin') and p is None),
+                            'version': (v.ver_str if v else (p.current_ver.ver_str if p is not None and p.current_ver else ''))})
+        if not drivers:
+            continue
+        drivers.sort(key=lambda d: (not d['recommended'], d['free'], d['pkg']))
+        out.append({'id': dev_id, 'vendor': info.get('vendor') or '', 'model': info.get('model') or os.path.basename(dev_id),
+                    'manual': bool(info.get('manual_install')), 'drivers': drivers})
+    return out
+
+
+class _Null:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+
+def drivers_only():
+    """`store-backend --drivers`: just the Drivers table (slow: ubuntu-drivers reads every package record)."""
+    try:
+        from UbuntuDrivers import detect
+    except ImportError:
+        out({'available': False, 'devices': []})
+        return
+
+    class Lite(Catalog):
+        def __init__(self):
+            self.load_apt()
+    cat = Lite()
+    try:
+        fake = os.environ.get('PALOS_STORE_TEST_DRIVERS')   # for testing the Drivers tab on any machine
+        devs = json.load(open(fake)) if fake else (detect.system_device_drivers(cat.cache) or {})
+        out({'available': True, 'devices': driver_devices(devs, cat)})
+    except Exception as e:  # noqa: BLE001
+        traceback.print_exc()
+        out({'available': True, 'error': str(e), 'devices': []})
+
+
+def snap_alt(a):
+    """The Snap Store version of a .deb app, if there is one: the same AppStream id, or a snap named like the package."""
+    want_id, want_pkg = (a.get('id') or '').lower(), (a.get('pkg') or '').lower()
+    seen = {}
+    for q in dict.fromkeys(x for x in (a.get('pkg'), a.get('name')) if x):
+        try:
+            for c in snapstore.search(q):
+                seen.setdefault(c['snap'], c)
+        except snapstore.Unreachable:
+            return None
+    for c in seen.values():
+        if want_id and want_id in (i.lower() for i in c['commonIds']):
+            return c
+    return seen.get(want_pkg)
+
+
+SNAP_CMDS = {
+    'snap-search': lambda a: snapstore.search(a.get('q')),
+    'snap-category': lambda a: snapstore.category(a.get('key')),
+    'snap-featured': lambda a: snapstore.featured(),
+    'snap-details': lambda a: snapstore.details(a.get('name')),
+    'snap-plan': lambda a: snapstore.plan(a.get('name')),
+    'snap-installed': lambda a: snapstore.installed_cards(),
+    'snap-updates': lambda a: snapstore.updates(),
+    'snap-state': lambda a: snapstore.state([p for p in a.get('pkgs') or [] if str(p).startswith('snap:')]),
+    'snap-alt': snap_alt,
+}
+
+
+CAT = None   # the .deb catalog, once loaded (read-only from the snap threads)
+
+
+def mark_debs(res):
+    """Snap cards for apps that are also .debs get the .deb's id (one card per app; its page offers both)."""
+    cat = CAT
+    if cat is None or not isinstance(res, list):
+        return res
+    for c in res:
+        if not isinstance(c, dict) or c.get('source') != 'snap':
+            continue
+        deb = next((i for i in c.get('commonIds') or [] if i in cat.apps), None)
+        if not deb:
+            deb = cat.by_pkg.get(c['snap'])
+        if deb:
+            c['debId'] = deb
+    return res
+
+
+def run_snap(rid, cmd, a):
+    try:
+        out({'id': rid, 'ok': True, 'result': mark_debs(SNAP_CMDS[cmd](a))})
+    except snapstore.Unreachable as e:
+        out({'id': rid, 'ok': False, 'error': str(e), 'offline': True})
+    except LookupError as e:
+        out({'id': rid, 'ok': False, 'error': str(e)})
+    except Exception as e:  # noqa: BLE001
+        traceback.print_exc()
+        out({'id': rid, 'ok': False, 'error': str(e) or e.__class__.__name__})
+
+
+def main():
+    if '--drivers' in sys.argv:
+        drivers_only()
+        return
+    global CAT
+    cat = None
+    load_error = None
+    try:
+        cat = CAT = Catalog()
+    except Exception as e:  # noqa: BLE001
+        load_error = f'{e}'
+        traceback.print_exc()
+    out({'event': 'ready', 'ok': cat is not None, 'error': load_error})
+    for line in sys.stdin:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            req = json.loads(line)
+        except ValueError:
+            continue
+        rid, cmd, a = req.get('id'), req.get('cmd'), req.get('args') or {}
+        if cmd in SNAP_CMDS:
+            threading.Thread(target=run_snap, args=(rid, cmd, a), daemon=True).start()
+            continue
+        try:
+            if cmd == 'reload':
+                cat = CAT = Catalog()
+                res = True
+            elif cat is None:
+                raise RuntimeError(load_error or 'The software catalog isn’t available.')
+            elif cmd == 'home':
+                res = cat.home()
+            elif cmd == 'category':
+                res = cat.category(a.get('key'), int(a.get('offset', 0)), int(a.get('limit', 60)))
+            elif cmd == 'search':
+                res = cat.search(a.get('q'))
+            elif cmd == 'details':
+                res = cat.details(a.get('id'))
+            elif cmd == 'installed':
+                res = cat.installed()
+            elif cmd == 'plan':
+                res = cat.plan(a.get('action'), list(a.get('pkgs') or []))
+            elif cmd == 'updates':
+                res = cat.updates()
+            elif cmd == 'drivers':
+                res = cat.drivers()
+            elif cmd == 'state':
+                pk = [p for p in a.get('pkgs') or [] if not str(p).startswith('snap:')]
+                res = {p: cat.state(p) for p in pk}
+            else:
+                raise ValueError(f'unknown command {cmd}')
+            out({'id': rid, 'ok': True, 'result': res})
+        except Exception as e:  # noqa: BLE001
+            traceback.print_exc()
+            out({'id': rid, 'ok': False, 'error': str(e) or e.__class__.__name__})
+
+
+if __name__ == '__main__':
+    main()

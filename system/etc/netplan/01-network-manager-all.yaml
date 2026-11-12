@@ -1,0 +1,4 @@
+# palOS: let NetworkManager manage all devices
+network:
+  version: 2
+  renderer: NetworkManager

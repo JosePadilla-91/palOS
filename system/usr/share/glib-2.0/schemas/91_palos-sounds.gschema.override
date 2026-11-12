@@ -1,0 +1,4 @@
+# palOS sounds: error messages, emptying the Trash and the volume pop come from the palOS sound theme
+[org.gnome.desktop.sound]
+theme-name='palos-ui'
+event-sounds=true

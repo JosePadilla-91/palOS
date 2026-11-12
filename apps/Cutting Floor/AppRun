@@ -1,0 +1,11 @@
+#!/bin/sh
+# palOS .app: runs on palOS's shared app runtime (electron-44).
+HERE="$(dirname "$(readlink -f "$0")")"
+RT=/usr/lib/paladin-runtime/electron-44
+export PALOS_APP="${APPIMAGE:-$HERE}"
+if [ ! -x "$RT/paladin-app" ]; then
+  notify-send -i dialog-warning "Cutting Floor" "This app needs palOS's app runtime (electron-44), which isn't on this computer." 2>/dev/null
+  echo "Cutting Floor: palOS's app runtime (electron-44) is missing" >&2; exit 1
+fi
+export PALOS_APP_DIR="$HERE/resources/app.asar" PALOS_APP_RESOURCES="$HERE/resources"
+exec "$RT/paladin-app" --ozone-platform=x11 "$@"

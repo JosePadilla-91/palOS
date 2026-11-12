@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chancery Press</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+<link rel="stylesheet" href="styles.css">
+<style id="pagestyle"></style>
+</head>
+<body class="pro">
+<div id="app">
+  <header id="toolbar">
+    <div class="tgroup" id="tg-file">
+      <button data-act="file-new" title="New (Ctrl+N)"><i class="ic">＋</i><span>New</span></button>
+      <button data-act="file-open" title="Open (Ctrl+O)"><i class="ic">📂</i><span>Open</span></button>
+      <button data-act="file-save" title="Save (Ctrl+S)"><i class="ic">💾</i><span>Save</span></button>
+      <button data-act="file-pdf" title="Export PDF (Ctrl+E)"><i class="ic">📄</i><span>PDF</span></button>
+      <button data-act="file-print" title="Print (Ctrl+P)"><i class="ic">🖨</i><span>Print</span></button>
+    </div>
+    <div class="tgroup">
+      <button data-act="undo" title="Undo (Ctrl+Z)"><i class="ic">↶</i></button>
+      <button data-act="redo" title="Redo (Ctrl+Shift+Z)"><i class="ic">↷</i></button>
+    </div>
+    <div class="tgroup" id="tg-insert">
+      <button data-tool="select" class="tool on" title="Select (V)"><i class="ic">⌖</i><span>Select</span></button>
+      <button data-tool="text" class="tool" title="Text box (T)"><i class="ic">T</i><span>Text</span></button>
+      <button data-tool="story" class="tool pro-only" title="Story frame - flowing text (S)"><i class="ic">¶</i><span>Story</span></button>
+      <button data-act="ins-image" title="Picture"><i class="ic">🖼</i><span>Picture</span></button>
+      <button data-tool="rect" class="tool" title="Rectangle (R)"><i class="ic">▭</i><span>Box</span></button>
+      <button data-tool="ellipse" class="tool" title="Ellipse (O)"><i class="ic">◯</i><span>Circle</span></button>
+      <button data-tool="line" class="tool" title="Line (L)"><i class="ic">／</i><span>Line</span></button>
+      <button data-tool="star" class="tool" title="Star"><i class="ic">★</i><span>Star</span></button>
+      <button data-act="shapes" title="More shapes"><i class="ic">✦</i><span>Shapes</span></button>
+      <button data-act="ins-table" class="pro-only" title="Table"><i class="ic">▦</i><span>Table</span></button>
+    </div>
+    <div class="tgroup" id="tg-fmt">
+      <button data-act="fmt-b" title="Bold (Ctrl+B)"><b>B</b></button>
+      <button data-act="fmt-i" title="Italic (Ctrl+I)"><i>I</i></button>
+      <button data-act="fmt-u" title="Underline (Ctrl+U)"><u>U</u></button>
+      <button data-act="al-left" title="Align left">⫷</button>
+      <button data-act="al-center" title="Center">☰</button>
+      <button data-act="al-right" title="Align right">⫸</button>
+      <button data-act="al-justify" title="Justify">▤</button>
+    </div>
+    <div class="spacer"></div>
+    <div class="tgroup">
+      <button data-act="divide-open" id="btn-divide" title="Divide page into panels / folds (Ctrl+Shift+D)"><i class="ic">⫼</i><span>Divide page</span></button>
+      <button data-act="doc-setup" title="Sheet size & setup"><i class="ic">📐</i><span>Sheet size</span></button>
+    </div>
+    <div class="tgroup" id="tg-zoom">
+      <button data-act="zoom-out" title="Zoom out">−</button>
+      <span id="zoomlabel">100%</span>
+      <button data-act="zoom-in" title="Zoom in">＋</button>
+      <button data-act="zoom-fit" title="Fit page">Fit</button>
+    </div>
+    <div class="tgroup">
+      <button data-act="toggle-mode" id="btn-mode" title="Simple / Pro (Ctrl+Shift+M)">Pro</button>
+    </div>
+  </header>
+
+  <div id="main">
+    <aside id="left">
+      <div class="tabs" id="lefttabs">
+        <button class="on" data-ltab="pages">Pages</button>
+        <button data-ltab="modules" class="pro-only">Modules</button>
+        <button data-ltab="templates">Templates</button>
+      </div>
+      <div id="ltab-pages" class="ltab"></div>
+      <div id="ltab-modules" class="ltab" hidden></div>
+      <div id="ltab-templates" class="ltab" hidden></div>
+    </aside>
+
+    <section id="workspace">
+      <div id="wsgrid">
+        <div id="rulercorner" class="ruler"></div>
+        <div id="rulerh" class="ruler" title="Drag down to make a guide"><canvas></canvas></div>
+        <div id="rulerv" class="ruler" title="Drag right to make a guide"><canvas></canvas></div>
+        <div id="scroller">
+          <div id="pages"></div>
+        </div>
+      </div>
+      <div id="statusbar"><span id="st-info"></span><span id="st-hint"></span></div>
+    </section>
+
+    <aside id="right"><div id="inspector"></div></aside>
+  </div>
+</div>
+<div id="modal-root"></div>
+<div id="toast"></div>
+<script src="data.js"></script>
+<script src="core.js"></script>
+<script src="flow.js"></script>
+<script src="ui.js"></script>
+<script src="dialogs.js"></script>
+<script src="export.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

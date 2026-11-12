@@ -1,0 +1,24 @@
+palOS 27 Clownfish
+
+Firefox
+  Firefox is palOS's web browser. It keeps your profile, bookmarks and tabs from one launch to the next,
+  closes cleanly (no more "quit unexpectedly"), uses palOS's look and Open/Save sheets, and speaks the
+  language you chose for palOS.
+
+NVIDIA graphics
+  palOS installs NVIDIA's own driver for GeForce RTX 20 series and newer graphics chips, straight from
+  NVIDIA. Older NVIDIA chips use palOS's built-in graphics driver.
+
+Sound
+  Sound goes where you'd expect from the very first second: headphones and speakers you plug in come first,
+  the computer's own sound next, a screen's sound last. You can always choose another output in the menu bar
+  or in Settings.
+
+Copying files
+  Dropping files into a folder copies them once, without asking to replace the files it just copied.
+
+Languages
+  palOS speaks 16 languages besides English, including Ecclesiastical Latin.
+
+The Library
+  Fonts, Icons, Sounds and Themes show palOS's own.

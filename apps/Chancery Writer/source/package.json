@@ -1,0 +1,14 @@
+{
+  "name": "chancery-writer",
+  "version": "1.0.0",
+  "description": "Chancery Writer — a full-featured standalone word processor for palOS",
+  "main": "dist/main/main.js",
+  "author": {
+    "name": "Chancery",
+    "email": "joe.lucas0413@gmail.com"
+  },
+  "license": "MIT",
+  "dependencies": {},
+  "productName": "Chancery Writer",
+  "homepage": "https://github.com/chancery/chancery-writer"
+}

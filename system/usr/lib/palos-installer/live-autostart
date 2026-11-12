@@ -1,0 +1,11 @@
+#!/bin/sh
+# In the palOS live session (started from the USB stick): put "Install palOS" on the desktop and open it.
+grep -qw 'boot=casper' /proc/cmdline || exit 0
+D=$(xdg-user-dir DESKTOP 2>/dev/null || echo "$HOME/Desktop")
+mkdir -p "$D"
+cp /usr/share/applications/palos-install.desktop "$D/" 2>/dev/null && chmod +x "$D/palos-install.desktop"
+command -v gio >/dev/null 2>&1 && gio set "$D/palos-install.desktop" metadata::trusted true 2>/dev/null
+# palOS Utilities already offered to install; after "Try palOS" the installer waits for its desktop icon
+[ -e "${XDG_RUNTIME_DIR:-/tmp}/palos-try" ] && exit 0
+sleep 3
+exec /usr/bin/palos-install

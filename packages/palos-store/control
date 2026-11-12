@@ -1,0 +1,25 @@
+Package: palos-store
+Status: install ok installed
+Priority: optional
+Section: admin
+Maintainer: palOS <joe.lucas0413@gmail.com>
+Architecture: all
+Version: 1.2.2
+Depends: paladin-seeker (>= 1.3.0), python3, python3-apt, appstream, gir1.2-appstream-1.0, python3-gi, gir1.2-notify-0.7, pkexec | policykit-1, apt (>= 2.7), ubuntu-drivers-common
+Recommends: unattended-upgrades
+Conffiles:
+ /etc/apt/apt.conf.d/60palos-store fe12ee99423736a9d9423795658fad23
+ /etc/xdg/autostart/palos-update-notifier.desktop a45c2fda80f5afaae705ba43c5314b0f
+ /etc/apparmor.d/palos-store b198de180e258179ae4786c9179ad86d
+Description: palOS Store: apps, updates and drivers
+ Browse, search, install and remove apps from the .deb software
+ archive (thousands of apps, with icons, screenshots and descriptions from
+ its AppStream catalog) and from the Snap Store. An app offered both
+ ways has one card, with a switch between the .deb and the snap. Snap
+ support (snapd) is set up the first time someone installs a snap. Apps
+ that need 32-bit libraries, like Steam, switch 32-bit support on as they
+ install. Updates shows everything waiting to be installed (snaps too) and
+ installs it in one go; Drivers offers the hardware drivers the
+ archive provides, including the manufacturers' own (proprietary) ones.
+ .
+ Runs on Seeker's Electron runtime.

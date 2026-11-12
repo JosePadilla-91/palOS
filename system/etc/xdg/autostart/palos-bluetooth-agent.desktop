@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Bluetooth pairing helper
+Name[fr]=Assistant de jumelage Bluetooth
+Comment=Answers pairing requests from phones and other devices
+Comment[fr]=Répond aux demandes de jumelage des téléphones et autres appareils
+Exec=/usr/lib/palos-bluetooth/palos-bluetooth-agent
+Icon=palos-bluetooth
+NoDisplay=true
+X-GNOME-Autostart-enabled=true

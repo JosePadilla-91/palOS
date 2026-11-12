@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=palOS
+Comment=The palOS desktop: Seeker, the Dock and Compiz
+Exec=/usr/bin/paladin-session
+TryExec=/usr/bin/paladin-session
+Type=Application
+DesktopNames=Paladin

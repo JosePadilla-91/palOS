@@ -1,0 +1,22 @@
+#!/bin/sh
+set -e
+if [ "$1" = "configure" ]; then
+  /usr/lib/paladin-seeker/fetch-runtime || {
+    echo "paladin-seeker: the Electron runtime is not installed yet (see above)." >&2
+    exit 1
+  }
+  if command -v apparmor_parser >/dev/null 2>&1 && [ -d /sys/kernel/security/apparmor ]; then
+    apparmor_parser -r -T -W /etc/apparmor.d/paladin-seeker 2>/dev/null || true
+  fi
+  # Seeker opens folders for the rest of the system, unless the distro chose otherwise.
+  F=/etc/xdg/mimeapps.list
+  if ! grep -q '^inode/directory=' "$F" 2>/dev/null; then
+    if ! grep -q '^\[Default Applications\]' "$F" 2>/dev/null; then
+      printf '%s\n' '[Default Applications]' >> "$F"
+    fi
+    sed -i '/^\[Default Applications\]/a inode/directory=paladin-seeker.desktop\nx-scheme-handler/trash=paladin-seeker.desktop' "$F"
+  fi
+  command -v gtk-update-icon-cache >/dev/null 2>&1 && gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor || true
+  command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database -q /usr/share/applications || true
+fi
+exit 0

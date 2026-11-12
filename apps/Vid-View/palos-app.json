@@ -1,0 +1,10 @@
+{
+ "name": "Vid-View",
+ "id": "vid-view",
+ "command": "vid-view",
+ "icon": "vid-view",
+ "version": "2.0",
+ "folder": "",
+ "kind": "kibble",
+ "runtime": "kibble"
+}

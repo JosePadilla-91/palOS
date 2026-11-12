@@ -1,0 +1,21 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Preview — Site Knitter</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+<link rel="stylesheet" href="css/preview.css"></head>
+<body>
+<header id="bar">
+  <div class="grp">
+    <button id="back" class="nb" title="Back" aria-label="Back"><svg viewBox="0 0 16 16"><path d="M10 3L5 8l5 5"/></svg></button>
+    <button id="fwd" class="nb" title="Forward" aria-label="Forward"><svg viewBox="0 0 16 16"><path d="M6 3l5 5-5 5"/></svg></button>
+  </div>
+  <button id="reload" class="nb" title="Reload" aria-label="Reload"><svg viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.6M11.6 1.8v2.8H8.8"/></svg></button>
+  <label class="addr"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="1.5" width="11" height="13" rx="1.5"/><path d="M5 5h6M5 8h6M5 11h4"/></svg>
+    <select id="page" aria-label="Page"></select></label>
+  <div class="seg" role="radiogroup" aria-label="Screen size">
+    <button data-d="desktop" role="radio" title="Desktop"><svg viewBox="0 0 16 16"><rect x="1.5" y="2.5" width="13" height="8.5" rx="1"/><path d="M6 14h4M8 11v3"/></svg>Desktop</button>
+    <button data-d="tablet" role="radio" title="Tablet"><svg viewBox="0 0 16 16"><rect x="3" y="1.5" width="10" height="13" rx="1.5"/><path d="M7 12.5h2"/></svg>Tablet</button>
+    <button data-d="phone" role="radio" title="Phone"><svg viewBox="0 0 16 16"><rect x="4.5" y="1.5" width="7" height="13" rx="1.5"/><path d="M7.2 12.5h1.6"/></svg>Phone</button>
+  </div>
+  <button id="ext" class="tb" title="Open this page in Nave">Open in Nave</button>
+</header>
+<script src="js/preview.js"></script>
+</body></html>

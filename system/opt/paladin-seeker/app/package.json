@@ -1,0 +1,8 @@
+{
+  "name": "paladin-seeker",
+  "productName": "Seeker",
+  "version": "1.7.0",
+  "description": "Desktop, menu bar and file browser for Paladin",
+  "main": "main/main.js",
+  "license": "MIT"
+}

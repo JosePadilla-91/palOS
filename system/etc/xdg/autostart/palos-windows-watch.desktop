@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Windows apps in Applications
+Exec=/usr/lib/palos-windows/watch
+NoDisplay=true
+X-GNOME-Autostart-enabled=true

@@ -1,0 +1,21 @@
+#!/bin/sh
+set -e
+if [ "$1" = "configure" ]; then
+  # Windows files open with palOS's Windows handler, system-wide, unless someone chose otherwise
+  python3 - <<'PY' || true
+import configparser, os
+p = '/etc/xdg/mimeapps.list'
+c = configparser.RawConfigParser(); c.optionxform = str
+if os.path.exists(p): c.read(p)
+if not c.has_section('Default Applications'): c.add_section('Default Applications')
+for m in ('application/x-ms-dos-executable', 'application/vnd.microsoft.portable-executable', 'application/x-msdownload', 'application/x-msi', 'application/x-ms-installer', 'application/x-ms-shortcut', 'application/x-bat', 'application/x-msdos-program'):
+    c.set('Default Applications', m, 'palos-windows.desktop')
+with open(p, 'w') as f: c.write(f, space_around_delimiters=False)
+PY
+  command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database -q /usr/share/applications || true
+  # fast synchronization for Windows programs (Wine 11 + the kernel's ntsync driver)
+  modprobe ntsync 2>/dev/null || true
+  command -v udevadm >/dev/null 2>&1 && udevadm trigger --subsystem-match=misc --sysname-match=ntsync 2>/dev/null || true
+  chmod -R a+rX /opt/palos-windows
+fi
+exit 0

@@ -1,0 +1,11 @@
+{
+ "name": "Time Turner",
+ "id": "time-turner",
+ "command": "time-turner",
+ "icon": "time-turner",
+ "version": "1.0",
+ "folder": "",
+ "kind": "shared",
+ "runtime": "kibble",
+ "fallback": "electron-44"
+}

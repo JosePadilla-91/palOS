@@ -1,0 +1,17 @@
+[Desktop Entry]
+Type=Application
+Name=Install palOS
+Name[fr]=Installer palOS
+Name[fr_CA]=Installer palOS
+GenericName=Install palOS on this computer
+GenericName[fr]=Installer palOS sur cet ordinateur
+GenericName[fr_CA]=Installer palOS sur cet ordinateur
+Comment=Put palOS on this computer's disk
+Comment[fr]=Installer palOS sur le disque de cet ordinateur
+Comment[fr_CA]=Installer palOS sur le disque de cet ordinateur
+Exec=/usr/bin/palos-install
+Icon=palos-installer
+Terminal=false
+StartupNotify=true
+Categories=System;
+Keywords=installer;install;setup;

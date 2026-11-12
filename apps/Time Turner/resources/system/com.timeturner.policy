@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+  "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<policyconfig>
+  <vendor>Time Turner</vendor>
+  <icon_name>time-turner</icon_name>
+
+  <!-- Browse backups and restore files inside your own home folder -->
+  <action id="com.timeturner.browse">
+    <description>Browse backups and restore your own files</description>
+    <message>Authentication is required to browse backups</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>yes</allow_active>
+    </defaults>
+  </action>
+
+  <!-- Start or stop a backup -->
+  <action id="com.timeturner.backup">
+    <description>Back up now</description>
+    <message>Authentication is required to start a backup</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>yes</allow_active>
+    </defaults>
+  </action>
+
+  <!-- Set up backups or change settings -->
+  <action id="com.timeturner.configure">
+    <description>Change Time Turner settings</description>
+    <message>Authentication is required to change backup settings</message>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+  </action>
+
+  <!-- Restore the whole system (always asks for a password) -->
+  <action id="com.timeturner.restore-system">
+    <description>Restore the entire system from a backup</description>
+    <message>Authentication is required to restore the system</message>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin</allow_active>
+    </defaults>
+  </action>
+</policyconfig>

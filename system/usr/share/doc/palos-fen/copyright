@@ -1,0 +1,4 @@
+Fen, the palOS viewer. Copyright palOS.
+
+Includes pdf.js 4.10.38 (opt/palos-fen/app/ui/vendor/pdfjs), Copyright Mozilla Foundation,
+licensed under the Apache License 2.0 (/usr/share/common-licenses/Apache-2.0, and LICENSE beside it).

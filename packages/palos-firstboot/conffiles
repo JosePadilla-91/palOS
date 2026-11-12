@@ -1,0 +1,2 @@
+/etc/polkit-1/rules.d/50-palos-firstboot.rules
+/etc/apparmor.d/palos-firstboot

@@ -1,0 +1,11 @@
+{
+ "name": "Terminal",
+ "id": "palos-terminal",
+ "command": "palos-terminal",
+ "icon": "palos-terminal",
+ "version": "1.0.0",
+ "folder": "Utilities",
+ "kind": "shared",
+ "runtime": "kibble",
+ "fallback": "electron-44"
+}

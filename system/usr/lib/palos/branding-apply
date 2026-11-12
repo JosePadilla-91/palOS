@@ -1,0 +1,57 @@
+#!/bin/sh
+# palOS branding: things that belong to other packages and are adjusted (never edited) after they install.
+# Run by palos-branding and from a dpkg trigger, so it's re-applied when those packages update.
+set -e
+# console messages from the stock message-of-the-day scripts that don't apply to palOS
+for f in 00-header 10-help-text 50-motd-news 91-release-upgrade 90-updates-available 95-hwe-eol 88-esm-announce 91-contract-ua-esm-status; do
+  p=/etc/update-motd.d/$f
+  if [ -e "$p" ] && ! dpkg-statoverride --list "$p" >/dev/null 2>&1; then
+    dpkg-statoverride --update --add root root 0644 "$p" 2>/dev/null || chmod 0644 "$p"
+  fi
+done
+command -v systemctl >/dev/null 2>&1 && systemctl mask --quiet motd-news.timer motd-news.service 2>/dev/null || true
+# text-mode boot screen (shown when there's no graphics): say palOS
+T=/usr/share/plymouth/themes/ubuntu-text/ubuntu-text.plymouth
+if [ -f "$T" ]; then
+  mkdir -p /usr/share/plymouth/themes/palos-text
+  sed -e 's/^title=.*/title=palOS 27/' -e 's/^Name=.*/Name=palOS Text/' "$T" > /usr/share/plymouth/themes/palos-text/palos-text.plymouth
+  update-alternatives --install /usr/share/plymouth/themes/text.plymouth text.plymouth /usr/share/plymouth/themes/palos-text/palos-text.plymouth 200 >/dev/null 2>&1 || true
+  update-alternatives --set text.plymouth /usr/share/plymouth/themes/palos-text/palos-text.plymouth >/dev/null 2>&1 || true
+fi
+# Keep the stock upgrade/subscription/report tools off palOS (Snap is welcome: the palOS Store installs
+# snapd the first time someone gets a snap). Only packages that aren't
+# installed are blocked, so a converted system keeps updating whatever it already uses.
+PREF=/etc/apt/preferences.d/palos.pref
+{
+  echo "# palOS installs software through the palOS Store (the .deb archive and the Snap Store), without"
+  echo "# the stock upgrade, subscription or crash-report tools (the Store does apps, updates and drivers)."
+  echo "# Written by palos-branding; packages already on this computer when palOS was set up aren't listed."
+  for p in ubuntu-pro-client ubuntu-advantage-tools ubuntu-pro-client-l10n ubuntu-advantage-desktop-daemon \
+           ubuntu-release-upgrader-core ubuntu-release-upgrader-gtk update-manager update-manager-core update-notifier \
+           ubuntu-report popularity-contest apport apport-gtk whoopsie ubuntu-docs; do
+    if [ "$(dpkg-query -W -f='${db:Status-Status}' "$p" 2>/dev/null)" != installed ]; then
+      printf '\nPackage: %s\nPin: release a=*\nPin-Priority: -10\n' "$p"
+    fi
+  done
+} > "$PREF.new"
+if [ -f "$PREF" ] && [ "$1" != "--refresh-pins" ]; then rm -f "$PREF.new"; else mv "$PREF.new" "$PREF"; fi
+# an early palOS blocked snapd; take that block out of an existing file (the rest stays as it was)
+if [ -f "$PREF" ] && grep -q '^Package: snapd$' "$PREF"; then
+  awk 'BEGIN { RS = ""; ORS = "\n\n" } !/(^|\n)Package: snapd(\n|$)/' "$PREF" > "$PREF.new" && mv "$PREF.new" "$PREF"
+  sed -i -e "s/^# palOS installs software from Ubuntu's .deb archive only: no Snap store, and none of Ubuntu's$/# palOS installs software through the palOS Store (the .deb archive and the Snap Store), without/" \
+         -e "s/^# own upgrade, subscription or crash-report tools (the palOS Store does apps, updates and drivers).$/# the stock upgrade, subscription or crash-report tools (the Store does apps, updates and drivers)./" "$PREF"
+fi
+# the legal notice shown at the first text-console login
+if [ -f /etc/legal ] && grep -q 'included with the Ubuntu system' /etc/legal; then
+  cat > /etc/legal <<'LEGAL'
+
+The programs included with palOS are free
+software; the exact distribution terms for each program are described in the
+individual files in /usr/share/doc/*/copyright.
+
+palOS comes with ABSOLUTELY NO WARRANTY, to the extent permitted by
+applicable law.
+
+LEGAL
+fi
+exit 0

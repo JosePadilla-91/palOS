@@ -1,0 +1,17 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #d9dde2; font: 13px "Inter", "Noto Sans", sans-serif; color: #1f2328; overflow: hidden; }
+@media (prefers-color-scheme: dark) { html, body { background: #26292d; color: #e9eef2; } #bar { background: linear-gradient(#3b4148, #2e3339); border-color: #15181b; } .addr, .seg, .tb, .nb { background: #474e56; color: #e9eef2; border-color: #1c2024; } }
+#bar { height: 46px; display: flex; align-items: center; gap: 8px; padding: 0 10px; background: linear-gradient(#f4f5f7, #dfe3e7); border-bottom: 1px solid #b8bec5; }
+.grp { display: flex; gap: 2px; }
+.nb { width: 30px; height: 26px; border-radius: 6px; border: 1px solid #b4bac1; background: linear-gradient(#fff, #e9ecef); display: flex; align-items: center; justify-content: center; padding: 0; color: #2b3138; }
+.nb:disabled { opacity: .4; }
+svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.addr { flex: 1; min-width: 120px; height: 28px; display: flex; align-items: center; gap: 6px; padding: 0 10px; border-radius: 14px; border: 1px solid #b4bac1; background: #fff; color: #5b6470; }
+.addr select { flex: 1; border: 0; background: transparent; font: inherit; color: #1f2328; outline: none; min-width: 0; }
+@media (prefers-color-scheme: dark) { .addr select { color: #e9eef2; } }
+.seg { display: flex; border: 1px solid #b4bac1; border-radius: 7px; overflow: hidden; background: linear-gradient(#fff, #e9ecef); }
+.seg button { display: flex; gap: 5px; align-items: center; border: 0; background: transparent; font: inherit; color: inherit; padding: 4px 10px; }
+.seg button + button { border-left: 1px solid #b4bac1; }
+.seg button[aria-checked="true"] { background: linear-gradient(#80addf, #3f8fd6 50%, #1b7fcc 51%, #0c76c3); color: #fff; }
+.tb { height: 26px; padding: 0 12px; border-radius: 13px; border: 1px solid #b4bac1; background: linear-gradient(#fff, #e9ecef); font: inherit; color: inherit; }
+@media (max-width: 760px) { .seg button { font-size: 0; gap: 0; } .seg button svg { margin: 0; } }

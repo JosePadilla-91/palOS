@@ -1,0 +1,12 @@
+Package: palos-monitor
+Status: install ok installed
+Priority: optional
+Section: utils
+Maintainer: palOS <joe.lucas0413@gmail.com>
+Architecture: all
+Version: 1.0.2
+Depends: paladin-seeker (>= 1.6.0)
+Description: Native System Monitor for palOS
+ See what the computer is doing: processor and memory use, disks, network speed, graphics,
+ temperatures and battery, and every running program, with Quit and Force Quit.
+ Runs on Seeker's Electron runtime.

@@ -1,0 +1,131 @@
+#!/usr/bin/python3
+"""Draws today's date on the Calendar icon (the palOS tear-off calendar) and installs it for this account.
+
+Today's month, weekday and day are printed on the blank calendar artwork, at every icon size, into
+~/.local/share/icons/hicolor/<size>/apps/paladin-calendar.png, which comes before the system's copy.
+Run at log-in, at midnight and after the computer wakes up (paladin-session does this).
+  calendar-icon            today's date
+  calendar-icon --watch    keep it current (redraws at midnight and after sleep)"""
+import datetime
+import os
+import subprocess
+import sys
+import time
+
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
+
+BASE = '/usr/share/paladin-session/calendar-base.png'
+OUT = os.path.join(os.environ.get('XDG_DATA_HOME', os.path.expanduser('~/.local/share')), 'icons', 'hicolor')
+NAME = 'paladin-calendar'
+SIZES = [16, 22, 24, 32, 48, 64, 96, 128, 256, 512]
+FONT_DIRS = ['/usr/share/fonts/truetype/noto', '/usr/share/fonts/truetype/dejavu', '/usr/share/fonts/truetype/liberation']
+K = 2                      # work at twice the artwork's size
+ANGLE = 2.6                # the calendar is drawn tilted: text runs slightly uphill
+
+
+def font(names, size):
+    for d in FONT_DIRS:
+        for n in names:
+            p = os.path.join(d, n)
+            if os.path.exists(p):
+                return ImageFont.truetype(p, size)
+    return ImageFont.load_default()
+
+
+SANS_B = ['NotoSans-Bold.ttf', 'DejaVuSans-Bold.ttf', 'LiberationSans-Bold.ttf']
+SERIF_B = ['NotoSerif-Bold.ttf', 'DejaVuSerif-Bold.ttf', 'LiberationSerif-Bold.ttf']
+
+
+def erase(im, box, light_text):
+    """remove printed text inside box (x0, y0, x1, y1): light text on a dark band, or dark text on paper"""
+    x0, y0, x1, y1 = [v * K for v in box]
+    pad = 8 * K
+    reg = im.crop((x0 - pad, y0 - pad, x1 + pad, y1 + pad))
+    rgb = reg.convert('RGB')
+    f = ImageFilter.MinFilter if light_text else ImageFilter.MaxFilter
+    for _ in range(3):
+        rgb = rgb.filter(f(9))
+    rgb = rgb.filter(ImageFilter.GaussianBlur(3 * K))
+    mask = Image.new('L', reg.size, 0)
+    ImageDraw.Draw(mask).rectangle((pad, pad, reg.width - pad, reg.height - pad), fill=255)
+    mask = mask.filter(ImageFilter.GaussianBlur(3 * K))
+    patched = Image.composite(rgb.convert('RGBA'), reg, mask)
+    patched.putalpha(reg.getchannel('A'))
+    im.paste(patched, (x0 - pad, y0 - pad))
+
+
+def text(im, s, center, fnt, color, max_w=None):
+    """draw s centred at center (artwork coordinates), tilted like the calendar"""
+    w = int(fnt.getlength(s)) + 20 * K
+    asc, desc = fnt.getmetrics()
+    layer = Image.new('RGBA', (w, asc + desc + 20 * K), (0, 0, 0, 0))
+    ImageDraw.Draw(layer).text((10 * K, 10 * K), s, font=fnt, fill=color)
+    if max_w and layer.width > max_w * K:
+        layer = layer.resize((int(max_w * K), int(layer.height * max_w * K / layer.width)), Image.LANCZOS)
+    layer = layer.rotate(ANGLE, resample=Image.BICUBIC, expand=True)
+    cx, cy = center[0] * K, center[1] * K
+    im.alpha_composite(layer, (int(cx - layer.width / 2), int(cy - layer.height / 2)))
+
+
+def render(day):
+    base = Image.open(BASE).convert('RGBA')
+    im = base.resize((base.width * K, base.height * K), Image.LANCZOS)
+    # the artwork has a blank band and page: print today's month, weekday and day on them
+    white = (250, 248, 244, 255)
+    ink = (52, 50, 48, 255)
+    text(im, day.strftime('%B').upper(), (93, 75), font(SANS_B, 21 * K), white, max_w=128)
+    text(im, day.strftime('%a').upper(), (231, 63), font(SANS_B, 21 * K), white, max_w=58)
+    text(im, day.strftime('%b').upper(), (157, 127), font(SERIF_B, 40 * K), ink, max_w=120)
+    text(im, f'{day.day:02d}', (168, 182), font(SERIF_B, 76 * K), ink, max_w=150)
+    text(im, day.strftime('%A').upper(), (188, 228), font(SERIF_B, 19 * K), ink, max_w=150)
+    return im
+
+
+def square(im, size):
+    inner = int(size * 0.96)
+    k = inner / max(im.size)
+    r = im.resize((max(1, round(im.width * k)), max(1, round(im.height * k))), Image.LANCZOS)
+    c = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+    c.alpha_composite(r, ((size - r.width) // 2, (size - r.height) // 2))
+    return c
+
+
+def install(day=None):
+    day = day or datetime.date.today()
+    if not os.path.exists(BASE):
+        return
+    big = render(day)
+    for s in SIZES:
+        d = os.path.join(OUT, f'{s}x{s}', 'apps')
+        os.makedirs(d, exist_ok=True)
+        tmp = os.path.join(d, f'.{NAME}.png.tmp')
+        square(big, s).save(tmp, 'PNG')
+        os.replace(tmp, os.path.join(d, NAME + '.png'))
+    # let running apps (the Dock) notice: the icon folders changed
+    now = time.time()
+    for root in (OUT, os.path.dirname(OUT)):
+        try:
+            os.utime(root, (now, now))
+        except OSError:
+            pass
+    subprocess.run(['gtk-update-icon-cache', '-q', '-t', '-f', OUT], capture_output=True)
+
+
+def watch():
+    last = None
+    while True:
+        today = datetime.date.today()
+        if today != last:
+            install(today)
+            last = today
+        # wake up shortly after midnight; a short nap also catches the computer waking from sleep
+        time.sleep(60)
+
+
+if __name__ == '__main__':
+    if '--watch' in sys.argv:
+        watch()
+    elif len(sys.argv) > 2 and sys.argv[1] == '--date':
+        install(datetime.date.fromisoformat(sys.argv[2]))
+    else:
+        install()

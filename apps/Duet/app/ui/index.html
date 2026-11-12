@@ -1,0 +1,53 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Duet</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+<link rel="stylesheet" href="kit.css"><link rel="stylesheet" href="duet.css"></head>
+<body>
+<main id="panel">
+  <header class="hero"><img src="duet.png" alt=""><div><h1>Duet</h1><p class="note" id="lead">Choose the system this computer starts with.</p></div></header>
+  <div id="systems" class="systems" role="radiogroup" aria-label="Startup system"></div>
+  <p class="note" id="status" role="status" aria-live="polite"></p>
+  <div class="actions" id="actions">
+    <button class="btn" id="restart" type="button" disabled>Restart…</button>
+    <span class="grow"></span>
+    <button class="btn primary" id="apply" type="button" disabled>Start With This Every Time</button>
+  </div>
+  <section id="nowin" class="card info" hidden>
+    <div class="row"><div class="lbl">
+      <div class="t">Windows isn’t set up on this computer</div>
+      <div class="s" id="nowinText"></div>
+    </div></div>
+  </section>
+  <h2>Make Room for Windows</h2>
+  <section class="card tool" id="room">
+    <p class="s" id="roomText">Looking at palOS’s volume…</p>
+    <div id="roomCtl" hidden>
+      <div class="bar" aria-hidden="true"><span class="pal" id="barPal"></span><span class="win" id="barWin"></span></div>
+      <div class="legend"><span><i class="pal"></i>palOS <b id="palGB"></b></span><span><i class="win"></i>Windows <b id="winGB"></b></span></div>
+      <input type="range" id="roomRange" min="64" max="64" step="1" aria-label="Room for Windows (GB)">
+      <div class="row2"><span class="grow"></span><button class="btn primary" id="roomGo" type="button">Make Room and Restart…</button></div>
+    </div>
+    <div class="row2" id="roomPendingRow" hidden><span class="s grow" id="roomPending"></span><button class="btn" id="roomCancel" type="button">Cancel</button><button class="btn primary" id="roomRestart" type="button">Restart Now</button></div>
+  </section>
+  <h2 id="instH">Install Windows</h2>
+  <section class="card tool" id="inst">
+    <p class="s" id="instText">Duet installs Windows by itself in the free space after palOS, from a Windows .iso file (from Microsoft’s website). It uses this computer’s settings, so Windows doesn’t ask for them; it asks only for your account.</p>
+    <dl class="kv" id="instSettings"></dl>
+    <div class="row2"><span class="s grow" id="instIso">No image chosen.</span><button class="btn" id="instPick" type="button">Choose Image…</button></div>
+    <div class="row2" id="instEdRow" hidden><label class="s grow" for="instEd">Edition</label><select id="instEd" aria-label="Windows edition"></select></div>
+    <p class="s hint" id="instHint" hidden></p>
+    <div class="ubar" id="instBar" hidden><i id="instFill"></i></div>
+    <div class="row2" id="instGoRow"><span class="s grow" id="instStatus" role="status" aria-live="polite"></span><button class="btn primary" id="instGo" type="button" disabled>Install Windows…</button></div>
+    <div class="row2" id="instReadyRow" hidden><span class="s grow" id="instReady"></span><button class="btn" id="instCancel" type="button">Cancel</button><button class="btn primary" id="instRestart" type="button">Restart and Install</button></div>
+  </section>
+  <h2>Windows Installer USB</h2>
+  <section class="card tool" id="usb">
+    <p class="s">Make a USB stick that installs Windows, from a Windows .iso file (from Microsoft’s website). Everything on the stick is replaced. Large Windows files are split to fit.</p>
+    <div class="row2"><span class="s grow" id="usbIso">No image chosen.</span><button class="btn" id="usbPick" type="button">Choose Image…</button></div>
+    <div class="row2"><label class="s grow" for="usbDev">USB stick</label><select id="usbDev" aria-label="USB stick"></select><button class="btn" id="usbRefresh" type="button">Look Again</button></div>
+    <div class="ubar" id="usbBar" hidden><i id="usbFill"></i></div>
+    <div class="row2"><span class="s grow" id="usbStatus" role="status" aria-live="polite"></span><button class="btn primary" id="usbGo" type="button" disabled>Make Installer…</button></div>
+  </section>
+  <h2 id="disksH">Disks</h2>
+  <div class="card" id="disks"></div>
+</main>
+<script src="helpers.js"></script><script src="duet.js"></script></body></html>

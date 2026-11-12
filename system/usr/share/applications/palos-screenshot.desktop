@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Name=Screenshot
+Name[fr]=Capture d’écran
+Name[fr_CA]=Capture d’écran
+Comment=Take pictures and recordings of the screen
+Comment[fr]=Prendre des images et des enregistrements de l’écran
+Comment[fr_CA]=Prendre des images et des enregistrements de l’écran
+Exec=palos-screenshot
+Icon=palos-screenshot
+Terminal=false
+StartupNotify=false
+Categories=Utility;Graphics;
+Keywords=screenshot;capture;print;snip;record;screencast;video;grab;
+X-Palos-Folder=Utilities

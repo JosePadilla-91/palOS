@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+<mime-type type="application/x-site-knitter">
+  <glob pattern="*.wspin"/>
+    <comment>Site Knitter site</comment>
+    <comment xml:lang="fr">Site Site Knitter</comment>
+  <icon name="application-x-site-knitter"/>
+  <generic-icon name="text-html"/>
+</mime-type>
+</mime-info>

@@ -1,0 +1,20 @@
+:root { --pad:#f8ec8d; --rule:#7fb5a0; --margin:#e46a6a; --ink:#22262b; --head:#7d1d24; }
+@media (prefers-color-scheme: dark) { :root { --bg:#262a2f; --panel:#2f343a; --fg:#eef1f4; --card:#383d44; } }
+body { display: flex; background: var(--bg); }
+#side { width: 170px; background: var(--panel); border-right: 1px solid var(--line); padding: 10px 6px; display: flex; flex-direction: column; flex: none; }
+#books { flex: 1; overflow: auto; } .book { display: flex; justify-content: space-between; padding: 5px 10px; border-radius: 6px; cursor: default; } .book:hover { background: var(--field); } .book.on { background: var(--accent); color: var(--on); } .book small { opacity: .7; }
+button.link { background: none; border: 0; color: var(--accent2); text-align: left; padding: 6px 10px; }
+#listpane { width: 270px; border-right: 1px solid var(--line); display: flex; flex-direction: column; background: var(--card); flex: none; }
+#listbar { display: flex; gap: 6px; padding: 8px; border-bottom: 1px solid var(--line); } #search { flex: 1; min-width: 0; } #new { font-size: 16px; padding: 0 10px; }
+#list { flex: 1; overflow: auto; } .note { padding: 8px 12px; border-bottom: 1px solid var(--line); cursor: default; } .note.on { background: var(--accent); color: var(--on); } .note b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .note span { display: block; font-size: 11px; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .note .pin { float: right; font-size: 10px; opacity: .8; }
+#list .empty { padding: 24px; text-align: center; color: var(--dim); }
+#editpane { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
+#tools { display: flex; gap: 4px; padding: 6px 10px; background: var(--panel); border-bottom: 1px solid var(--line); align-items: center; } .sep { width: 1px; height: 18px; background: var(--line); margin: 0 4px; } .grow { flex: 1; } #tools button { padding: 3px 9px; white-space: nowrap; } #tools button.on { background: var(--accent); color: var(--on); }
+/* the legal pad: a red header strip, yellow paper, green rules and a double red margin line */
+#pad { flex: 1; position: relative; overflow: auto; background: var(--pad); border-top: 18px solid #8d2531; }
+#editor { min-height: 100%; outline: none; padding: 0 28px 40px 92px; font: 17px/32px "Noto Sans", sans-serif; color: var(--ink); user-select: text;
+  background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 31px, var(--rule) 31px, var(--rule) 32px), linear-gradient(to right, transparent 74px, var(--margin) 74px, var(--margin) 75px, transparent 75px, transparent 78px, var(--margin) 78px, var(--margin) 79px, transparent 79px);
+  background-attachment: local; background-position: 0 0, 0 0; }
+#editor h2 { font-size: 22px; line-height: 32px; margin: 0; color: var(--head); } #editor p, #editor div { margin: 0; } #editor ul, #editor ol { margin: 0; padding-left: 26px; } #editor li { line-height: 32px; }
+#editor .todo { list-style: none; margin-left: -26px; } #editor .todo input { margin-right: 8px; transform: scale(1.2); } #editor .todo.done span { text-decoration: line-through; opacity: .55; } #editor a { color: #1b4fa8; }
+#none { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #6e6a40; font-size: 16px; background: var(--pad); } .hidden { display: none !important; }

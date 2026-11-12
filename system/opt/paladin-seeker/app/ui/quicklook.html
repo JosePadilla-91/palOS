@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' seeker: file: data:; media-src file:; frame-src file:; object-src file:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+<link rel="stylesheet" href="common.css">
+<style>
+  html, body { height: 100%; overflow: hidden; background: transparent; color: #fff; }
+  .hud { position: absolute; inset: 0; display: flex; flex-direction: column; background: rgba(28,28,28,.88); border-radius: 8px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); overflow: hidden; }
+  body.no-composite .hud { border-radius: 0; background: #262626; }
+  .top { height: 24px; flex: none; display: flex; align-items: center; justify-content: center; position: relative; font-size: 12px; font-weight: bold; text-shadow: 0 1px 1px #000; -webkit-app-region: drag; }
+  .top .x { position: absolute; left: 8px; top: 5px; width: 14px; height: 14px; border-radius: 50%; background: rgba(255,255,255,.75); color: #222; font: bold 11px/14px sans-serif; text-align: center; -webkit-app-region: no-drag; }
+  .stage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 6px 16px; position: relative; }
+  .stage img.main { max-width: 100%; max-height: 100%; object-fit: contain; box-shadow: 0 4px 16px rgba(0,0,0,.6); }
+  .stage iframe { width: 100%; height: 100%; border: 0; background: #fff; }
+  .stage video, .stage audio { max-width: 100%; max-height: 100%; }
+  .stage pre { width: 100%; height: 100%; margin: 0; overflow: auto; background: #fff; color: #111; padding: 12px 14px; font: 12px/1.45 "DejaVu Sans Mono", "Noto Sans Mono", monospace; white-space: pre-wrap; word-break: break-word; user-select: text; }
+  .card { display: flex; gap: 22px; align-items: center; }
+  .card .n { font-size: 20px; font-weight: bold; margin-bottom: 6px; word-break: break-all; max-width: 380px; }
+  .card div.d { font-size: 12px; color: #c8c8c8; line-height: 1.6; }
+  .bot { height: 34px; flex: none; display: flex; align-items: center; justify-content: center; gap: 12px; }
+  .bot button { background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.25); color: #fff; border-radius: 4px; height: 22px; padding: 0 10px; font-size: 12px; -webkit-app-region: no-drag; }
+  .bot .ctr { font-size: 11px; color: #bbb; min-width: 60px; text-align: center; }
+  .grid { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; align-content: center; overflow: auto; max-height: 100%; }
+  .grid .g { width: 120px; text-align: center; font-size: 11px; }
+  .grid .g img { max-width: 110px; max-height: 110px; }
+</style>
+<link rel="stylesheet" href="paladin.css">
+</head>
+<body>
+<div class="hud">
+  <div class="top"><div class="x" id="x">×</div><span id="name"></span></div>
+  <div class="stage" id="stage"></div>
+  <div class="bot"><button id="prev">◀</button><span class="ctr" id="ctr"></span><button id="next">▶</button><button id="index" title="Index Sheet">▦</button><button id="fs" title="Full Screen">⤢</button><button id="openbtn">Open</button></div>
+</div>
+<script src="common.js"></script>
+<script src="quicklook.js"></script>
+</body>
+</html>

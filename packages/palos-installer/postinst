@@ -1,0 +1,6 @@
+#!/bin/sh
+set -e
+if [ "$1" = configure ]; then
+  ln -sf /usr/lib/palos-installer/sfdisk /usr/sbin/sfdisk
+fi
+exit 0

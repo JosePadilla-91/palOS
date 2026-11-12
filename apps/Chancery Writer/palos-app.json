@@ -1,0 +1,11 @@
+{
+ "name": "Chancery Writer",
+ "id": "chancery-writer",
+ "command": "chancery-writer",
+ "icon": "chancery-writer",
+ "version": "1.0",
+ "folder": "",
+ "kind": "shared",
+ "runtime": "kibble",
+ "fallback": "electron-44"
+}

@@ -1,0 +1,12 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Snap Booth</title><link rel="stylesheet" href="base.css"><link rel="stylesheet" href="snapbooth.css"></head>
+<body>
+<div id="stage"><video id="cam" autoplay playsinline muted></video><canvas id="view"></canvas><div id="count" class="hidden"></div><div id="flash"></div><div id="msg" class="hidden"></div><div id="coach" class="hidden"><b id="coach-t"></b><span id="coach-s"></span></div><div id="rec" class="hidden"><i></i><span id="rect">0:00</span></div></div>
+<div id="controls">
+  <div class="seg" id="modes"><button data-m="photo" class="on" title="One photo">Photo</button><button data-m="strip" title="Four photos in a row">Strip</button><button data-m="video" title="Record a movie">Movie</button></div>
+  <button id="shutter" title="Take"><i></i></button>
+  <div class="right"><button id="bgbtn">Backgrounds</button><button id="fx">Effects</button><select id="cams" title="Camera"></select></div>
+</div>
+<div id="fxbar" class="hidden"></div>
+<div id="bgbar" class="hidden"></div>
+<div id="shelf"></div>
+<script src="snapbooth.js"></script></body></html>

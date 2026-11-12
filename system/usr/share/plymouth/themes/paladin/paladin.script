@@ -1,0 +1,104 @@
+// Paladin boot screen: the white palOS dog on black, a spinning hoop under it,
+// and a password box when the disk is encrypted.
+
+Window.SetBackgroundTopColor(0, 0, 0);
+Window.SetBackgroundBottomColor(0, 0, 0);
+
+if (Window.GetWidth() >= 2560 || Window.GetHeight() >= 1440) { s = "@2x"; k = 2; } else { s = ""; k = 1; }
+
+cx = Window.GetX() + Window.GetWidth() / 2;
+cy = Window.GetY() + Window.GetHeight() / 2;
+
+shield.image = Image("shield" + s + ".png");
+shield.sprite = Sprite(shield.image);
+shield.y = cy - shield.image.GetHeight() / 2 - 30 * k;
+shield.sprite.SetPosition(cx - shield.image.GetWidth() / 2, shield.y, 10);
+
+hoop.image = Image("hoop" + s + ".png");
+hoop.sprite = Sprite();
+hoop.size = hoop.image.GetWidth();
+hoop.y = shield.y + shield.image.GetHeight() + 44 * k;
+hoop.angle = 0;
+hoop.shown = 1;
+
+entry.image = Image("entry" + s + ".png");
+bullet.image = Image("bullet" + s + ".png");
+prompt.sprite = Sprite();
+entry.sprite = Sprite();
+bullets = [];
+message.sprite = Sprite();
+fade = 0;
+
+fun show_hoop(on) {
+  hoop.shown = on;
+  hoop.sprite.SetOpacity(on);
+}
+
+fun refresh_callback() {
+  // fade the shield in over the first half second
+  if (fade < 1) { fade = fade + 0.04; if (fade > 1) fade = 1; shield.sprite.SetOpacity(fade); }
+  if (hoop.shown) {
+    hoop.angle = hoop.angle + 0.13;
+    if (hoop.angle > 6.2832) hoop.angle = hoop.angle - 6.2832;
+    r = hoop.image.Rotate(hoop.angle);
+    hoop.sprite.SetImage(r);
+    hoop.sprite.SetPosition(cx - r.GetWidth() / 2, hoop.y + hoop.size / 2 - r.GetHeight() / 2, 10);
+  }
+}
+Plymouth.SetRefreshFunction(refresh_callback);
+
+// ---------------------------------------------------------------- password (encrypted disk)
+fun hide_bullets() {
+  for (i = 0; bullets[i]; i++) bullets[i].SetOpacity(0);
+}
+
+fun display_password_callback(text, count) {
+  show_hoop(0);
+  if (!text) text = "Password";
+  label = Image.Text(text, 1, 1, 1, 0.85, "Noto Sans " + 12 * k);
+  prompt.sprite.SetImage(label);
+  prompt.sprite.SetPosition(cx - label.GetWidth() / 2, hoop.y - 6 * k, 10);
+  prompt.sprite.SetOpacity(1);
+  ey = hoop.y + label.GetHeight() + 4 * k;
+  entry.sprite.SetImage(entry.image);
+  entry.sprite.SetPosition(cx - entry.image.GetWidth() / 2, ey, 10);
+  entry.sprite.SetOpacity(1);
+  hide_bullets();
+  gap = bullet.image.GetWidth() + 5 * k;
+  max = Math.Int((entry.image.GetWidth() - 32 * k) / gap);
+  n = count; if (n > max) n = max;
+  x0 = cx - (n * gap - 5 * k) / 2;
+  for (i = 0; i < n; i++) {
+    if (!bullets[i]) bullets[i] = Sprite(bullet.image);
+    bullets[i].SetPosition(x0 + i * gap, ey + entry.image.GetHeight() / 2 - bullet.image.GetHeight() / 2, 11);
+    bullets[i].SetOpacity(1);
+  }
+}
+Plymouth.SetDisplayPasswordFunction(display_password_callback);
+
+fun display_question_callback(text, answer) {
+  display_password_callback(text + " " + answer, 0);
+}
+Plymouth.SetDisplayQuestionFunction(display_question_callback);
+
+fun display_normal_callback() {
+  prompt.sprite.SetOpacity(0);
+  entry.sprite.SetOpacity(0);
+  hide_bullets();
+  show_hoop(1);
+}
+Plymouth.SetDisplayNormalFunction(display_normal_callback);
+
+// ---------------------------------------------------------------- messages (fsck, errors)
+fun message_callback(text) {
+  m = Image.Text(text, 1, 1, 1, 0.7, "Noto Sans " + 11 * k);
+  message.sprite.SetImage(m);
+  message.sprite.SetPosition(cx - m.GetWidth() / 2, Window.GetY() + Window.GetHeight() - m.GetHeight() - 40 * k, 10);
+  message.sprite.SetOpacity(1);
+}
+Plymouth.SetMessageFunction(message_callback);
+
+fun quit_callback() {
+  show_hoop(0);
+}
+Plymouth.SetQuitFunction(quit_callback);

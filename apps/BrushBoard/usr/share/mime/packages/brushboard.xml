@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+<mime-type type="application/x-brushboard">
+  <comment>BrushBoard document</comment>
+  <comment xml:lang="fr">Document BrushBoard</comment>
+  <glob pattern="*.brb"/>
+  <glob pattern="*.brushboard"/>
+  <glob pattern="*.gio"/>
+  <icon name="application-x-brushboard"/>
+  <generic-icon name="x-office-document"/>
+</mime-type>
+</mime-info>

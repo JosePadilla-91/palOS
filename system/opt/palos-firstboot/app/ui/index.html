@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data: http://127.0.0.1:*; media-src file: blob: mediastream:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+<title>palOS Setup</title>
+<link rel="stylesheet" href="setup.css">
+</head>
+<body>
+<div id="bg"></div>
+<div id="film" class="hidden">
+  <video id="video" preload="auto" playsinline></video>
+</div>
+<main id="stage" class="hidden" aria-live="polite">
+  <div id="card"></div>
+  <div id="dots" aria-hidden="true"></div>
+</main>
+<div id="black" class="hidden"><img src="file:///usr/share/palos/logo-512.png" alt=""><div>Starting palOS…</div><div class="spin"></div></div>
+<script src="filmsw.js"></script>
+<script src="setup.js"></script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+#!/bin/sh
+# palOS: the welcome line at text-console and SSH logins
+. /etc/os-release 2>/dev/null
+printf "Welcome to %s (%s %s %s)\n" "${PRETTY_NAME:-palOS}" "$(uname -o)" "$(uname -r)" "$(uname -m)"

@@ -1,0 +1,11 @@
+{
+ "name": "Address Book",
+ "id": "paladin-addressbook",
+ "command": "paladin-addressbook",
+ "icon": "paladin-addressbook",
+ "version": "1.0",
+ "folder": "",
+ "kind": "shared",
+ "runtime": "kibble",
+ "fallback": "electron-44"
+}

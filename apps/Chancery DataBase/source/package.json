@@ -1,0 +1,13 @@
+{
+  "name": "chancery-database",
+  "productName": "Chancery DataBase",
+  "version": "1.1.0",
+  "description": "Desktop database designer for palOS",
+  "main": "src/main.js",
+  "author": "Joe Lucas <joe.lucas0413@gmail.com>",
+  "homepage": "https://github.com/palos/chancery-database",
+  "dependencies": {
+    "sql.js": "^1.15.2"
+  },
+  "desktopName": "chancery-database.desktop"
+}

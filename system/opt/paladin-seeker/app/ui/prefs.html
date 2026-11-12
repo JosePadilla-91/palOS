@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' seeker: file: data:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+<link rel="stylesheet" href="common.css"><link rel="stylesheet" href="panel.css">
+<style>
+  .tabs { display: flex; justify-content: center; gap: 2px; padding: 0 0 4px; -webkit-app-region: no-drag; }
+  .tab { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 3px 10px; border-radius: 4px; font-size: 11px; }
+  .tab img { width: 32px; height: 32px; }
+  .tab.on { background: rgba(0,0,0,.14); box-shadow: inset 0 1px 3px rgba(0,0,0,.25); }
+  .body { padding: 16px 22px; font-size: 13px; }
+  .pane { display: none; } .pane.on { display: block; }
+  .row { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+  .row > label:first-child, .lbl { width: 170px; text-align: right; flex: none; }
+  .group { margin-left: 180px; }
+  .bg { display: flex; gap: 12px; height: 100%; }
+  .bgside { width: 150px; flex: none; background: #fff; border: 1px solid #9a9a9a; overflow: auto; }
+  .bgside .si { padding: 3px 8px; font-size: 12px; display: flex; gap: 5px; align-items: center; }
+  .bgside .si img { width: 16px; height: 16px; }
+  .bgside .si.on { background: linear-gradient(#5e8fe2, #3166d1); color: #fff; }
+  .bgmain { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .bgtop { display: flex; gap: 12px; align-items: center; margin-bottom: 10px; }
+  .cur { width: 120px; height: 76px; border: 1px solid #777; box-shadow: 0 1px 3px rgba(0,0,0,.3); background-size: cover; background-position: center; flex: none; }
+  .grid { flex: 1; background: #fff; border: 1px solid #9a9a9a; overflow: auto; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 8px; padding: 8px; min-height: 0; }
+  .grid .w { width: 96px; height: 62px; background-size: cover; background-position: center; border: 2px solid transparent; outline: 1px solid #bbb; }
+  .grid .w.on { border-color: #3166d1; outline-color: #3166d1; }
+  #pane-desktop { height: 340px; }
+</style>
+<link rel="stylesheet" href="paladin.css">
+</head>
+<body>
+<div class="window rounded">
+  <div class="chrome">
+    <div class="titlebar"><div class="lights"></div><div class="title" id="title">Seeker Preferences</div></div>
+    <div class="tabs" id="tabs"></div>
+  </div>
+  <div class="body">
+    <div class="pane" id="pane-general"></div>
+    <div class="pane" id="pane-desktop"></div>
+    <div class="pane" id="pane-menubar"></div>
+    <div class="pane" id="pane-sidebar"></div>
+  </div>
+</div>
+<script src="common.js"></script>
+<script src="prefs.js"></script>
+</body>
+</html>

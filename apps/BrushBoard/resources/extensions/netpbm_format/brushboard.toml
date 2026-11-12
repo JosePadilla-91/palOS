@@ -1,0 +1,8 @@
+id = "netpbm_format"
+name = "Netpbm & PFM"
+version = "1.0.0"
+author = "BrushBoard Project"
+description = "Example file-format extension: reads and writes PPM/PGM (8/16-bit) and PFM (32-bit float)."
+entry = "main.py"
+api = 1
+requirements = []

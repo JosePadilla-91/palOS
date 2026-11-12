@@ -1,0 +1,20 @@
+{
+  "hardDiskName": "palOS HD",
+  "wallpaper": null,
+  "wallpaperMode": "fill",
+  "systemPreferences": [
+    "paladin-settings",
+    "paladin-preferences",
+    "gnome-control-center",
+    "xfce4-settings-manager",
+    "lxqt-config"
+  ],
+  "softwareUpdate": [
+    "paladin-software-update",
+    "update-manager",
+    "gnome-software --mode=updates"
+  ],
+  "appStore": [],
+  "aboutLogo": "/usr/share/palos/logo-512.png",
+  "defaultWallpaper": "/usr/share/backgrounds/palos/palOS Pupper.jpg"
+}

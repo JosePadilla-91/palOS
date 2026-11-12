@@ -1,0 +1,11 @@
+{
+ "name": "Remote Disc",
+ "id": "palos-remote-drive",
+ "command": "palos-remote-drive",
+ "icon": "palos-remote-drive",
+ "version": "1.0.0",
+ "folder": "Utilities",
+ "kind": "shared",
+ "runtime": "kibble",
+ "fallback": "electron-44"
+}

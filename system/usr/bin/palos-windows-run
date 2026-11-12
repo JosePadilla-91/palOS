@@ -1,0 +1,82 @@
+#!/bin/sh
+# Runs Windows programs and installers the palOS way: one ready-made Windows 11 environment, no questions.
+#   palos-windows-run setup.exe | app.msi | shortcut.lnk | script.bat     run it
+#   palos-windows-run --uninstaller                                       Windows Programs (remove Windows apps)
+#   palos-windows-run --config                                            Windows Settings
+#   palos-windows-run --regedit                                           Registry Editor
+#   palos-windows-run --files                                             Windows Files (the C: drive)
+#   palos-windows-run --repair                                            start the Windows environment over
+PREFIX="${WINEPREFIX:-$HOME/.local/share/palos-windows/prefix}"
+export WINEPREFIX="$PREFIX" WINEDEBUG="${WINEDEBUG:--all}" PATH="/opt/palos-windows/wine/bin:$PATH"
+# quiet logs, and the DirectX shader cache in the cache folder
+export WINE_LARGE_ADDRESS_AWARE=1 DXVK_LOG_LEVEL=none VKD3D_DEBUG=none VKD3D_SHADER_DEBUG=none DXVK_STATE_CACHE_PATH="$HOME/.cache/palos-windows"
+
+if [ "$1" = "--repair" ]; then
+  exec /usr/lib/palos-windows/setup --repair
+fi
+if [ ! -e "$PREFIX/.palos-ready" ]; then
+  command -v notify-send >/dev/null 2>&1 && notify-send -i palos-windows -a "Windows apps" "$(palos-say "Windows apps")" "$(palos-say "Getting Windows apps ready. This takes a few seconds, once.")"
+  /usr/lib/palos-windows/setup || exit 1
+  command -v notify-send >/dev/null 2>&1 && notify-send -i palos-windows -a "Windows apps" "$(palos-say "Windows apps")" "$(palos-say "Windows apps are ready.")"
+fi
+# a different graphics card since last time? (quick when nothing changed)
+/usr/lib/palos-windows/graphics >>"$HOME/.cache/palos-windows-setup.log" 2>&1
+
+case "$1" in
+  --uninstaller) exec wine uninstaller ;;
+  --config) exec winecfg ;;
+  --regedit) exec wine regedit ;;
+  --files) exec wine explorer 'C:\' ;;
+  "") exec wine explorer ;;
+esac
+f="$1"; shift          # anything after the file goes to the program (e.g. an installer's /S)
+[ -e "$f" ] || { command -v notify-send >/dev/null 2>&1 && notify-send -i dialog-error "Windows apps" "$f isn't there any more."; exit 1; }
+f=$(realpath "$f")
+cd "$(dirname "$f")" 2>/dev/null
+label=$(basename "$f"); label=${label%.*}       # what to call it in messages: "GIMP 3.2.6", not "GIMP 3.2.6.lnk"
+# A Start Menu shortcut: start the program it points at, in its own folder, with its own arguments.
+# (Starting the .lnk itself through "start /wait" gives Wine no process to wait for, so it looked
+# like the program had failed even though it was running.)
+case "$f" in
+  *.lnk|*.LNK)
+    R=$(/usr/lib/palos-windows/sync --resolve "$f" 2>/dev/null)
+    T=$(printf '%s\n' "$R" | sed -n 1p); W=$(printf '%s\n' "$R" | sed -n 2p); A=$(printf '%s\n' "$R" | sed -n 3p)
+    if [ -n "$T" ] && [ -e "$T" ]; then
+      f="$T"; [ -n "$W" ] && cd "$W" 2>/dev/null
+      if [ -n "$A" ] && [ $# -eq 0 ]; then eval "set -- $A" 2>/dev/null || set -- $A; fi
+    fi ;;
+esac
+win=$(winepath -w "$f" 2>/dev/null || echo "$f")
+START=$(date +%s)
+case "$f" in
+  *.msi|*.MSI) wine msiexec /i "$win" "$@" ;;
+  *.bat|*.BAT|*.cmd|*.CMD) wine cmd /c "$win" "$@" ;;
+  *) wine start /wait /unix "$f" "$@" ;;
+esac
+CODE=$?
+# installers: put what they installed into Applications right away (the watcher also does this)
+/usr/lib/palos-windows/sync 2>/dev/null
+# Is the program (or a copy of itself it handed over to) still running? Then it started fine,
+# whatever "start" said: many programs relaunch themselves or hand over to an already-open copy.
+still_running() {
+  exe=$(basename "$f")
+  sleep 3
+  for p in /proc/[0-9]*; do
+    [ "${p#/proc/}" = "$$" ] && continue
+    c=$(tr '\0' ' ' < "$p/cmdline" 2>/dev/null)
+    case "$c" in *palos-windows-run*|*palos-windows/sync*) continue ;; esac
+    printf '%s' "$c" | grep -qiF -- "$exe" || continue
+    tr '\0' '\n' < "$p/environ" 2>/dev/null | grep -qxF "WINEPREFIX=$PREFIX" && return 0
+  done
+  return 1
+}
+# a program that couldn't start at all says so, instead of just disappearing
+if [ "$CODE" -ne 0 ] && [ $(( $(date +%s) - START )) -lt 4 ] && ! still_running; then
+  name="$label"
+  if command -v notify-send >/dev/null 2>&1; then
+    notify-send -i dialog-warning -a "Windows apps" "$name couldn’t start" \
+      "Some Windows programs don’t work on palOS (games with anti-cheat, some copy-protected or driver-based software). Details: ~/.cache/palos-windows-setup.log"
+  fi
+  echo "$(date '+%F %T') $name exited with $CODE straight away" >>"$HOME/.cache/palos-windows-setup.log"
+fi
+exit "$CODE"

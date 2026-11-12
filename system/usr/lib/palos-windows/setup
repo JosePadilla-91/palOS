@@ -1,0 +1,90 @@
+#!/bin/sh
+# Gives this account its own copy of palOS's ready-made Windows 11 environment (a few seconds, once).
+# Everything it needs is already on the computer: Wine 11, .NET (Mono), the web engine (Gecko), and
+# DirectX 9-12 through Vulkan (DXVK, vkd3d-proton) when the graphics card supports Vulkan.
+# Safe to run again; `setup --repair` starts the Windows environment over (installed programs are lost).
+PREFIX="${WINEPREFIX:-$HOME/.local/share/palos-windows/prefix}"
+TEMPLATE=/opt/palos-windows/prefix-template
+WINE=/opt/palos-windows/wine/bin
+export WINEPREFIX="$PREFIX" WINEDEBUG=-all PATH="$WINE:$PATH"
+LOG="$HOME/.cache/palos-windows-setup.log"
+mkdir -p "$(dirname "$PREFIX")" "$(dirname "$LOG")"
+say() { command -v notify-send >/dev/null 2>&1 && notify-send -i palos-windows -a "Windows apps" "$(palos-say "Windows apps")" "$(palos-say "$1")"; }
+log() { echo "$(date '+%F %T') $*" >>"$LOG"; }
+
+exec 3>"$HOME/.cache/palos-windows.lock"; flock 3
+if [ "$1" = "--repair" ]; then
+  log "starting over (repair)"
+  wineserver -k 2>/dev/null
+  rm -rf "$PREFIX"
+fi
+[ -e "$PREFIX/.palos-ready" ] && exit 0
+
+ME=$(id -un)
+if [ -d "$TEMPLATE/drive_c" ]; then
+  log "copying the Windows environment for $ME"
+  TMP="$PREFIX.new"
+  rm -rf "$TMP"
+  # the big read-only parts (.NET and the web engine) stay shared; the rest is this account's own
+  mkdir -p "$TMP"
+  tar -C "$TEMPLATE" --exclude=./drive_c/windows/mono --exclude=./drive_c/windows/system32/gecko --exclude=./drive_c/windows/syswow64/gecko \
+      -cf - . | tar -C "$TMP" -xf - || { log "copy failed"; rm -rf "$TMP"; say "Windows apps couldn't be set up (no space left?). See $LOG"; exit 1; }
+  ln -s "$TEMPLATE/drive_c/windows/mono" "$TMP/drive_c/windows/mono"
+  ln -s "$TEMPLATE/drive_c/windows/system32/gecko" "$TMP/drive_c/windows/system32/gecko"
+  ln -s "$TEMPLATE/drive_c/windows/syswow64/gecko" "$TMP/drive_c/windows/syswow64/gecko"
+  # the Windows user folder takes this account's name
+  if [ "$ME" != palos-template ]; then
+    mv "$TMP/drive_c/users/palos-template" "$TMP/drive_c/users/$ME"
+    for r in "$TMP/system.reg" "$TMP/user.reg" "$TMP/userdef.reg"; do
+      [ -f "$r" ] && sed -i "s/palos-template/$ME/g" "$r"
+    done
+  fi
+  mv "$TMP" "$PREFIX"
+else
+  log "no ready-made environment found; creating one (slower)"
+  WINEDLLOVERRIDES="winemenubuilder.exe=d" wineboot -i >>"$LOG" 2>&1
+  wineserver -w
+  winecfg -v win11 >>"$LOG" 2>&1
+  [ -f /usr/lib/palos-windows/tweaks.reg ] && wine regedit /S /usr/lib/palos-windows/tweaks.reg >>"$LOG" 2>&1
+  wineserver -w
+fi
+if [ ! -d "$PREFIX/drive_c/windows" ]; then
+  log "setup failed"
+  say "Windows apps couldn't be set up. See $LOG"
+  exit 1
+fi
+
+# Documents, Desktop, Downloads, Music, Pictures and Videos are this account's own palOS folders
+U="$PREFIX/drive_c/users/$ME"
+link_folder() {   # link_folder WINDOWS-NAME XDG-NAME
+  target=$(xdg-user-dir "$2" 2>/dev/null)
+  [ -n "$target" ] && [ "$target" != "$HOME" ] || return 0
+  mkdir -p "$target"
+  if [ -d "$U/$1" ] && [ ! -L "$U/$1" ]; then
+    # move anything already in the Windows folder (normally nothing) into the palOS folder
+    (cd "$U/$1" && find . -mindepth 1 -maxdepth 1 -exec mv -n {} "$target/" \; ) 2>/dev/null
+    rm -rf "$U/$1"
+  fi
+  [ -e "$U/$1" ] || ln -s "$target" "$U/$1"
+}
+link_folder Desktop DESKTOP
+link_folder Documents DOCUMENTS
+link_folder Downloads DOWNLOAD
+link_folder Music MUSIC
+link_folder Pictures PICTURES
+link_folder Videos VIDEOS
+link_folder Templates TEMPLATES
+
+# text and window size like the rest of palOS (Settings > Displays scale)
+DPI=$(xrdb -query 2>/dev/null | awk '/^Xft.dpi:/ {printf "%d", $2; exit}')
+[ -n "$DPI" ] || DPI=96
+[ "$DPI" -ge 72 ] 2>/dev/null || DPI=96
+wine reg add 'HKCU\Control Panel\Desktop' /v LogPixels /t REG_DWORD /d "$DPI" /f >>"$LOG" 2>&1
+
+/usr/lib/palos-windows/graphics >>"$LOG" 2>&1
+wineserver -w
+touch "$PREFIX/.palos-ready"
+log "ready"
+# Microsoft's own Visual C++ runtimes, when the computer is online (Wine's built-in ones work meanwhile)
+( /usr/lib/palos-windows/runtimes >>"$LOG" 2>&1 & ) </dev/null >/dev/null 2>&1
+exit 0

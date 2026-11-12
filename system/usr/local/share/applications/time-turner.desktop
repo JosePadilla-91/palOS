@@ -1,0 +1,14 @@
+[Desktop Entry]
+TryExec=/Applications/Time Turner.app
+X-Palos-App=/Applications/Time Turner.app
+Type=Application
+Name=Time Turner
+Comment=Back up your computer and go back in time to restore
+Comment[fr]=Sauvegarder votre ordinateur et remonter le temps pour restaurer
+Keywords=backup;restore;time machine;sauvegarde;restaurer;
+Exec="/Applications/Time Turner.app" %U
+Icon=time-turner
+Terminal=false
+StartupWMClass=Time Turner
+Categories=Utility;System;
+X-AppImage-Version=1.0

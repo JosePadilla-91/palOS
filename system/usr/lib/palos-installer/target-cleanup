@@ -1,0 +1,10 @@
+#!/bin/sh
+# Runs inside the new system at the end of installing.
+# Nothing from the live session belongs on the installed system.
+rm -f /etc/xdg/autostart/palos-install-autostart.desktop
+rm -f /etc/sudoers.d/casper /etc/lightdm/lightdm.conf.d/*casper* 2>/dev/null
+# the computer's name until palOS setup names it after its owner
+[ -s /etc/hostname ] || echo palos > /etc/hostname
+# offline install: the package lists in the image are kept so the palOS Store works straight away
+update-grub >/dev/null 2>&1 || true
+exit 0

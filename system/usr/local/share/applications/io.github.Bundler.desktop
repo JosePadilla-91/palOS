@@ -1,0 +1,22 @@
+[Desktop Entry]
+TryExec=/Applications/Utilities/Bundler.app
+X-Palos-App=/Applications/Utilities/Bundler.app
+X-Palos-Folder=Utilities
+X-AppImage-Name=Bundler
+Type=Application
+Name=Bundler
+GenericName=Archiver
+GenericName[fr]=Archiveur
+GenericName[fr_CA]=Archiveur
+Comment=Unpack archives into folders and bundle files into zips
+Comment[fr]=Décompresser des archives dans des dossiers et regrouper des fichiers dans des zips
+Comment[fr_CA]=Décompresser des archives dans des dossiers et regrouper des fichiers dans des zips
+Keywords=zip;unzip;tar;gz;xz;bz2;archive;compress;extract;bundle;
+Keywords[fr]=zip;décompresser;archive;compresser;extraire;tar;
+Exec="/Applications/Utilities/Bundler.app" %F
+Icon=io.github.Bundler
+Terminal=false
+Categories=Utility;Archiving;Compression;
+MimeType=application/zip;application/x-zip-compressed;application/x-tar;application/gzip;application/x-compressed-tar;application/x-xz-compressed-tar;application/x-bzip-compressed-tar;application/x-bzip2-compressed-tar;application/x-zstd-compressed-tar;
+StartupWMClass=Bundler
+X-AppImage-Version=1.0

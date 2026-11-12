@@ -1,0 +1,23 @@
+[Desktop Entry]
+TryExec=/Applications/Utilities/Symbols.app
+X-Palos-App=/Applications/Utilities/Symbols.app
+X-Palos-Folder=Utilities
+X-AppImage-Name=Symbols
+Type=Application
+Name=Symbols
+Name[fr]=Symboles
+Name[fr_CA]=Symboles
+GenericName=Character Map
+GenericName[fr]=Table de caractères
+GenericName[fr_CA]=Table de caractères
+Comment=Find and copy emoji, arrows, accents and every other character
+Comment[fr]=Trouver et copier des émojis, des flèches, des accents et tous les autres caractères
+Comment[fr_CA]=Trouver et copier des émojis, des flèches, des accents et tous les autres caractères
+Keywords=character;map;emoji;symbol;unicode;accent;glyph;special;
+Exec="/Applications/Utilities/Symbols.app"
+Icon=palos-symbols
+Terminal=false
+StartupNotify=true
+StartupWMClass=Symbols
+Categories=Utility;
+X-AppImage-Version=1.0.0

@@ -1,0 +1,36 @@
+#!/bin/sh
+# Time Turner apt hook (runs after every dpkg run via /etc/apt/apt.conf.d/80time-turner).
+# Asks the background service for a full system image when a new kernel is
+# installed or Ubuntu moves to a new release. The service waits until package
+# activity has been quiet for 10 minutes before backing up.
+# This must never make apt fail, so every error is ignored.
+
+LIB=/var/lib/time-turner
+STATE="$LIB/apt-kernels"
+RELEASE_STATE="$LIB/apt-release"
+REQUEST="$LIB/full-image-request"
+
+[ -f /etc/time-turner/config.json ] || exit 0
+mkdir -p "$LIB" 2>/dev/null || exit 0
+
+now_kernels=$(ls -1 /boot/vmlinuz-* 2>/dev/null | sort)
+now_release=$(. /etc/os-release 2>/dev/null && echo "$VERSION_ID")
+
+reason=""
+if [ -f "$RELEASE_STATE" ] && [ "$(cat "$RELEASE_STATE")" != "$now_release" ]; then
+  reason="upgrade"
+elif [ -f "$STATE" ]; then
+  # Only newly *added* kernels count; removing old ones (autoremove) does not.
+  added=$(printf '%s\n' "$now_kernels" | grep -vxF -f "$STATE" 2>/dev/null | grep -c . 2>/dev/null)
+  [ "${added:-0}" -gt 0 ] && reason="kernel"
+fi
+
+printf '%s\n' "$now_kernels" > "$STATE" 2>/dev/null
+printf '%s\n' "$now_release" > "$RELEASE_STATE" 2>/dev/null
+
+if [ -n "$reason" ]; then
+  # An upgrade request outranks a kernel request that is still waiting.
+  if [ "$reason" = "kernel" ] && grep -q '"upgrade"' "$REQUEST" 2>/dev/null; then reason="upgrade"; fi
+  printf '{"reason":"%s","at":%s000}\n' "$reason" "$(date +%s)" > "$REQUEST.tmp" 2>/dev/null && mv -f "$REQUEST.tmp" "$REQUEST" 2>/dev/null
+fi
+exit 0

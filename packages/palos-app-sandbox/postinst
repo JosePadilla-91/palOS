@@ -1,0 +1,6 @@
+#!/bin/sh
+set -e
+if [ "$1" = configure ] && command -v apparmor_parser >/dev/null 2>&1 && [ -d /sys/kernel/security/apparmor ]; then
+  while read -r f; do apparmor_parser -r -T -W "$f" 2>/dev/null || true; done < /var/lib/dpkg/info/palos-app-sandbox.conffiles
+fi
+exit 0

@@ -1,0 +1,30 @@
+#!/bin/sh
+# Runs inside the new system after the boot loader is installed (UEFI only).
+# grub-install named the firmware boot entry "ubuntu" (the signed boot loader must live in \EFI\ubuntu);
+# make the entry say palOS instead, and give removable-media firmware a Secure Boot friendly fallback.
+[ -d /sys/firmware/efi ] || exit 0
+command -v efibootmgr >/dev/null 2>&1 || exit 0
+ESP=/boot/efi
+[ -d "$ESP/EFI/ubuntu" ] || exit 0
+LOADER='\EFI\ubuntu\grubx64.efi'
+[ -e "$ESP/EFI/ubuntu/shimx64.efi" ] && LOADER='\EFI\ubuntu\shimx64.efi'
+PART=$(findmnt -no SOURCE "$ESP" | head -1)
+PART=$(readlink -f "$PART")
+NAME=$(basename "$PART")
+DISK=$(lsblk -no PKNAME "$PART" 2>/dev/null | head -1)
+NUM=$(cat "/sys/class/block/$NAME/partition" 2>/dev/null)
+if [ -n "$DISK" ] && [ -n "$NUM" ]; then
+  # remove the "ubuntu" entries this install made, then add "palOS" (efibootmgr puts the new one first)
+  for b in $(efibootmgr | sed -n 's/^Boot\([0-9A-Fa-f]\{4\}\)\*\{0,1\} \{1,\}ubuntu\b.*/\1/p'); do efibootmgr -q -b "$b" -B || true; done
+  for b in $(efibootmgr | sed -n 's/^Boot\([0-9A-Fa-f]\{4\}\)\*\{0,1\} \{1,\}palOS\b.*/\1/p'); do efibootmgr -q -b "$b" -B || true; done
+  efibootmgr -q -c -d "/dev/$DISK" -p "$NUM" -L palOS -l "$LOADER" || true
+fi
+# fallback path: shim + grub + MOK manager as \EFI\BOOT\BOOTX64.EFI
+if [ -e "$ESP/EFI/ubuntu/shimx64.efi" ]; then
+  mkdir -p "$ESP/EFI/BOOT"
+  cp "$ESP/EFI/ubuntu/shimx64.efi" "$ESP/EFI/BOOT/BOOTX64.EFI"
+  cp "$ESP/EFI/ubuntu/grubx64.efi" "$ESP/EFI/BOOT/grubx64.efi"
+  [ -e "$ESP/EFI/ubuntu/mmx64.efi" ] && cp "$ESP/EFI/ubuntu/mmx64.efi" "$ESP/EFI/BOOT/mmx64.efi"
+fi
+efibootmgr || true
+exit 0

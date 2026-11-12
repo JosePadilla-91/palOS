@@ -1,0 +1,16 @@
+Package: palos-screenshot
+Status: install ok installed
+Priority: optional
+Section: graphics
+Maintainer: palOS <joe.lucas0413@gmail.com>
+Architecture: all
+Version: 27.0.0
+Replaces: paladin-session (<< 1.6.0)
+Depends: python3, python3-gi, python3-gi-cairo, gir1.2-gtk-3.0, maim, slop, xdotool, xclip, x11-utils, ffmpeg, pulseaudio-utils, libnotify-bin, xdg-user-dirs
+Breaks: paladin-session (<< 1.6.0)
+Conflicts: gnome-screenshot
+Description: Screenshot: pictures and recordings of the screen
+ The palOS Screenshot bar: capture the entire screen, one window or a
+ selected portion, or record the screen (MP4) with sound from the
+ microphone, the computer or both. Opened with the Print Screen key;
+ everything is saved to the Desktop.

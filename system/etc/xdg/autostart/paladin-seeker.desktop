@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Seeker Desktop
+Comment=Desktop and menu bar
+Exec=paladin-seeker --session
+Icon=paladin-seeker
+NoDisplay=true
+X-GNOME-AutoRestart=true
+X-GNOME-Autostart-Phase=Desktop

@@ -1,0 +1,11 @@
+#!/bin/sh
+# copy-kernel ROOT: make sure the new system has its kernel in /boot (the live image keeps it there,
+# but if it's missing, take the copy from the USB stick).
+ROOT="$1"
+[ -n "$ROOT" ] && [ -d "$ROOT" ] || exit 1
+KVER=$(ls "$ROOT/usr/lib/modules" | sort -V | tail -1)
+[ -n "$KVER" ] || exit 0
+if [ ! -e "$ROOT/boot/vmlinuz-$KVER" ] && [ -e /cdrom/casper/vmlinuz ]; then
+  cp /cdrom/casper/vmlinuz "$ROOT/boot/vmlinuz-$KVER"
+fi
+exit 0

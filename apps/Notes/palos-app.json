@@ -1,0 +1,11 @@
+{
+ "name": "Notes",
+ "id": "palos-notes",
+ "command": "notes",
+ "icon": "palos-notes",
+ "version": "1.0.0",
+ "folder": "",
+ "kind": "shared",
+ "runtime": "kibble",
+ "fallback": "electron-44"
+}

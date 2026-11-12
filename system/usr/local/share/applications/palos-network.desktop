@@ -1,0 +1,23 @@
+[Desktop Entry]
+TryExec=/Applications/Utilities/Advanced Network Settings.app
+X-Palos-App=/Applications/Utilities/Advanced Network Settings.app
+X-Palos-Folder=Utilities
+X-AppImage-Name=Advanced Network Settings
+Type=Application
+Name=Advanced Network Settings
+Name[fr]=Réglages réseau avancés
+Name[fr_CA]=Réglages réseau avancés
+GenericName=Network Connections
+GenericName[fr]=Connexions réseau
+GenericName[fr_CA]=Connexions réseau
+Comment=Every setting of your Wi-Fi, Ethernet and VPN connections: addresses, DNS, IPv6, proxy, security
+Comment[fr]=Tous les réglages de vos connexions Wi-Fi, Ethernet et RPV : adresses, DNS, IPv6, proxy, sécurité
+Comment[fr_CA]=Tous les réglages de vos connexions Wi-Fi, Ethernet et RPV : adresses, DNS, IPv6, proxy, sécurité
+Keywords=network;wifi;ethernet;vpn;dns;ip;ipv6;proxy;mac;réseau;rpv;
+Exec="/Applications/Utilities/Advanced Network Settings.app"
+Icon=palos-network
+Terminal=false
+StartupNotify=true
+StartupWMClass=Advanced Network Settings
+Categories=Settings;HardwareSettings;Network;
+X-AppImage-Version=1.0.0

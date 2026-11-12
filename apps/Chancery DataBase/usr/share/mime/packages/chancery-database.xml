@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-chancery-database">
+    <comment>Chancery database</comment>
+    <comment xml:lang="fr">Base de données Chancery</comment>
+    <glob pattern="*.cdb"/>
+    <icon name="application-x-chancery-database"/>
+    <generic-icon name="x-office-document"/>
+  </mime-type>
+</mime-info>

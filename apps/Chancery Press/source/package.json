@@ -1,0 +1,13 @@
+{
+  "name": "chancery-press",
+  "productName": "Chancery Press",
+  "version": "1.0.0",
+  "description": "Desktop publishing for palOS - newspapers, pamphlets, posters",
+  "main": "src/main.js",
+  "author": "Joe Lucas <joe.lucas0413@gmail.com>",
+  "homepage": "https://github.com/",
+  "license": "MIT",
+  "dependencies": {
+    "pdf-lib": "^1.17.1"
+  }
+}

@@ -1,0 +1,21 @@
+[Desktop Entry]
+X-AppImage-Name=Remote Disc
+Type=Application
+Name=Remote Disc
+Name[fr]=Disque distant
+Name[fr_CA]=Disque distant
+GenericName=Shared Disc Drive
+GenericName[fr]=Lecteur de disque partagé
+GenericName[fr_CA]=Lecteur de disque partagé
+Comment=Use the CD/DVD drive of another computer on your network, or share this one's
+Comment[fr]=Utiliser le lecteur CD/DVD d’un autre ordinateur de votre réseau, ou partager celui-ci
+Comment[fr_CA]=Utiliser le lecteur CD/DVD d’un autre ordinateur de votre réseau, ou partager celui-ci
+Keywords=cd;dvd;disc;drive;remote disc;remote drive;optical;remote;share;network;
+Exec=AppRun
+Icon=palos-remote-drive
+Terminal=false
+StartupNotify=true
+StartupWMClass=Remote Disc
+Categories=Utility;System;
+X-Palos-Folder=Utilities
+X-AppImage-Version=1.0.0

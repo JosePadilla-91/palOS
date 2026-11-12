@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' seeker: file: data:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+<link rel="stylesheet" href="common.css">
+<style>
+  html, body { height: 100%; overflow: hidden; background: #2b4f7e; }
+  #wall { position: fixed; inset: 0; background-color: #2b4f7e; }
+  #wall.default {
+    background:
+      radial-gradient(ellipse 60% 45% at 28% 72%, rgba(255,120,210,.55), transparent 70%),
+      radial-gradient(ellipse 55% 50% at 70% 30%, rgba(120,90,255,.60), transparent 70%),
+      radial-gradient(ellipse 80% 40% at 50% 100%, rgba(60,40,140,.9), transparent 70%),
+      radial-gradient(ellipse 40% 30% at 85% 75%, rgba(80,200,255,.35), transparent 70%),
+      linear-gradient(160deg, #0b1440 0%, #241a6b 45%, #4a1f78 70%, #0d0f2e 100%);
+  }
+  #wall.default::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(115deg, rgba(255,255,255,.035) 0 2px, transparent 2px 9px); mix-blend-mode: screen; }
+  #icons { position: fixed; inset: 0; }
+  .di { position: absolute; display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .di .img { display: flex; align-items: center; justify-content: center; border-radius: 5px; border: 1px solid transparent; padding: 3px; }
+  .di .img img { display: block; object-fit: contain; filter: drop-shadow(0 2px 3px rgba(0,0,0,.45)); }
+  .di .img img.thumb { border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,.5); filter: none; background: #fff; }
+  /* see-through pictures and program icons: exactly as they are, the shadow following their own shape */
+  .di .img img.thumb.alpha { border: none; box-shadow: none; background: none; filter: drop-shadow(0 2px 3px rgba(0,0,0,.45)); }
+  .di .lbl { margin-top: 2px; padding: 0 5px; border-radius: 8px; color: #fff; font-size: 12px; line-height: 15px; font-weight: bold;
+    text-shadow: 0 1px 2px rgba(0,0,0,.95), 0 0 4px rgba(0,0,0,.6); max-width: 100%; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; word-break: break-word; }
+  .di.sel .img { background: rgba(0,0,0,.30); border-color: rgba(255,255,255,.35); }
+  .di.sel .lbl { background: linear-gradient(var(--sel-top), var(--sel-bot)); text-shadow: none; -webkit-line-clamp: 6; }
+  .di.drop .img { background: rgba(0,0,0,.40); border-color: rgba(255,255,255,.7); }
+  .di.cut { opacity: .5; }
+  .di.lifted { opacity: .3; }
+  .di.live { position: fixed; z-index: 9999; pointer-events: none; opacity: .92; filter: drop-shadow(0 6px 10px rgba(0,0,0,.45)); }
+  .di.live .img { background: transparent; border-color: transparent; }
+  /* where a dragged icon will land: a soft glow, no outline */
+  .cell-hint { position: fixed; z-index: 9990; pointer-events: none; border-radius: 14px; background: radial-gradient(ellipse at center, rgba(255,255,255,.22), rgba(255,255,255,.06) 70%, rgba(255,255,255,0)); }
+  body.live-drag { cursor: default; }
+  #marquee { position: fixed; border: 1px solid rgba(255,255,255,.85); background: rgba(160,180,210,.30); display: none; z-index: 20; }
+  textarea.rename { font: bold 12px/15px var(--font); text-align: center; resize: none; border: 1px solid #6f8fd0; overflow: hidden; }
+</style>
+<link rel="stylesheet" href="paladin.css">
+</head>
+<body class="remote-menus">
+  <div id="wall"></div>
+  <div id="icons"></div>
+  <div id="marquee"></div>
+  <script src="common.js"></script>
+  <script src="actions.js"></script>
+  <script src="desktop.js"></script>
+</body>
+</html>

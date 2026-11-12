@@ -1,0 +1,8 @@
+id = "film_lab"
+name = "Film Lab"
+version = "1.0.0"
+author = "BrushBoard Project"
+description = "Analog film looks: grain, vignette, halation, chromatic aberration and duotone. Pure NumPy."
+entry = "main.py"
+api = 1
+requirements = []

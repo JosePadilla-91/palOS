@@ -1,0 +1,10 @@
+#!/bin/sh
+# palOS .app: Discette, on Kibble (palOS's app runtime: WebKit, palOS windows and Kibble's media engine)
+HERE="$(dirname "$(readlink -f "$0")")"
+export PALOS_APP="${APPIMAGE:-$HERE}"
+export PALOS_APP_DIR="$HERE/resources/app.asar" PALOS_APP_RESOURCES="$HERE/resources"
+if [ ! -x /usr/lib/kibble/kibble ]; then
+  notify-send -i dialog-warning "Discette" "Discette needs Kibble, palOS's app runtime, which isn't on this computer." 2>/dev/null
+  echo "Discette: Kibble (/usr/lib/kibble) is missing" >&2; exit 1
+fi
+exec /usr/lib/kibble/kibble "$@"

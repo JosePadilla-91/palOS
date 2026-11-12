@@ -1,0 +1,17 @@
+Package: palos-scanner
+Status: install ok installed
+Priority: optional
+Section: graphics
+Installed-Size: 444
+Maintainer: palOS <joe.lucas0413@gmail.com>
+Architecture: all
+Version: 1.0.0
+Replaces: xsane
+Depends: sane-utils
+Recommends: sane-airscan
+Description: Scanner for palOS
+ Scan documents and photos with any scanner the computer can see, on USB or on
+ the network: an overview to choose the part to scan, colour, greyscale or black
+ and white, any resolution the scanner offers, and every page in a document
+ feeder in one go. Saves as PDF (several pages in one file), JPEG, PNG or TIFF.
+ In English and French.

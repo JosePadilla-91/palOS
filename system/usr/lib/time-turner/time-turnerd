@@ -1,0 +1,10 @@
+#!/bin/sh
+# Time Turner's background backup service. The engine is part of palOS (it backs the computer up whether
+# or not anyone is logged in); Time Turner.app is the window you use to set it up and restore.
+# It runs on Kibble's Node.js (palOS's app runtime), the same JavaScript engine palOS's apps use.
+NODE=/usr/lib/kibble/node/bin/node
+if [ ! -x "$NODE" ]; then
+  echo "time-turnerd: Kibble's Node.js ($NODE) is missing" >&2
+  exit 1
+fi
+exec "$NODE" /usr/lib/time-turner/engine/src/daemon/index.js "$@"

@@ -1,0 +1,25 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Calculator</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'">
+<link rel="stylesheet" href="calc.css"></head>
+<body class="basic">
+<!-- Basic | Scientific, right on the calculator (also View › Basic / Scientific, Ctrl+1 / Ctrl+2) -->
+<div id="modes" role="group" aria-label="Mode"><button data-m="basic">Basic</button><button data-m="sci">Scientific</button></div>
+<div id="lcd"><div id="expr"></div><div id="out">0</div><div id="flags"><span id="deg">Deg</span><span id="mem"></span></div></div>
+<div id="keys">
+  <div id="sci">
+    <button data-k="(">(</button><button data-k=")">)</button><button data-k="mc">mc</button><button data-k="m+">m+</button><button data-k="m-">m−</button><button data-k="mr">mr</button>
+    <button data-k="2nd" class="mod">2ⁿᵈ</button><button data-k="x2">x²</button><button data-k="x3">x³</button><button data-k="xy">xʸ</button><button data-k="ex">eˣ</button><button data-k="10x">10ˣ</button>
+    <button data-k="inv">¹⁄ₓ</button><button data-k="sqrt">√x</button><button data-k="cbrt">∛x</button><button data-k="yroot">ʸ√x</button><button data-k="ln">ln</button><button data-k="log">log₁₀</button>
+    <button data-k="fact">x!</button><button data-k="sin">sin</button><button data-k="cos">cos</button><button data-k="tan">tan</button><button data-k="e">e</button><button data-k="EE">EE</button>
+    <button data-k="rad" class="mod">Rad</button><button data-k="sinh">sinh</button><button data-k="cosh">cosh</button><button data-k="tanh">tanh</button><button data-k="pi">π</button><button data-k="rand">Rand</button>
+  </div>
+  <div id="basic">
+    <button data-k="C" class="fn" id="clear">AC</button><button data-k="neg" class="fn">⁺∕₋</button><button data-k="%" class="fn">%</button><button data-k="/" class="op">÷</button>
+    <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><button data-k="*" class="op">×</button>
+    <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button><button data-k="-" class="op">−</button>
+    <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button data-k="+" class="op">+</button>
+    <button data-k="0" class="zero">0</button><button data-k=".">.</button><button data-k="=" class="op">=</button>
+  </div>
+</div>
+<div id="tape" hidden><div id="tapehead"><span>Paper Tape</span><button id="tapeclose">✕</button></div><pre id="tapetext"></pre></div>
+<script src="calc.js"></script></body></html>

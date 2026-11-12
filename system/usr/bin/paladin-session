@@ -1,0 +1,305 @@
+#!/bin/sh
+# Paladin session: paladin-wm + Seeker (desktop and menu bar) + Paladin Dock.
+# Started by the login screen from /usr/share/xsessions/paladin.desktop.
+
+HELPER=/usr/lib/paladin-session/paladin-session-helper
+LOGDIR="${XDG_CACHE_HOME:-$HOME/.cache}/paladin-session"
+LOG="$LOGDIR/session.log"
+mkdir -p "$LOGDIR"
+[ -f "$LOG" ] && [ "$(wc -c < "$LOG")" -gt 1048576 ] && mv -f "$LOG" "$LOG.old"
+log() { echo "$(date '+%F %T') $*" >> "$LOG"; }
+log "---- Paladin session starting on $DISPLAY"
+# the setup screen's blue until the desktop draws (never a black screen in between)
+command -v xsetroot >/dev/null && xsetroot -solid '#1e2e40' 2>/dev/null
+
+# ---------------------------------------------------------------- environment
+# Language & Region (Settings, or the first-start setup): this account's language and formats.
+# LANG/LANGUAGE give the language of menus and apps; LC_* give dates, numbers, money and paper size.
+LOCALE_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/palos/locale.conf"
+if [ -r "$LOCALE_CONF" ]; then
+  while IFS='=' read -r k v; do
+    case "$k" in
+      LANG|LANGUAGE|LC_TIME|LC_NUMERIC|LC_MONETARY|LC_PAPER|LC_MEASUREMENT|LC_ADDRESS|LC_TELEPHONE|LC_NAME|PALOS_LANG|PALOS_REGION)
+        v=$(printf '%s' "$v" | tr -d '"'"'"); [ -n "$v" ] && export "$k=$v" ;;
+      KEYBOARD) PALOS_KEYBOARD=$(printf '%s' "$v" | tr -d '"'"'") ;;
+    esac
+  done < "$LOCALE_CONF"
+  unset LC_ALL
+  # older names first, then any X keyboard as "layout" or "layout:variant" (two layouts: Alt+Shift switches)
+  case "${PALOS_KEYBOARD:-}" in us|ca-eng) PALOS_KEYBOARD=palos ;; us-plain) PALOS_KEYBOARD=us ;; ca) PALOS_KEYBOARD=ca:fr ;; ca-multix) PALOS_KEYBOARD=ca:multix ;; ch-fr) PALOS_KEYBOARD=ch:fr ;; esac
+  if [ -n "${PALOS_KEYBOARD:-}" ]; then
+    KL=${PALOS_KEYBOARD%%:*}; KV=; case "$PALOS_KEYBOARD" in *:*) KV=${PALOS_KEYBOARD#*:} ;; esac
+    case "$KL" in *,*) setxkbmap -layout "$KL" -option grp:alt_shift_toggle ;; *) setxkbmap -layout "$KL" ${KV:+-variant "$KV"} ;; esac 2>/dev/null
+  fi
+  log "language: LANG=$LANG LC_TIME=${LC_TIME:-} LANGUAGE=${LANGUAGE:-}"
+fi
+# No keyboard chosen yet: plain US English gets the palOS accents on Right Alt (Option).
+if [ -z "${PALOS_KEYBOARD:-}" ]; then
+  case "$(setxkbmap -query 2>/dev/null | sed -n 's/^layout: *//p')" in us|palos|'') setxkbmap -layout palos 2>/dev/null ;; esac
+fi
+export XDG_CURRENT_DESKTOP=Paladin
+export XDG_SESSION_DESKTOP=paladin
+export DESKTOP_SESSION=paladin
+export XDG_MENU_PREFIX="${XDG_MENU_PREFIX:-gnome-}"
+export XCURSOR_THEME="${XCURSOR_THEME:-Paladin}"
+export XCURSOR_SIZE="${XCURSOR_SIZE:-24}"
+# Displays and Scale, as kept in Settings → Displays (~/.config/palos/display.json): put back before anything opens
+DISPCONF="${XDG_CONFIG_HOME:-$HOME/.config}/palos/display.json"
+if [ -f "$DISPCONF" ]; then
+  eval "$(python3 -I - "$DISPCONF" <<'PY'
+import json, shlex, subprocess, sys
+try:
+    c = json.load(open(sys.argv[1]))
+except Exception:
+    sys.exit()
+lay = c.get('layout') or []
+if lay:
+    have = subprocess.run(['xrandr', '--query'], capture_output=True, text=True).stdout
+    if all((o.get('name', '') + ' connected') in have for o in lay):   # same screens plugged in as when it was kept
+        a = []
+        for o in lay:
+            a += ['--output', o['name']]
+            if o.get('enabled') is False:
+                a += ['--off']; continue
+            a += ['--mode', o['mode']] if o.get('mode') else ['--auto']
+            if o.get('rate'): a += ['--rate', str(o['rate'])]
+            a += ['--rotate', o.get('rotation') or 'normal', '--pos', f"{o.get('x', 0)}x{o.get('y', 0)}"]
+            if o.get('primary'): a += ['--primary']
+        subprocess.run(['xrandr'] + a, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=20)
+s = float(c.get('scale') or 1)
+if s > 1:
+    subprocess.run(['xrdb', '-merge'], input=f'Xft.dpi: {round(96 * s)}\nXcursor.size: {round(24 * s)}\n', text=True)
+    print(f'export PALOS_SCALE={s} XCURSOR_SIZE={round(24 * s)}')
+PY
+)"
+  log "displays put back (scale ${PALOS_SCALE:-1})"
+fi
+case ":${GTK_MODULES:-}:" in
+  *:appmenu-gtk-module:*) ;;
+  *) export GTK_MODULES="${GTK_MODULES:+$GTK_MODULES:}appmenu-gtk-module" ;;
+esac
+# Save dialogs open small (name + "Where:"), as in palOS (paladin-save-sheets)
+if [ -e /usr/lib/x86_64-linux-gnu/gtk-3.0/modules/libpaladin-save-sheet.so ]; then
+  case ":${GTK_MODULES}:" in *:paladin-save-sheet:*) ;; *) export GTK_MODULES="$GTK_MODULES:paladin-save-sheet" ;; esac
+fi
+# GTK 4 programs ask the desktop portal for Open and Save, so they get the same dialogs
+export GDK_DEBUG="${GDK_DEBUG:+$GDK_DEBUG,}portals"
+export UBUNTU_MENUPROXY=1
+# Snap apps: their launchers and commands, from the start (Snap may be set up in the middle of a session).
+case ":${XDG_DATA_DIRS:=/usr/local/share:/usr/share}:" in
+  *:/var/lib/snapd/desktop:*) ;;
+  *) export XDG_DATA_DIRS="$XDG_DATA_DIRS:/var/lib/snapd/desktop" ;;
+esac
+case ":$PATH:" in *:/snap/bin:*) ;; *) export PATH="$PATH:/snap/bin" ;; esac
+# GTK apps on X11 (no GNOME Shell): keep client-side decorations for apps that need them.
+export GDK_BACKEND=x11
+
+# First-login defaults (title bar buttons on the left, Paladin cursor ...).
+/usr/bin/python3 "$HELPER" setup >> "$LOG" 2>&1 || log "setup step failed (continuing)"
+CURSOR=$(gsettings get org.gnome.desktop.interface cursor-theme 2>/dev/null | tr -d "'")
+[ -n "$CURSOR" ] && export XCURSOR_THEME="$CURSOR"
+SIZE=$(gsettings get org.gnome.desktop.interface cursor-size 2>/dev/null)
+[ -n "$SIZE" ] && export XCURSOR_SIZE="$SIZE"
+
+# Num Lock the way the user left it in Settings (on by default); snap apps get the cursor theme.
+/usr/bin/python3 "$HELPER" numlock >> "$LOG" 2>&1 &
+/usr/bin/python3 "$HELPER" snap-cursors >> "$LOG" 2>&1 &
+
+# Let D-Bus/systemd-started programs see the same environment.
+dbus-update-activation-environment --systemd DISPLAY XAUTHORITY XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP \
+  DESKTOP_SESSION GTK_MODULES GDK_DEBUG UBUNTU_MENUPROXY XCURSOR_THEME XCURSOR_SIZE PALOS_SCALE XDG_DATA_DIRS PATH >> "$LOG" 2>&1 || true
+# the account's language too, for apps started by D-Bus (only the variables that are set)
+LVARS=""; for v in LANG LANGUAGE LC_TIME LC_NUMERIC LC_MONETARY LC_PAPER LC_MEASUREMENT; do eval "[ -n \"\${$v:-}\" ]" && LVARS="$LVARS $v"; done
+[ -n "$LVARS" ] && dbus-update-activation-environment --systemd $LVARS >> "$LOG" 2>&1 || true
+
+# ---------------------------------------------------------------- helpers GNOME used to provide
+# Font, theme, cursor and scaling settings for every app (XSETTINGS), kept in sync with gsettings.
+/usr/bin/python3 "$HELPER" xsettings >> "$LOG" 2>&1 &
+command -v xsetroot >/dev/null && xsetroot -cursor_name left_ptr
+# the mouse pointer starts in the top-left corner (just under the menu bar), never mid-screen: right away, and again
+# whenever setting up the screens put it back in the middle (only while it's still there: a mouse the person is
+# already moving is left alone)
+if command -v xdotool >/dev/null; then
+  xdotool mousemove 18 40 2>/dev/null
+  (
+    for t in 1 1 1 2 3; do
+      sleep "$t"
+      eval "$(xdotool getdisplaygeometry --shell 2>/dev/null)"; eval "$(xdotool getmouselocation --shell 2>/dev/null)"
+      [ -n "$WIDTH" ] && [ -n "$X" ] || continue
+      dx=$((X - WIDTH / 2)); dy=$((Y - HEIGHT / 2))
+      if [ "${dx#-}" -le 2 ] && [ "${dy#-}" -le 2 ]; then xdotool mousemove 18 40; fi
+    done
+  ) &
+fi
+
+# Saved passwords (the login screen already unlocked the keyring).
+if command -v gnome-keyring-daemon >/dev/null; then
+  eval "$(gnome-keyring-daemon --start --components=secrets,pkcs11 2>>"$LOG")"
+  export GNOME_KEYRING_CONTROL
+fi
+[ -S "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/gcr/ssh" ] && export SSH_AUTH_SOCK="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/gcr/ssh"
+dbus-update-activation-environment --systemd SSH_AUTH_SOCK GNOME_KEYRING_CONTROL >> "$LOG" 2>&1 || true
+
+# Password prompts for administrator tasks.
+for agent in /usr/lib/policykit-1-gnome/polkit-gnome-authentication-agent-1 \
+             /usr/libexec/polkit-gnome-authentication-agent-1 \
+             /usr/lib/x86_64-linux-gnu/polkit-mate/polkit-mate-authentication-agent-1 \
+             /usr/bin/lxpolkit; do
+  if [ -x "$agent" ]; then "$agent" >> "$LOG" 2>&1 & break; fi
+done
+
+# Notifications.
+if command -v dunst >/dev/null; then
+  DUNSTRC=/etc/paladin-session/dunstrc
+  [ -f "$HOME/.config/paladin-session/dunstrc" ] && DUNSTRC="$HOME/.config/paladin-session/dunstrc"
+  dunst -config "$DUNSTRC" >> "$LOG" 2>&1 &
+fi
+
+# Volume, brightness and media keys.
+if command -v xbindkeys >/dev/null; then
+  xbindkeys -n -f /etc/paladin-session/xbindkeysrc >> "$LOG" 2>&1 &
+  [ -f "$HOME/.xbindkeysrc" ] && xbindkeys >> "$LOG" 2>&1
+fi
+
+# Settings → Power: screen off, lock, sleep and log out when idle (paladin-idle follows the settings as they
+# change). Not in the live session from the palOS USB stick: installing takes a while, and the screen must stay
+# on (there's no password to unlock it with).
+if grep -qw 'boot=casper' /proc/cmdline 2>/dev/null; then
+  xset s off -dpms 2>/dev/null
+else
+  /usr/lib/paladin-session/paladin-idle >> "$LOG" 2>&1 &
+  # locks when the screen turns off and before sleep, only if "Lock the Screen" is on
+  command -v xss-lock >/dev/null && xss-lock -l -- /usr/lib/paladin-session/paladin-idle lock-if-enabled >> "$LOG" 2>&1 &
+fi
+
+# ---------------------------------------------------------------- 1. window manager
+# paladin-wm: palOS's own (X11 and OpenGL: steel title bars, sheets, snapping, Magic Lamp). If it can't start
+# three times in a row, a plain emergency window manager (Openbox) keeps the session usable, and it's logged.
+WM_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/paladin-session"
+(
+  pfails=0; fails=0
+  while :; do
+    started=$(date +%s); which=
+    if [ "$pfails" -lt 3 ] && [ -x /usr/bin/paladin-wm ]; then
+      which=paladin; log "starting paladin-wm"
+      ( /usr/bin/python3 /usr/lib/paladin-session/paladin-repaint --wait 20 >> "$LOG" 2>&1; sleep 4; /usr/bin/python3 /usr/lib/paladin-session/paladin-repaint >> "$LOG" 2>&1 ) &
+      /usr/bin/paladin-wm >> "$LOG" 2>&1
+    elif command -v openbox >/dev/null; then
+      which=emergency
+      log "paladin-wm keeps failing; using the emergency window manager (Openbox)"
+      openbox --replace >> "$LOG" 2>&1
+    else
+      sleep 5
+    fi
+    if [ $(( $(date +%s) - started )) -lt 20 ]; then
+      if [ "$which" = paladin ]; then pfails=$((pfails + 1)); else fails=$((fails + 1)); fi
+    else
+      pfails=0; fails=0
+    fi
+    xprop -root -len 0 >/dev/null 2>&1 || exit 0     # X is gone: session over
+    sleep 1
+  done
+) &
+
+/usr/bin/python3 "$HELPER" wait-wm 20 >> "$LOG" 2>&1 || log "window manager did not report in time (continuing)"
+# The desktop, menu bar and Dock use see-through windows: start them only once the window manager's compositing runs
+# (made before it, they could come up black or with garbled colours until clicked).
+/usr/bin/python3 -c 'import sys,time
+from Xlib import display, X
+d=display.Display(); a=d.intern_atom("_NET_WM_CM_S0"); end=time.time()+10
+while time.time()<end and d.get_selection_owner(a) in (0, X.NONE): time.sleep(0.2)' >> "$LOG" 2>&1 || true
+# Dialogs from other apps become sheets on the window they belong to (palOS apps draw their own).
+# paladin-wm makes sheets itself: this runs only under the emergency window manager.
+wm_name() { w=$(xprop -root _NET_SUPPORTING_WM_CHECK 2>/dev/null | awk '{print $NF}'); [ -n "$w" ] && xprop -id "$w" _NET_WM_NAME 2>/dev/null | sed -n 's/.*= "\(.*\)"/\1/p'; }
+( while xprop -root -len 0 >/dev/null 2>&1; do
+    case "$(wm_name)" in Paladin*) sleep 5; continue ;; esac
+    /usr/bin/python3 /usr/lib/paladin-session/paladin-sheets >> "$LOG" 2>&1; sleep 2
+  done ) &
+# The window manager resets the keyboard as it starts: set Num Lock again once it's up.
+( sleep 2; /usr/bin/python3 "$HELPER" numlock >> "$LOG" 2>&1 ) &
+# The trackpad: this person's settings (Settings › Trackpad) and the gestures (pinch, rotate, swipes).
+[ -x /usr/lib/paladin-gestures/paladin-trackpad ] && \
+  ( while xprop -root -len 0 >/dev/null 2>&1; do /usr/bin/python3 /usr/lib/paladin-gestures/paladin-trackpad >> "$LOG" 2>&1; sleep 2; done ) &
+
+# ---------------------------------------------------------------- 1b. the install USB: palOS Utilities only
+# Started from the palOS install USB, the computer shows palOS Utilities (language, region, internet, then
+# Install palOS, Migration Assistant, Disk Utility, Get Help Online) on a plain background. There is no
+# desktop to try: Utilities is the whole session, and comes back if it ever closes.
+if grep -qw 'boot=casper' /proc/cmdline 2>/dev/null && [ -x /usr/bin/palos-utilities ]; then
+  log "install USB: starting palOS Utilities"
+  n=0
+  while :; do
+    started=$(date +%s)
+    /usr/bin/palos-utilities >> "$LOG" 2>&1
+    # it closed (or crashed): open it again, but don't spin if it can't start at all
+    [ $(( $(date +%s) - started )) -lt 5 ] && n=$((n + 1)) || n=0
+    [ "$n" -ge 5 ] && { log "palOS Utilities can't start"; sleep 30; n=0; }
+    sleep 1
+  done
+fi
+
+# palOS .apps in ~/Applications (the ones in /Applications are registered by the system)
+# (no empty ~/Applications is made: apps go in /Applications; this only serves someone who keeps their own)
+# an empty one left by earlier builds goes (rmdir only removes an empty folder)
+rmdir "$HOME/Applications" 2>/dev/null
+[ -d "$HOME/Applications" ] && { /usr/lib/paladin-appd/paladin-appd --user >> "$LOG" 2>&1 || true; }
+
+# ---------------------------------------------------------------- 2. Seeker and Paladin Dock
+supervise() {
+  # supervise NAME COMMAND...: restart after a crash, give up after 5 crashes in a minute.
+  name=$1; shift
+  (
+    fails=0; window=$(date +%s)
+    while :; do
+      log "starting $name"
+      "$@" >> "$LOG" 2>&1
+      code=$?
+      xprop -root -len 0 >/dev/null 2>&1 || exit 0
+      [ "$code" -eq 0 ] && { log "$name exited normally"; exit 0; }
+      now=$(date +%s)
+      [ $((now - window)) -gt 60 ] && { fails=0; window=$now; }
+      fails=$((fails + 1))
+      log "$name stopped (exit $code); restarting"
+      [ "$fails" -ge 5 ] && { log "$name crashed 5 times in a minute; giving up"; exit 1; }
+      sleep 1
+    done
+  ) &
+}
+
+# Calendar keeps its standard icon (the live date icon didn't line up well). Remove the dated copies
+# earlier versions drew into this account, so the standard one shows again.
+rm -f "${XDG_DATA_HOME:-$HOME/.local/share}"/icons/hicolor/*/apps/paladin-calendar.png 2>/dev/null
+
+# Screen Reader (Settings → Accessibility, or Super+Alt+S): when it's on, every app starts with its
+# accessibility switched on (Chromium/Electron apps only build it when asked), and the reader starts.
+if [ "$(gsettings get org.gnome.desktop.a11y.applications screen-reader-enabled 2>/dev/null)" = "true" ]; then
+  export ACCESSIBILITY_ENABLED=1 GTK_MODULES="${GTK_MODULES:+$GTK_MODULES:}gail:atk-bridge"
+  dbus-update-activation-environment --systemd ACCESSIBILITY_ENABLED 2>/dev/null
+  log "starting the Screen Reader"; /usr/lib/palos-screen-reader/palos-screen-reader >> "$LOG" 2>&1 &
+fi
+if command -v paladin-seeker >/dev/null; then supervise Seeker paladin-seeker --session; fi
+# Where sound goes: headphones when they're plugged in, otherwise your chosen output, otherwise the best one with
+# something attached (never an empty jack). Re-decided whenever sound hardware changes.
+[ -x /usr/lib/paladin-session/palos-sound-router ] && supervise "sound router" /usr/lib/paladin-session/palos-sound-router
+# This account's volume: put back at log-in, and noted whenever it changes (it used to come back at 50%).
+[ -x /usr/lib/paladin-session/palos-volume-keeper ] && supervise "volume keeper" /usr/lib/paladin-session/palos-volume-keeper
+# An app that crashes takes only itself down: a notice says so, with Reopen.
+[ -x /usr/lib/paladin-session/palos-crashwatch ] && supervise "crash watch" /usr/lib/paladin-session/palos-crashwatch
+# paladin-dock has its own crash-restart loop.
+if command -v paladin-dock >/dev/null; then log "starting Paladin Dock"; paladin-dock >> "$LOG" 2>&1 & fi
+
+# Tray icons: programs started at log-in (Steam, Discord ...) only use the menu bar's tray if it is already
+# there when they start, so wait for it (up to 20 seconds) before starting them.
+for _ in $(seq 1 80); do
+  dbus-send --session --print-reply --dest=org.freedesktop.DBus / org.freedesktop.DBus.NameHasOwner string:org.kde.StatusNotifierWatcher 2>/dev/null | grep -q 'boolean true' && break
+  sleep 0.25
+done
+# ... and old-style (XEmbed) tray icons are shown there too
+supervise "Tray" /usr/bin/python3 /usr/lib/paladin-session/xembed-tray
+
+# ---------------------------------------------------------------- 3. everything else in autostart
+/usr/bin/python3 "$HELPER" autostart >> "$LOG" 2>&1
+
+# ---------------------------------------------------------------- stay alive until logout
+while xprop -root -len 0 >/dev/null 2>&1; do sleep 5; done
+log "---- Paladin session ended"

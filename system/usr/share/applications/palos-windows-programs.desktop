@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Windows Programs
+Name[fr]=Programmes Windows
+Name[fr_CA]=Programmes Windows
+Comment=See and remove the Windows apps you have installed
+Comment[fr]=Voir et retirer les apps Windows que vous avez installées
+Comment[fr_CA]=Voir et retirer les apps Windows que vous avez installées
+Exec=palos-windows-run --uninstaller
+Icon=palos-windows
+Terminal=false
+Categories=System;
+X-Palos-Folder=Utilities/WINE

@@ -1,0 +1,26 @@
+Package: palos-windows
+Status: install ok installed
+Priority: optional
+Section: otherosfs
+Maintainer: palOS <joe.lucas0413@gmail.com>
+Architecture: amd64
+Version: 27.1.0
+Replaces: wine, wine64
+Provides: wine
+Depends: libc6 (>= 2.39), libfreetype6, libfontconfig1, libgnutls30t64 | libgnutls30, libvulkan1, mesa-vulkan-drivers, vulkan-tools, libpulse0, libasound2t64 | libasound2, libgstreamer1.0-0, gstreamer1.0-plugins-base, gstreamer1.0-plugins-good, libsdl2-2.0-0, libx11-6, libxext6, libxrender1, libxrandr2, libxi6, libxcursor1, libxcomposite1, libxinerama1, libxfixes3, libxkbcommon0, libgl1, libegl1, libcups2t64 | libcups2, libudev1, libusb-1.0-0, libkrb5-3, libgssapi-krb5-2, libpcap0.8t64 | libpcap0.8, libv4l-0t64 | libv4l-0, libgphoto2-6t64 | libgphoto2-6, libodbc2, ocl-icd-libopencl1, libdbus-1-3, fonts-liberation2, fonts-crosextra-carlito, fonts-crosextra-caladea, fonts-dejavu-core, cabextract, icoutils, inotify-tools, libnotify-bin, xdg-user-dirs, x11-xserver-utils, curl, util-linux, python3
+Recommends: winetricks, gstreamer1.0-plugins-bad, gstreamer1.0-plugins-ugly, gstreamer1.0-libav
+Conflicts: wine, wine64, wine32, wine-stable, wine-devel, wine-staging
+Description: Windows programs on palOS, ready out of the box
+ A ready-made Windows 11 environment: Wine 11 (with the Staging compatibility
+ patches), .NET Framework programs (Wine Mono), the web engine Windows programs
+ use for their own screens (Wine Gecko), and DirectX 8-12 through Vulkan (DXVK and
+ vkd3d-proton) on graphics cards that have Vulkan. Nothing is downloaded the first
+ time; each account gets its own copy in a few seconds.
+ .
+ Double-clicking an installer (.exe or .msi) runs it like on Windows; the installed
+ program appears in Applications like any other app, and Utilities > Windows
+ Programs removes it. Sound, graphics, the network, printers and the Documents,
+ Desktop, Downloads, Music, Pictures and Videos folders are shared with palOS.
+ .
+ Not every Windows program runs under Wine: games with anti-cheat, software that
+ installs Windows drivers and some copy-protected programs don't.

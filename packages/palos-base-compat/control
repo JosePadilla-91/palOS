@@ -1,0 +1,13 @@
+Package: palos-base-compat
+Status: install ok installed
+Priority: optional
+Section: misc
+Maintainer: Joe Lucas
+Architecture: all
+Version: 27.30
+Replaces: fonts-ubuntu, ubuntu-mono, humanity-icon-theme
+Provides: fonts-ubuntu (= 0.869+git20240321-0ubuntu1), ubuntu-mono (= 24.04-0ubuntu1), humanity-icon-theme (= 0.6.16)
+Conflicts: fonts-ubuntu, ubuntu-mono, humanity-icon-theme
+Description: palOS: stands in for the base system's own font and icon themes
+ palOS draws with its own fonts and icons; this package takes the place of the base system's, which
+ other base packages still name, so they can be removed without breaking updates.

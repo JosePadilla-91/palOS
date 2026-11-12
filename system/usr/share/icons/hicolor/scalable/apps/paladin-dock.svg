@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3b6fb0"/><stop offset="1" stop-color="#1c3558"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".85"/>
+      <stop offset=".15" stop-color="#e3e8ef" stop-opacity=".6"/>
+      <stop offset="1" stop-color="#8d939c" stop-opacity=".85"/>
+    </linearGradient>
+    <linearGradient id="t1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd36b"/><stop offset="1" stop-color="#e58a1f"/></linearGradient>
+    <linearGradient id="t2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8fe08a"/><stop offset="1" stop-color="#2f9a3a"/></linearGradient>
+    <linearGradient id="t3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9fd0ff"/><stop offset="1" stop-color="#2a74d2"/></linearGradient>
+  </defs>
+  <rect x="4" y="4" width="120" height="120" rx="26" fill="url(#bg)"/>
+  <path d="M30 78 H98 L114 96 H14 Z" fill="url(#glass)"/>
+  <rect x="14" y="96" width="100" height="5" rx="1.5" fill="#c9ced4"/>
+  <rect x="24" y="52" width="24" height="28" rx="6" fill="url(#t1)"/>
+  <rect x="52" y="40" width="26" height="40" rx="6" fill="url(#t2)"/>
+  <rect x="82" y="52" width="24" height="28" rx="6" fill="url(#t3)"/>
+  <circle cx="65" cy="89" r="2.5" fill="#dff1ff"/>
+</svg>

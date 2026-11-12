@@ -1,0 +1,9 @@
+# BrushBoard Python helper requirements (installed into ~/.local/share/brushboard/venv)
+numpy>=1.26
+Pillow>=10.0
+opencv-python-headless>=4.9
+psd-tools>=1.9.30
+rawpy>=0.19
+tifffile>=2024.1.30
+OpenEXR>=3.2
+onnxruntime>=1.17       # Subject Snap (local people segmentation)

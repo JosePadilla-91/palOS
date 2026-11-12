@@ -1,0 +1,11 @@
+{
+ "name": "Chancery Press",
+ "id": "chancery-press",
+ "command": "chancery-press",
+ "icon": "chancery-press",
+ "version": "1.0",
+ "folder": "",
+ "kind": "shared",
+ "runtime": "kibble",
+ "fallback": "electron-45"
+}

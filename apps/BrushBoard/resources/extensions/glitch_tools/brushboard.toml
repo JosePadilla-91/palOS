@@ -1,0 +1,8 @@
+id = "glitch_tools"
+name = "Glitch Tools"
+version = "1.0.0"
+author = "BrushBoard Project"
+description = "Canvas tools written in Python: a pixel sorter and a protractor that shows angles."
+entry = "main.py"
+api = 1
+requirements = []

@@ -1,0 +1,11 @@
+{
+ "name": "Printers",
+ "id": "palos-printers",
+ "command": "palos-printers",
+ "icon": "palos-printers",
+ "version": "1.0.0",
+ "folder": "Utilities",
+ "kind": "shared",
+ "runtime": "kibble",
+ "fallback": "electron-44"
+}

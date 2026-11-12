@@ -1,0 +1,8 @@
+id = "cv_studio"
+name = "CV Studio"
+version = "1.0.0"
+author = "BrushBoard Project"
+description = "OpenCV-powered filters: oil paint, edge-preserving smoothing, denoise, pencil sketch, detail enhance and Content-Aware Fill."
+entry = "main.py"
+api = 1
+requirements = ["opencv-python-headless>=4.9"]

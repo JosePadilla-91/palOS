@@ -1,0 +1,80 @@
+#!/bin/sh
+# Starts palOS setup on the current screen and keeps trying until it works:
+#   1. the full setup screen (welcome film, Wi-Fi, account, light or dark)
+#   2. the same, drawn without the graphics card (a graphics driver that can't cope can't stop setup)
+#   3. Basic Setup: a plain screen that only creates the first account (needs nothing but GTK)
+# Used by the first-boot session, by the login screen when setup didn't start by itself, and by the
+# login screen's launcher if the login screen itself can't start. Everything it does goes to the system
+# log (journalctl -t palos-setup) as well as ~/.cache/palos-setup.log, so a failure always leaves a record.
+FLAG=/var/lib/palos/firstboot
+RT=/usr/lib/kibble/kibble     # Kibble: palOS's app runtime (its media engine plays the welcome film)
+APP=/opt/palos-firstboot/app
+[ -e "$FLAG" ] || exit 0
+export XCURSOR_THEME=Paladin XCURSOR_SIZE=24 GDK_BACKEND=x11 NO_AT_BRIDGE=1
+# the language and keyboard chosen in the installer (or on setup's own language page, for a new owner)
+read_language() {
+  [ -r /var/lib/palos-firstboot/locale.conf ] || return 0
+  KB=""
+  while IFS='=' read -r k v; do
+    case "$k" in LANG|LANGUAGE|LC_TIME|LC_NUMERIC|LC_MONETARY|LC_PAPER|LC_MEASUREMENT|PALOS_LANG|PALOS_REGION) export "$k=$v" ;; KEYBOARD) KB="$v" ;; esac
+  done < /var/lib/palos-firstboot/locale.conf
+  # older names first, then any X keyboard as "layout" or "layout:variant" (two layouts: Alt+Shift switches)
+  case "${KB:-}" in us|ca-eng|'') KB=palos ;; us-plain) KB=us ;; ca) KB=ca:fr ;; ca-multix) KB=ca:multix ;; ch-fr) KB=ch:fr ;; esac
+  L=${KB%%:*}; V=; case "$KB" in *:*) V=${KB#*:} ;; esac
+  case "$L" in *,*) setxkbmap -layout "$L" -option grp:alt_shift_toggle ;; *) setxkbmap -layout "$L" ${V:+-variant "$V"} ;; esac 2>/dev/null
+}
+read_language
+mkdir -p "$HOME/.cache" 2>/dev/null
+LOG="$HOME/.cache/palos-setup.log"
+note() {
+  echo "$(date '+%F %T') $*" >>"$LOG" 2>/dev/null
+  logger -t palos-setup -- "$*" 2>/dev/null || true
+}
+note "starting setup as $(id -un) on ${DISPLAY:-no display} (from ${PALOS_SETUP_FROM:-session})"
+
+# big screens (4K laptops and monitors): make everything larger so it's readable
+SCALE=1
+W=$(xdpyinfo 2>/dev/null | awk '/dimensions:/ {split($2, a, "x"); print a[1]; exit}')
+if [ -n "$W" ]; then
+  if [ "$W" -ge 3200 ]; then SCALE=2; elif [ "$W" -ge 2400 ]; then SCALE=1.5; fi
+fi
+
+SAFE=""
+[ -e /var/lib/palos/firstboot-safe ] && SAFE=1
+if [ -x "$RT" ] && [ -f "$APP/package.json" ]; then
+  attempt=1; swrestarts=0
+  while [ "$attempt" -le 3 ]; do
+    # a second try draws without the graphics card (a graphics driver that can't cope can't stop setup)
+    [ "$attempt" -ge 2 ] && SAFE=1
+    START=$(date +%s)
+    if [ -n "$SAFE" ]; then
+      PALOS_APP_DIR="$APP" PALOS_SCALE=$SCALE LIBGL_ALWAYS_SOFTWARE=1 "$RT" >>"$LOG" 2>&1
+    else
+      PALOS_APP_DIR="$APP" PALOS_SCALE=$SCALE "$RT" >>"$LOG" 2>&1
+    fi
+    CODE=$?
+    [ -e "$FLAG" ] || { note "setup finished"; exit 0; }
+    [ "$CODE" -eq 0 ] && { note "setup screen closed"; exit 0; }
+    # 75: the welcome film's video decoding failed on this computer; start again with the processor doing
+    # all video decoding (the film resumes where it was). Not a failed attempt.
+    # 76: the new owner chose a language on setup's first page: start again in that language
+    if [ "$CODE" -eq 76 ]; then
+      read_language
+      note "language chosen (${LANG:-}); restarting setup in it"
+      continue
+    fi
+    if [ "$CODE" -eq 75 ] && [ "$swrestarts" -lt 1 ]; then
+      swrestarts=1; export PALOS_FILM_SOFTWARE=1
+      note "the film's hardware video decoding failed; restarting setup in software video mode"
+      continue
+    fi
+    note "setup screen stopped (attempt $attempt, code $CODE, after $(( $(date +%s) - START ))s): $(tail -n 3 "$LOG" 2>/dev/null | tr '\n' ' ' | cut -c1-400)"
+    sleep 1
+    attempt=$((attempt + 1))
+  done
+else
+  note "the setup screen's runtime is missing ($RT)"
+fi
+[ -e "$FLAG" ] || exit 0
+note "starting Basic Setup"
+exec /usr/bin/python3 /usr/lib/palos-firstboot/basic-setup >>"$LOG" 2>&1

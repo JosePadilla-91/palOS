@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' seeker: file: data: blob:; media-src 'self' seeker: file: blob:; font-src 'self' seeker: file: data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' seeker: file:">
+<title>Seeker</title>
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="browser.css">
+<link rel="stylesheet" href="paladin.css">
+</head>
+<body>
+<div class="window rounded">
+  <div class="chrome">
+    <div class="titlebar"><div class="lights"></div><div class="title"><img id="ticon" alt=""><span id="ttext">Seeker</span></div>
+      <div id="tbtoggle" title="Show or Hide Path Bar"></div></div>
+    <div class="toolbar" id="toolbar">
+      <div class="seg" id="nav">
+        <button id="back" title="Back"><svg viewBox="0 0 14 14"><path d="M9.5 2L4 7l5.5 5z"/></svg></button>
+        <button id="fwd" title="Forward"><svg viewBox="0 0 14 14"><path d="M4.5 2L10 7l-5.5 5z"/></svg></button>
+      </div>
+      <div class="seg" id="views">
+        <button data-view="icon" title="Icon view"><svg viewBox="0 0 14 14"><rect x="1" y="1" width="5" height="5"/><rect x="8" y="1" width="5" height="5"/><rect x="1" y="8" width="5" height="5"/><rect x="8" y="8" width="5" height="5"/></svg></button>
+        <button data-view="list" title="List view"><svg viewBox="0 0 14 14"><rect x="1" y="2" width="12" height="2"/><rect x="1" y="6" width="12" height="2"/><rect x="1" y="10" width="12" height="2"/></svg></button>
+        <button data-view="column" title="Column view"><svg viewBox="0 0 14 14"><path d="M1 1h12v12H1zM2 2v10h3V2zm4 0v10h3V2zm4 0v10h2V2z"/></svg></button>
+        <button data-view="flow" title="Carousel"><svg viewBox="0 0 14 14"><path d="M1 3l3 1v6l-3 1zM13 3l-3 1v6l3 1zM5 2h4v10H5z"/></svg></button>
+      </div>
+      <div class="seg" id="ql"><button title="Quick Look"><svg viewBox="0 0 16 14"><path d="M8 3C4.5 3 2 7 2 7s2.5 4 6 4 6-4 6-4-2.5-4-6-4zm0 6.5A2.5 2.5 0 1 1 8 4.5a2.5 2.5 0 0 1 0 5z"/></svg></button></div>
+      <div class="seg" id="action"><button title="Action"><svg viewBox="0 0 22 14"><path d="M7 1.2l1 .2.3 1.4.9.4 1.2-.8.8.6.6.8-.8 1.2.4.9 1.4.3.2 1-.2 1-1.4.3-.4.9.8 1.2-.6.8-.8.6-1.2-.8-.9.4-.3 1.4-1 .2-1-.2-.3-1.4-.9-.4-1.2.8-.8-.6-.6-.8.8-1.2-.4-.9L.4 8l-.2-1 .2-1 1.4-.3.4-.9-.8-1.2.6-.8.8-.6 1.2.8.9-.4L5 1.4zM7 5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/><path d="M16 6h5l-2.5 3z"/></svg></button></div>
+      <div class="spacer"></div>
+      <div class="search"><input type="search" id="q" placeholder="" spellcheck="false"><span class="clear hidden" id="qclear">×</span></div>
+    </div>
+  </div>
+  <!-- where you are, across the top under the toolbar (the pill at the top right shows or hides it) -->
+  <div class="pathbar hidden" id="pathbar"></div>
+  <div class="main">
+    <div class="sidebar" id="sidebar"></div>
+    <div class="splitter" id="split"></div>
+    <div class="content" id="content">
+      <div class="banner hidden" id="banner"></div>
+      <div class="view" id="view" tabindex="0"></div>
+    </div>
+  </div>
+  <div class="statusbar" id="statusbar"><span id="status"></span><input type="range" id="zoom" min="16" max="128" step="4" title="Icon size"></div>
+</div>
+<div id="marquee"></div>
+<script src="common.js"></script>
+<script src="actions.js"></script>
+<script src="live.js"></script>
+<script src="browser.js"></script>
+</body>
+</html>

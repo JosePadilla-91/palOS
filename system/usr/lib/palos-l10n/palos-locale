@@ -1,0 +1,80 @@
+#!/usr/bin/python3 -I
+"""palos-locale: palOS's languages and regions (/usr/share/palos/languages.json).
+
+  palos-locale resolve LANG REGION      JSON: {locale, language, keyboard: [layout, variant], rtl}
+  palos-locale build LOCALE [ROOT]      makes the locale (e.g. fr_CA.UTF-8) if it isn't there yet (root)
+  palos-locale env [FILE]               shell lines exporting LANG, LANGUAGE, LC_* for the language chosen on the
+                                        install USB ("fr CA" in $XDG_RUNTIME_DIR/palos-live-lang)
+
+A language and a country make a locale: French in Canada is fr_CA, Spanish in Mexico es_MX. When glibc has
+no such pair, the language's own locale is used, with the country kept for dates and money where it can be."""
+import json
+import os
+import subprocess
+import sys
+
+DATA = '/usr/share/palos/languages.json'
+
+
+def supported(root='/'):
+    out = set()
+    try:
+        for line in open(os.path.join(root, 'usr/share/i18n/SUPPORTED')):
+            name = line.split()[0] if line.strip() else ''
+            if name.endswith('.UTF-8'):
+                out.add(name[:-6])
+    except OSError:
+        pass
+    return out
+
+
+def resolve(lang, region, root='/'):
+    langs = {l['id']: l for l in json.load(open(os.path.join(root, DATA.lstrip('/'))))['languages']}
+    l = langs.get(lang) or langs['en']
+    base = l['id'].split('-')[0]
+    sup = supported(root)
+    cand = f"{l['locale'].split('_')[0]}_{region}" if region else ''
+    loc = cand if cand in sup and not l['id'].startswith('zh') else l['locale']
+    if base == 'la':                 # Latin (la, la-ecc): no system locale of its own, so English formats
+        loc = f'en_{region}' if region and f'en_{region}' in sup else 'en_US'
+    kb = l['keyboards'].get(region) or l['keyboards'].get('*') or l['keyboard']
+    layout, _, variant = kb.partition(':')
+    # LANGUAGE: the language itself first (so apps with its translation use it), then English
+    language = ':'.join(dict.fromkeys([loc, l['id'].replace('-', '_'), base, 'en']))
+    return {'id': l['id'], 'locale': loc + '.UTF-8', 'language': language, 'keyboard': [layout, variant], 'rtl': l['rtl'], 'region': region or l['regions'][0]}
+
+
+def build(locale, root='/'):
+    name = locale.replace('.UTF-8', '').replace('.utf8', '')
+    have = subprocess.run(['chroot', root, 'locale', '-a'] if root != '/' else ['locale', '-a'], capture_output=True, text=True).stdout.split()
+    if name + '.utf8' in have:
+        return 0
+    cmd = ['localedef', '-i', name, '-f', 'UTF-8', name + '.UTF-8']
+    return subprocess.run(['chroot', root] + cmd if root != '/' else cmd).returncode
+
+
+def main(a):
+    if len(a) >= 2 and a[0] == 'resolve':
+        print(json.dumps(resolve(a[1], a[2] if len(a) > 2 else '')))
+        return 0
+    if a and a[0] == 'env':
+        f = a[1] if len(a) > 1 else os.path.join(os.environ.get('XDG_RUNTIME_DIR', '/tmp'), 'palos-live-lang')
+        try:
+            words = open(f).read().split()
+        except OSError:
+            return 1
+        legacy = {'en-CA': ['en', 'CA'], 'fr-CA': ['fr', 'CA']}
+        words = legacy.get(words[0], words) if words else ['en', 'CA']
+        r = resolve(words[0], words[1] if len(words) > 1 else '')
+        loc = r['locale']
+        print(f"export LANG={loc} LANGUAGE={r['language']} LC_TIME={loc} LC_NUMERIC={loc} LC_MONETARY={loc} LC_PAPER={loc} LC_MEASUREMENT={loc} PALOS_LANG={r['id']} PALOS_REGION={r['region']}")
+        print(f"PALOS_XKB_LAYOUT={r['keyboard'][0]} PALOS_XKB_VARIANT={r['keyboard'][1]}")
+        return 0
+    if len(a) >= 2 and a[0] == 'build':
+        return build(a[1], a[2] if len(a) > 2 else '/')
+    print(__doc__)
+    return 2
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))

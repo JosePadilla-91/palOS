@@ -1,0 +1,11 @@
+{
+ "name": "Activity Monitor",
+ "id": "palos-monitor",
+ "command": "system-monitor",
+ "icon": "palos-monitor",
+ "version": "1.0.0",
+ "folder": "Utilities",
+ "kind": "shared",
+ "runtime": "kibble",
+ "fallback": "electron-44"
+}

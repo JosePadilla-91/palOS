@@ -1,0 +1,17 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Activity Monitor</title>
+<link rel="stylesheet" href="base.css"><link rel="stylesheet" href="monitor.css"></head>
+<body>
+<div id="tabs"></div>
+<main>
+  <section id="v-procs" class="view">
+    <div class="bar"><input id="filter" placeholder="Filter" spellcheck="false"><span class="grow"></span><span id="pcount" class="dim"></span><button id="quit">Quit</button><button id="kill">Force Quit</button></div>
+    <div class="tablewrap"><table id="ptable"><thead><tr></tr></thead><tbody></tbody></table></div>
+  </section>
+  <section id="v-cpu" class="view hidden"><h2 id="cpumodel"></h2><canvas id="cpuchart" height="170"></canvas><div id="cores"></div><div id="cpustats" class="stats"></div></section>
+  <section id="v-mem" class="view hidden"><canvas id="memchart" height="170"></canvas><div id="memstats" class="stats"></div><div id="membar" class="stack"></div></section>
+  <section id="v-disk" class="view hidden"><canvas id="diskchart" height="140"></canvas><div id="diskstats" class="stats"></div><div id="fslist"></div></section>
+  <section id="v-net" class="view hidden"><canvas id="netchart" height="170"></canvas><div id="netstats" class="stats"></div><div id="iflist"></div></section>
+  <section id="v-gpu" class="view hidden"><div id="gpulist"></div></section>
+  <section id="v-sens" class="view hidden"><div id="senslist"></div></section>
+</main>
+<script src="monitor.js"></script></body></html>

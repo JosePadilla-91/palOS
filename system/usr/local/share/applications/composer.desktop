@@ -1,0 +1,17 @@
+[Desktop Entry]
+TryExec=/Applications/Composer.app
+X-Palos-App=/Applications/Composer.app
+X-AppImage-Name=Composer
+Name=Composer
+Exec="/Applications/Composer.app"  %U
+Terminal=false
+Type=Application
+Icon=composer
+StartupWMClass=Composer
+Comment=Composer: compose, record and produce music, with sheet music editing, SoundFont instruments, a session band, multitrack recording and export.
+Comment[fr]=Composer : composez, enregistrez et produisez de la musique, avec édition de partitions, instruments SoundFont, groupe de session, enregistrement multipiste et exportation.
+Comment[fr_CA]=Composer : composez, enregistrez et produisez de la musique, avec édition de partitions, instruments SoundFont, groupe de session, enregistrement multipiste et exportation.
+Categories=AudioVideo;
+Keywords=music;daw;midi;score;notation;garageband;
+MimeType=application/x-composer-project;
+X-AppImage-Version=1.0

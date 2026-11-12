@@ -1,0 +1,11 @@
+# AppArmor profile for Chancery Sheets (Electron). Ubuntu 24.04 blocks unprivileged user namespaces
+# for unconfined apps; this profile allows them so Chromium's sandbox works without SUID.
+abi <abi/4.0>,
+include <tunables/global>
+
+profile chancery-sheets "/opt/Chancery Sheets/chancery-sheets" flags=(unconfined) {
+  userns,
+
+  # Site-specific additions and overrides.
+  include if exists <local/chancery-sheets>
+}

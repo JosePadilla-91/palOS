@@ -1,0 +1,144 @@
+#!/usr/bin/python3
+"""Thumbnails for programs, so Seeker (and every app that uses the thumbnail cache) shows what they are.
+
+    palos-program-thumbnailer SIZE INPUT OUTPUT
+
+  Windows .exe / .msi   the program's own icon, with a small Windows badge in the corner
+  .deb packages         the app's own icon, on palOS's brown package box
+
+With no icon inside, it gives up (exit 1) and the file keeps its kind's icon: the blue box for Windows
+programs, the brown box for .deb packages."""
+import glob
+import io
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tarfile
+import tempfile
+
+from PIL import Image, ImageDraw, ImageFilter
+
+BOX = '/usr/share/icons/palOS/512x512/mimetypes/application-x-deb.png'
+
+
+def windows_icon(path, tmp):
+    if path.lower().endswith('.msi'):
+        return None                       # an MSI's icon lives in its tables: the blue box it is
+    subprocess.run(['wrestool', '-x', '-t', '14', '-o', tmp, path], capture_output=True, timeout=20)
+    icos = sorted(glob.glob(os.path.join(tmp, '*.ico')), key=os.path.getsize, reverse=True)
+    if not icos:
+        return None
+    subprocess.run(['icotool', '-x', '-o', tmp, icos[0]], capture_output=True, timeout=20)
+    pngs = glob.glob(os.path.join(tmp, '*.png'))
+
+    def size(p):
+        m = re.search(r'_(\d+)x(\d+)x(\d+)\.png$', p)
+        return (int(m.group(1)), int(m.group(3))) if m else (0, 0)
+    if not pngs:
+        return None
+    return Image.open(max(pngs, key=size)).convert('RGBA')
+
+
+def badge(im, S):
+    """the icon at S px, a white plate with four blue panes in the lower right"""
+    im = fit(im, S)
+    B = round(S * 0.33); x0, y0 = S - B - round(S * 0.01), S - B - round(S * 0.01)
+    shadow = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+    ImageDraw.Draw(shadow).rounded_rectangle((x0 + 2, y0 + 3, x0 + B + 2, y0 + B + 3), radius=round(B * 0.24), fill=(0, 0, 0, 110))
+    im = Image.alpha_composite(im, shadow.filter(ImageFilter.GaussianBlur(max(1, S / 64))))
+    d = ImageDraw.Draw(im)
+    d.rounded_rectangle((x0, y0, x0 + B, y0 + B), radius=round(B * 0.24), fill=(250, 251, 252, 255), outline=(176, 186, 198, 255), width=max(1, S // 128))
+    pad, gap = B * 0.21, max(1, B * 0.06)
+    pane = (B - 2 * pad - gap) / 2
+    for i in range(2):
+        for j in range(2):
+            px, py = x0 + pad + i * (pane + gap), y0 + pad + j * (pane + gap)
+            d.rectangle((round(px), round(py), round(px + pane), round(py + pane)), fill=(0, 120, 212, 255))
+    return im
+
+
+def fit(im, S):
+    w, h = im.size
+    k = S / max(w, h)
+    im = im.resize((max(1, round(w * k)), max(1, round(h * k))), Image.LANCZOS if min(w, h) >= 48 else Image.NEAREST)
+    c = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+    c.alpha_composite(im, ((S - im.width) // 2, (S - im.height) // 2))
+    return c
+
+
+def deb_icon(path):
+    """the biggest app icon the package installs (hicolor apps, pixmaps)"""
+    try:
+        p = subprocess.run(['dpkg-deb', '--fsys-tarfile', path], capture_output=True, timeout=60)
+        tf = tarfile.open(fileobj=io.BytesIO(p.stdout))
+    except (OSError, tarfile.TarError, subprocess.SubprocessError):
+        return None
+    best, best_px = None, 0
+    for m in tf.getmembers():
+        if not m.isfile() or not m.name.endswith('.png'):
+            continue
+        n = m.name
+        mm = re.search(r'/icons/hicolor/(\d+)x\d+/apps/', n)
+        px = int(mm.group(1)) if mm else (64 if '/pixmaps/' in n else 0)
+        if px > best_px and px <= 1024:
+            best, best_px = m, px
+    if not best:
+        return None
+    try:
+        return Image.open(io.BytesIO(tf.extractfile(best).read())).convert('RGBA')
+    except OSError:
+        return None
+
+
+def on_box(icon, S):
+    """the app's icon on a sticker at the front of the brown box"""
+    box = Image.open(BOX).convert('RGBA').resize((S, S), Image.LANCZOS)
+    k = round(S * 0.36)
+    ic = fit(icon, k)
+    cx, cy = S // 2, round(S * 0.64)
+    plate = round(S * 0.44)
+    x0, y0 = cx - plate // 2, cy - plate // 2
+    sh = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+    ImageDraw.Draw(sh).rounded_rectangle((x0 + 2, y0 + 4, x0 + plate + 2, y0 + plate + 4), radius=round(plate * 0.2), fill=(0, 0, 0, 120))
+    box = Image.alpha_composite(box, sh.filter(ImageFilter.GaussianBlur(max(1, S / 60))))
+    d = ImageDraw.Draw(box)
+    d.rounded_rectangle((x0, y0, x0 + plate, y0 + plate), radius=round(plate * 0.2), fill=(252, 251, 247, 255), outline=(206, 196, 176, 255), width=max(1, S // 170))
+    box.alpha_composite(ic, (cx - k // 2, cy - k // 2))
+    return box
+
+
+def main(argv):
+    if len(argv) != 4:
+        print(__doc__, file=sys.stderr)
+        return 2
+    S, src, out = int(argv[1]), argv[2], argv[3]
+    if src.startswith('file://'):
+        from urllib.parse import unquote, urlparse
+        src = unquote(urlparse(src).path)
+    S = max(32, min(S, 512))
+    low = src.lower()
+    tmp = tempfile.mkdtemp(prefix='palos-thumb-')
+    try:
+        if low.endswith('.deb'):
+            ic = deb_icon(src)
+            if ic is None:
+                return 1
+            img = on_box(ic, S)
+        else:
+            ic = windows_icon(src, tmp)
+            if ic is None:
+                return 1
+            img = badge(ic, S)
+        img.save(out, 'PNG')
+        return 0
+    except Exception as e:  # noqa: BLE001
+        print('palos-program-thumbnailer:', e, file=sys.stderr)
+        return 1
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http://127.0.0.1:*; media-src 'self' blob: http://127.0.0.1:*; connect-src http://127.0.0.1:*">
+  <title>Vid-View</title>
+  <link rel="stylesheet" href="viewer.css">
+</head>
+<body>
+<div id="app" class="mode-empty">
+
+  <!-- nothing open -->
+  <section id="empty">
+    <div class="empty-card">
+      <img class="empty-icon" src="../assets/icon.png" alt="">
+      <button class="open-btn" id="open">Open a Video…</button>
+      <div class="empty-sub">or drop one here</div>
+    </div>
+  </section>
+
+  <!-- the video -->
+  <section id="player">
+    <video id="video" crossorigin="anonymous" preload="auto" playsinline></video>
+    <div id="subs"></div>
+    <div id="osd"></div>
+    <div id="spinner"><i></i></div>
+
+    <div id="hud">
+      <div class="hud-row">
+        <div class="hud-side">
+          <button class="hb" id="b-mute" title="Mute (M)"></button>
+          <input type="range" id="vol" min="0" max="1" step="0.01" value="1" aria-label="Volume">
+        </div>
+        <div class="hud-mid">
+          <button class="hb" id="b-back" title="Back 10 seconds (J)"></button>
+          <button class="hb big" id="b-play" title="Play / Pause (Space)"></button>
+          <button class="hb" id="b-fwd" title="Forward 10 seconds (L)"></button>
+        </div>
+        <div class="hud-side right">
+          <button class="hb" id="b-tracks" title="Audio &amp; Subtitles (A / C)"></button>
+          <button class="hb txt" id="b-speed" title="Speed ([ and ])">1×</button>
+          <button class="hb" id="b-full" title="Full Screen (F)"></button>
+        </div>
+      </div>
+      <div class="hud-time">
+        <span id="t-cur">0:00</span>
+        <div id="timeline"><div class="tl-track"><div class="tl-buf"></div><div class="tl-fill"></div></div><div class="tl-knob"></div><div id="tl-tip"></div></div>
+        <span id="t-rem">-0:00</span>
+      </div>
+    </div>
+
+    <div class="popover" id="pop-tracks"></div>
+    <div class="popover" id="pop-speed"></div>
+  </section>
+
+  <div id="dropveil"><div class="dv-frame"><div class="dv-text">Drop to play</div></div></div>
+  <div id="modal"></div>
+  <div id="toasts"></div>
+</div>
+
+<script src="js/util.js"></script>
+<script src="js/icons.js"></script>
+<script src="js/subtitles.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/viewer.js"></script>
+</body>
+</html>

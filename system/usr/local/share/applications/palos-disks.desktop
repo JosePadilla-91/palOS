@@ -1,0 +1,24 @@
+[Desktop Entry]
+TryExec=/Applications/Utilities/Disk Utility.app
+X-Palos-App=/Applications/Utilities/Disk Utility.app
+X-Palos-Folder=Utilities
+X-AppImage-Name=Disk Utility
+Type=Application
+Name=Disk Utility
+Name[fr]=Utilitaire de disque
+Name[fr_CA]=Utilitaire de disque
+GenericName=Disk Manager
+GenericName[fr]=Gestionnaire de disques
+GenericName[fr_CA]=Gestionnaire de disques
+Comment=Erase, partition, check and mount disks; write ISOs to USB sticks; see what uses your space
+Comment[fr]=Effacer, partitionner, vérifier et monter des disques; écrire des ISO sur clé USB; voir ce qui occupe l’espace
+Comment[fr_CA]=Effacer, partitionner, vérifier et monter des disques; écrire des ISO sur clé USB; voir ce qui occupe l’espace
+Keywords=disk;drive;partition;format;erase;usb;mount;fsck;image;volume;iso;writer;bootable;usage;space;disques;utilitaire;
+Exec="/Applications/Utilities/Disk Utility.app" %f
+Icon=palos-disks
+Terminal=false
+StartupNotify=true
+StartupWMClass=Disk Utility
+Categories=System;Utility;
+MimeType=application/x-cd-image;application/x-iso9660-image;application/x-raw-disk-image;application/x-apple-diskimage;
+X-AppImage-Version=1.0.0

@@ -1,0 +1,23 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Disk Utility</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data:">
+<link rel="stylesheet" href="kit.css"><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="disks.css"></head>
+<body>
+<div id="app">
+  <aside id="side"><div id="nav"></div><div class="foot"><button class="btn small" id="attachBtn">Open Disk Image…</button></div></aside>
+  <main id="main">
+    <div class="toolbar dtools">
+      <button class="tb" id="tCheck"><span class="ti">🩺</span>Check Disk</button>
+      <button class="tb" id="tPart"><span class="ti">◔</span>Partition</button>
+      <button class="tb" id="tErase"><span class="ti">⌫</span>Erase</button>
+      <button class="tb" id="tMount"><span class="ti">⏏</span>Unmount</button>
+      <button class="tb" id="tEject"><span class="ti">⏏</span>Eject</button>
+      <span style="flex:1"></span>
+      <button class="tb" id="tImage"><span class="ti">💾</span>New Image</button>
+      <button class="tb" id="tRestore"><span class="ti">↺</span>Write Image</button>
+      <button class="tb" id="tUsage"><span class="ti">◕</span>Disk Usage</button>
+    </div>
+    <div id="view" class="dview"></div>
+    <div id="busy" class="hidden"><div class="bbox"><div id="btext">Working…</div><div class="bar"><i id="bfill"></i></div></div></div>
+  </main>
+</div>
+<script src="helpers.js"></script><script src="disks.js"></script></body></html>

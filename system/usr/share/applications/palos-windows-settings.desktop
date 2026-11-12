@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Windows Settings
+Name[fr]=Réglages Windows
+Name[fr_CA]=Réglages Windows
+Comment=Display, sound and compatibility settings for Windows apps
+Comment[fr]=Réglages d’affichage, de son et de compatibilité des apps Windows
+Comment[fr_CA]=Réglages d’affichage, de son et de compatibilité des apps Windows
+Exec=palos-windows-run --config
+Icon=palos-windows
+Terminal=false
+Categories=Settings;
+X-Palos-Folder=Utilities/WINE

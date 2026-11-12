@@ -1,0 +1,11 @@
+{
+ "name": "Winetricks",
+ "id": "palos-winetricks",
+ "command": "winetricks",
+ "icon": "palos-winetricks",
+ "version": "20260125",
+ "folder": "Utilities",
+ "kind": "shared",
+ "runtime": "kibble",
+ "fallback": "electron-44"
+}

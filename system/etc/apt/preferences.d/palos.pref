@@ -1,0 +1,64 @@
+# palOS installs software through the palOS Store (Ubuntu's archive and the Snap Store), without
+# Ubuntu's own upgrade, subscription or crash-report tools (the Store does apps, updates and drivers).
+# Written by palos-branding; packages already on this computer when palOS was set up aren't listed.
+
+Package: ubuntu-pro-client
+Pin: release a=*
+Pin-Priority: -10
+
+Package: ubuntu-advantage-tools
+Pin: release a=*
+Pin-Priority: -10
+
+Package: ubuntu-pro-client-l10n
+Pin: release a=*
+Pin-Priority: -10
+
+Package: ubuntu-advantage-desktop-daemon
+Pin: release a=*
+Pin-Priority: -10
+
+Package: ubuntu-release-upgrader-core
+Pin: release a=*
+Pin-Priority: -10
+
+Package: ubuntu-release-upgrader-gtk
+Pin: release a=*
+Pin-Priority: -10
+
+Package: update-manager
+Pin: release a=*
+Pin-Priority: -10
+
+Package: update-manager-core
+Pin: release a=*
+Pin-Priority: -10
+
+Package: update-notifier
+Pin: release a=*
+Pin-Priority: -10
+
+Package: ubuntu-report
+Pin: release a=*
+Pin-Priority: -10
+
+Package: popularity-contest
+Pin: release a=*
+Pin-Priority: -10
+
+Package: apport
+Pin: release a=*
+Pin-Priority: -10
+
+Package: apport-gtk
+Pin: release a=*
+Pin-Priority: -10
+
+Package: whoopsie
+Pin: release a=*
+Pin-Priority: -10
+
+Package: ubuntu-docs
+Pin: release a=*
+Pin-Priority: -10
+

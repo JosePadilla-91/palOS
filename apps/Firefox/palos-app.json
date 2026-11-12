@@ -1,0 +1,9 @@
+{
+ "name": "Firefox",
+ "id": "palos-firefox",
+ "command": "firefox",
+ "icon": "palos-firefox",
+ "version": "159.0.1",
+ "folder": "",
+ "kind": "firefox"
+}

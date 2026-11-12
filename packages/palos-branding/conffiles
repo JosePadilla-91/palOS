@@ -1,0 +1,12 @@
+/etc/palos/issue
+/etc/apt/apt.conf.d/10palos-periodic
+/etc/default/grub.d/50-palos.cfg
+/etc/systemd/system/getty@.service.d/palos-issue.conf
+/etc/systemd/system/serial-getty@.service.d/palos-issue.conf
+/etc/xdg/gtk-3.0/settings.ini
+/etc/update-motd.d/00-palos-header
+/etc/NetworkManager/conf.d/10-globally-managed-devices.conf
+/etc/netplan/01-network-manager-all.yaml
+/etc/xdg/paladin-mimeapps.list
+/etc/systemd/system/plocate-updatedb.timer.d/palos.conf
+/etc/systemd/system/plocate-updatedb.service.d/palos.conf

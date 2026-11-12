@@ -1,0 +1,6 @@
+// palOS: refresh the package lists once a day (the palOS Store's catalog). Ubuntu's system updates are
+// not installed or offered: palOS updates come from palOS (the palOS Store shows them under Updates).
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Download-Upgradeable-Packages "0";
+APT::Periodic::AutocleanInterval "7";
+APT::Periodic::Unattended-Upgrade "0";

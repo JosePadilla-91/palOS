@@ -1,0 +1,16 @@
+[Desktop Entry]
+TryExec=/Applications/Calculator.app
+X-Palos-App=/Applications/Calculator.app
+Type=Application
+Name=Calculator
+Name[fr]=Calculatrice
+Comment=Basic and scientific calculations, with a paper tape
+Comment[fr]=Calculs de base et scientifiques, avec un ruban
+Keywords=calculator;calc;math;arithmetic;scientific;calculatrice;
+Exec="/Applications/Calculator.app"
+Icon=palos-calculator
+Terminal=false
+StartupNotify=true
+StartupWMClass=Calculator
+Categories=Utility;Calculator;
+X-AppImage-Version=1.0.0

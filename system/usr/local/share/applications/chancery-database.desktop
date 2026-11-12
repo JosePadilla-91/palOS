@@ -1,0 +1,21 @@
+[Desktop Entry]
+TryExec=/Applications/Chancery DataBase.app
+X-Palos-App=/Applications/Chancery DataBase.app
+X-AppImage-Name=Chancery DataBase
+Name=Chancery DataBase
+GenericName=Database
+GenericName[fr]=Base de données
+GenericName[fr_CA]=Base de données
+Comment=Tables, queries, forms and reports
+Comment[fr]=Tables, requêtes, formulaires et rapports
+Comment[fr_CA]=Tables, requêtes, formulaires et rapports
+Keywords=database;table;query;form;report;sql;
+Keywords[fr]=base de données;table;requête;formulaire;rapport;sql;
+Exec="/Applications/Chancery DataBase.app" %U
+Terminal=false
+Type=Application
+Icon=chancery-database
+StartupWMClass=chancery-database
+MimeType=application/x-chancery-database;
+Categories=Office;Database;
+X-AppImage-Version=1.0

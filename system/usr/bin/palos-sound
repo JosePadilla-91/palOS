@@ -1,0 +1,18 @@
+#!/bin/sh
+# palos-sound NAME: play one of the palOS interface sounds, unless the person turned
+# them off (Settings > Sound > Play User Interface Sound Effects):
+#   poof    an icon taken off the Dock          trash   something thrown in the Trash
+#   empty   the Trash emptied                    volume  the volume changed (a pop)
+#   error   an error message (follows Settings > Sound > Alerts instead)
+#   done    a copy to a USB stick or a conversion finished (a boing)
+#   paste   files pasted or dropped into a folder (a soft bwang)
+f="/usr/share/sounds/palos/stereo/$1.oga"
+[ -f "$f" ] || exit 0
+if [ "$1" = error ]; then
+  [ "$(gsettings get org.gnome.desktop.sound event-sounds 2>/dev/null)" = "false" ] && exit 0
+else
+  [ "$(gsettings get org.gnome.desktop.sound input-feedback-sounds 2>/dev/null)" = "false" ] && exit 0
+fi
+if command -v paplay >/dev/null 2>&1; then exec paplay "$f"
+elif command -v pw-play >/dev/null 2>&1; then exec pw-play "$f"
+fi

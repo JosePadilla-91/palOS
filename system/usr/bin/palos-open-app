@@ -1,0 +1,225 @@
+#!/usr/bin/python3 -I
+"""palos-open-app: what double-clicking an app does on palOS.
+
+  palos-open-app FILE [FILES-FOR-IT...]
+
+A .app or an AppImage opens straight away, wherever it is, like an app on a Mac. One built for other Linux
+systems first gets palOS's own runtime (the old one needs libfuse.so.2, which palOS doesn't have). Run from
+outside Applications, a small note offers to move it there; clicking the note does it.
+A program file that isn't an app (a downloaded setup program, say) asks once before it runs.
+"""
+import os, re, shlex, shutil, stat, subprocess, sys, tempfile, time
+
+FR = (os.environ.get('LANG') or '').startswith('fr')
+HOME = os.path.expanduser('~')
+APPS = ['/Applications', os.path.join(HOME, 'Applications')]
+APPD = '/usr/lib/paladin-appd/paladin-appd'
+CACHE = os.path.join(os.environ.get('XDG_CACHE_HOME') or os.path.join(HOME, '.cache'), 'palos-open-app')
+
+
+def t(en, fr):
+    return fr if FR else en
+
+
+def note(title, body='', icon=None, actions=(), wait=False):
+    cmd = ['notify-send', '-a', 'palOS', title, body]
+    if icon:
+        cmd[1:1] = ['-i', icon]
+    for name, label in actions:
+        cmd.append(f'--action={name}={label}')
+    if actions:
+        cmd.insert(1, '--expire-time=20000')         # an offer stays a little longer than a plain note
+    try:
+        if actions or wait:
+            return subprocess.run(cmd, capture_output=True, text=True, timeout=600).stdout.strip()
+        subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return ''
+
+
+def elf_end(path):
+    import struct
+    with open(path, 'rb') as f:
+        h = f.read(64)
+    shoff, = struct.unpack_from('<Q', h, 0x28); shentsize, shnum = struct.unpack_from('<HH', h, 0x3A)
+    return shoff + shentsize * shnum
+
+
+def kind(path):
+    try:
+        with open(path, 'rb') as f:
+            h = f.read(11)
+    except OSError:
+        return None
+    if h[:4] != b'\x7fELF':
+        return None
+    return 'app' if h[8:11] in (b'AI\x02', b'AI\x01') else 'program'
+
+
+def peek(path, tmp):
+    """the app's name, its desktop entry's extra switches, and its icon (read without running it)"""
+    name, flags, icon = None, [], None
+    try:
+        off = str(elf_end(path))
+        subprocess.run(['unsquashfs', '-q', '-n', '-o', off, '-d', tmp + '/x', path, '*.desktop', '.DirIcon'],
+                       capture_output=True, timeout=60)
+        desk = [f for f in os.listdir(tmp + '/x') if f.endswith('.desktop')] if os.path.isdir(tmp + '/x') else []
+        if desk:
+            sect = None
+            with open(os.path.join(tmp, 'x', desk[0]), encoding='utf-8', errors='replace') as fh:
+                text = fh.read()
+            for line in text.splitlines():
+                line = line.strip()
+                if line.startswith('['):
+                    sect = line
+                elif sect == '[Desktop Entry]' and '=' in line:
+                    k, v = line.split('=', 1)
+                    if k == 'Name' and not name:
+                        name = v
+                    elif k == 'Exec' and not flags:
+                        try:
+                            parts = shlex.split(v)
+                        except ValueError:
+                            parts = v.split()
+                        flags = [p for p in parts[1:] if not re.fullmatch(r'%[fFuUickdDnNvm]', p)]
+        icon = tmp + '/x/.DirIcon'
+        if os.path.islink(icon):
+            target = os.readlink(icon).lstrip('/')
+            subprocess.run(['unsquashfs', '-q', '-n', '-f', '-o', off, '-d', tmp + '/y', path, target], capture_output=True, timeout=60)
+            icon = os.path.join(tmp, 'y', target)
+        if not os.path.isfile(icon) or os.path.islink(icon):
+            icon = None
+    except (OSError, subprocess.SubprocessError, ValueError):
+        pass
+    if not name:
+        stem = re.sub(r'\.(app|appimage)$', '', os.path.basename(path), flags=re.I)
+        stem = re.sub(r'[-_.](x86[-_]64|amd64|linux|x64)\b.*$', '', stem, flags=re.I)
+        name = re.sub(r'[-_.]v?\d[\w.+-]*$', '', stem) or stem
+    return name, flags, icon
+
+
+def runnable(path):
+    """a path we can execute: the file itself (made executable if needed) or a private copy"""
+    try:
+        st = os.stat(path)
+        if not st.st_mode & stat.S_IXUSR:
+            os.chmod(path, st.st_mode | 0o111)
+        return path
+    except PermissionError:
+        os.makedirs(CACHE, exist_ok=True)
+        copy = os.path.join(CACHE, os.path.basename(path))
+        shutil.copyfile(path, copy); os.chmod(copy, 0o755)
+        return copy
+
+
+def start(cmd, env=None, cwd=None):
+    os.makedirs(CACHE, exist_ok=True)
+    name = os.path.join(CACHE, 'last-run.log')
+    with open(name, 'wb') as log:
+        p = subprocess.Popen(cmd, env=env, cwd=cwd, start_new_session=True, stdin=subprocess.DEVNULL,
+                             stdout=log, stderr=subprocess.STDOUT)
+    return p, name
+
+
+def failed(p, log, name):
+    """tell the person if it quit at once with an error (the most useful line of what it said)"""
+    for _ in range(40):
+        if p.poll() is not None:
+            break
+        time.sleep(0.1)
+    if p.poll() is None or p.returncode == 0:
+        return False
+    try:
+        lines = [l for l in open(log, errors='replace').read().splitlines() if l.strip()]
+    except OSError:
+        lines = []
+    why = next((l for l in reversed(lines) if re.search(r'error|fatal|cannot|can.t|not found|denied', l, re.I)),
+               lines[-1] if lines else '')
+    note(t(f'“{name}” couldn’t open', f'« {name} » n’a pas pu s’ouvrir'), why[:300], 'dialog-error')
+    return True
+
+
+def ask_program(path):
+    """an ordinary program file: confirm once, the way a downloaded program should be"""
+    try:
+        import gi
+        gi.require_version('Gtk', '4.0'); gi.require_version('Adw', '1')
+        from gi.repository import Adw, GLib
+    except (ImportError, ValueError):
+        return True
+    name = os.path.basename(path); res = {'ok': False}
+    app = Adw.Application(application_id='org.palos.OpenApp')
+
+    def act(_app):
+        d = Adw.MessageDialog(heading=t(f'Open “{name}”?', f'Ouvrir « {name} » ?'),
+                              body=t('This is a program, not a palOS app. Only open programs that come from someone you trust.',
+                                     'C’est un programme, pas une app palOS. N’ouvrez que les programmes qui viennent de quelqu’un de confiance.'))
+        d.add_response('cancel', t('Cancel', 'Annuler')); d.add_response('open', t('Open', 'Ouvrir'))
+        d.set_default_response('cancel'); d.set_close_response('cancel')
+        d.set_response_appearance('open', Adw.ResponseAppearance.SUGGESTED)
+        d.connect('response', lambda _d, r: (res.__setitem__('ok', r == 'open'), app.quit()))
+        app.hold(); d.set_application(app); d.present()
+    app.connect('activate', act)
+    app.run([])
+    return res['ok']
+
+
+def offer_move(path, name, icon):
+    pick = note(t(f'{name} isn’t in Applications', f'{name} n’est pas dans Applications'),
+                t('Click here to move it there, so it’s in Launchpad and the Dock for good.',
+                  'Cliquez ici pour l’y ranger : il restera dans le Launchpad et le Dock.'),
+                icon, [('move', t('Move to Applications', 'Ranger dans Applications'))])
+    if pick != 'move':
+        return
+    src = path if path.endswith('.app') else None
+    tmpdir = None
+    if not src:                                   # an .AppImage is named NAME.app when it moves in
+        tmpdir = tempfile.mkdtemp(prefix='move-', dir=os.path.dirname(path)) if os.access(os.path.dirname(path), os.W_OK) else tempfile.mkdtemp(prefix='move-')
+        src = os.path.join(tmpdir, re.sub(r'[/\\:*?"<>|]+', ' ', name).strip() + '.app')
+        try:
+            os.link(path, src)
+        except OSError:
+            shutil.copyfile(path, src)
+    r = subprocess.run(['/usr/bin/palos-pack', 'install', src], capture_output=True, text=True)
+    if tmpdir:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+    if r.returncode == 0:
+        try:
+            os.remove(path)                       # moved, not copied (the running app keeps its open copy)
+        except OSError:
+            pass
+        note(t(f'{name} is in Applications', f'{name} est dans Applications'), '', icon)
+    elif 'dismissed' not in (r.stderr or '') and r.returncode != 126:
+        note(t(f'{name} couldn’t be moved', f'{name} n’a pas pu être rangé'), (r.stderr or r.stdout).strip()[-300:], 'dialog-error')
+
+
+def main():
+    if len(sys.argv) < 2 or sys.argv[1] in ('-h', '--help'):
+        print(__doc__); sys.exit(2)
+    path = os.path.realpath(sys.argv[1]); extra = sys.argv[2:]
+    k = kind(path)
+    if k is None:
+        note(t('This can’t be opened', 'Impossible d’ouvrir ceci'), os.path.basename(path), 'dialog-error'); sys.exit(1)
+    if k == 'program':
+        if not ask_program(path):
+            return
+        p, log = start([runnable(path)] + extra, cwd=os.path.dirname(path))
+        failed(p, log, os.path.basename(path)); return
+    env = dict(os.environ)
+    if subprocess.run([APPD, '--adopt', path], capture_output=True).returncode != 0:
+        env['APPIMAGE_EXTRACT_AND_RUN'] = '1'     # couldn't give it palOS's runtime (a read-only disk): unpack and run
+    with tempfile.TemporaryDirectory(prefix='open-app-') as tmp:
+        name, flags, icon = peek(path, tmp)
+        p, log = start([runnable(path)] + flags + extra, env=env, cwd=HOME)
+        if failed(p, log, name):
+            return
+        inside = any(path.startswith(a + '/') for a in APPS)
+        if not inside and os.path.dirname(path) != '/' and not path.startswith(('/media/', '/run/media/', '/tmp/.mount')):
+            if icon:
+                keep = os.path.join(CACHE, 'icon.png'); shutil.copyfile(icon, keep); icon = keep
+            offer_move(path, name, icon)
+
+
+if __name__ == '__main__':
+    main()

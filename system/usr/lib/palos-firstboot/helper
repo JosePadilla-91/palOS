@@ -1,0 +1,778 @@
+#!/usr/bin/python3
+"""palOS first-boot helper (root). Runs only while /var/lib/palos/firstboot exists.
+
+The setup screen (running as the palos-setup user) asks it, over /run/palos-firstboot/helper.sock,
+to do the few things that need root: check and create the first account, set the computer's name,
+remember the light/dark choice, and finish (which switches the computer to the normal login screen).
+Only the palos-setup user, and the login screen (lightdm, which runs setup itself when the automatic start
+didn't work), may connect (checked with SO_PEERCRED). One JSON request per connection.
+"""
+import base64
+import glob
+import unicodedata
+import grp
+import json
+import os
+import pwd
+import re
+import shutil
+import socket
+import struct
+import subprocess
+import sys
+import time
+
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+import ttrestore  # noqa: E402  (Time Turner restores)
+import migrate  # noqa: E402  (Migration Assistant: another computer's disk)
+
+FLAG = '/var/lib/palos/firstboot'
+SOCK_DIR = '/run/palos-firstboot'
+SOCK = os.path.join(SOCK_DIR, 'helper.sock')
+SETUP_USER = 'palos-setup'
+AVATARS = '/usr/share/palos/avatars'
+USER_RE = re.compile(r'^[a-z][a-z0-9_-]{0,31}$')
+RESERVED = {'root', 'admin', 'daemon', 'bin', 'sys', 'sync', 'games', 'man', 'lp', 'mail', 'news', 'uucp', 'proxy', 'www-data',
+            'backup', 'list', 'irc', 'gnats', 'nobody', 'systemd', 'messagebus', 'lightdm', 'palos', 'palos-setup', 'ubuntu', 'test',
+            'guest', 'sudo', 'user', 'users', 'sshd', 'syslog', 'polkitd', 'avahi', 'cups', 'pipewire', 'gdm', 'colord', 'geoclue'}
+# video/audio/render: the camera, sound and graphics work for this account even outside a seat session (logind's
+# uaccess covers the logged-in seat; the groups cover everything else: remote logins, services started by the account)
+ADMIN_GROUPS = ['adm', 'cdrom', 'sudo', 'dip', 'plugdev', 'lpadmin', 'users', 'netdev', 'bluetooth', 'video', 'audio', 'render']
+
+state = {'dark': False, 'user': None, 'hostname': None}
+
+
+def log(*a):
+    print('palos-firstboot-helper:', *a, file=sys.stderr, flush=True)
+
+
+def run(cmd, **kw):
+    r = subprocess.run(cmd, capture_output=True, text=True, **kw)
+    if r.returncode != 0:
+        log('failed:', ' '.join(cmd), r.stderr.strip())
+    return r
+
+
+# ------------------------------------------------------------------ actions
+def a_status(_):
+    tz = os.path.realpath('/etc/localtime').split('/zoneinfo/')[-1] if os.path.exists('/etc/localtime') else ''
+    model = ''
+    for f in ('/sys/class/dmi/id/product_family', '/sys/class/dmi/id/product_name'):
+        try:
+            v = open(f).read().strip()
+            if v and not re.search(r'to be filled|default|system product|^none$|o\.e\.m', v, re.I):
+                model = v
+                break
+        except OSError:
+            pass
+    return {'timezone': tz, 'model': model, 'dark': state['dark'], 'timeturner': ttrestore.available(),
+            'user': state['user'], 'fullname': state.get('fullname'), 'hostname': state.get('pretty') or state.get('hostname'),
+            'oem': os.path.exists('/var/lib/palos-firstboot/oem'), 'languageChosen': os.path.exists('/var/lib/palos-firstboot/language-chosen')}
+
+
+def valid_username(u):
+    if not isinstance(u, str) or not USER_RE.match(u):
+        return 'Use lowercase letters, numbers, - and _, starting with a letter.'
+    if u in RESERVED:
+        return 'That name is reserved by the system. Try another.'
+    try:
+        pwd.getpwnam(u)
+        return 'There’s already an account with that name.'
+    except KeyError:
+        pass
+    try:
+        grp.getgrnam(u)
+        return 'That name is already used by the system. Try another.'
+    except KeyError:
+        pass
+    return None
+
+
+def a_check_user(req):
+    err = valid_username(req.get('username'))
+    return {'ok': err is None, 'error': err}
+
+
+def pal_name(full):
+    """What the computer is called unless the person chooses: "Joey's pal" (first name)."""
+    first = (str(full or '').strip().split() or [''])[0][:40]
+    if not first:
+        return 'palOS pal'
+    lang = state.get('language') or os.environ.get('LANG', '')
+    if lang.lower().startswith('fr'):
+        return f'pal de {first}'
+    return f"{first}\u2019s pal"
+
+
+def hostname_from(name, username=''):
+    """The network name for a computer name: "Joey's pal" -> "joeys-pal" (letters, digits and dashes)."""
+    t = unicodedata.normalize('NFKD', str(name or '')).encode('ascii', 'ignore').decode()
+    t = re.sub(r"['\u2019`]", '', t.lower())
+    t = re.sub(r'[^a-z0-9]+', '-', t).strip('-')[:63].strip('-')
+    return t or (f'{username}-pal' if username else 'palos')
+
+
+def clean_computer_name(v):
+    v = re.sub(r'\s+', ' ', str(v or '').replace('\x00', '')).strip()[:63]
+    return v if re.search(r'\w', v) else ''
+
+
+def hostname_for(username, model=None, full=None):
+    if full is None:
+        try:
+            full = pwd.getpwnam(username).pw_gecos.split(',')[0]
+        except KeyError:
+            full = username
+    pretty = pal_name(full or username)
+    state['pretty'] = pretty
+    return hostname_from(pretty, username)
+
+
+def write_file(path, data, mode=0o644, uid=0, gid=0):
+    tmp = path + '.tmp'
+    with open(tmp, 'wb') as f:
+        f.write(data if isinstance(data, bytes) else data.encode())
+    os.chmod(tmp, mode)
+    os.chown(tmp, uid, gid)
+    os.replace(tmp, path)
+
+
+def a_create_user(req):
+    if state['user']:
+        return {'ok': False, 'error': 'The account has already been created.'}
+    username = req.get('username')
+    err = valid_username(username)
+    if err:
+        return {'ok': False, 'error': err}
+    full = str(req.get('fullname') or '').strip()[:120]
+    if not full or any(ch in full for ch in ':\n,=') :
+        return {'ok': False, 'error': 'Enter your name (without : or commas).'}
+    password = req.get('password') or ''
+    if not isinstance(password, str) or len(password) < 1 or '\n' in password or len(password) > 512:
+        return {'ok': False, 'error': 'Choose a password.'}
+    groups = [g for g in ADMIN_GROUPS if _group_exists(g)]
+    r = run(['useradd', '--create-home', '--shell', '/bin/bash', '--comment', full, '--groups', ','.join(groups), username])
+    if r.returncode != 0:
+        return {'ok': False, 'error': 'The account couldn’t be created: ' + (r.stderr.strip() or 'useradd failed')}
+    r = subprocess.run(['chpasswd'], input=f'{username}:{password}\n', capture_output=True, text=True)
+    if r.returncode != 0:
+        run(['userdel', '--remove', username])
+        return {'ok': False, 'error': 'The password couldn’t be set: ' + r.stderr.strip()}
+    pw = pwd.getpwnam(username)
+    state['user'] = username
+    state['fullname'] = full
+    try:
+        return finish_account(req, username, full, pw)
+    except Exception as e:  # noqa: BLE001  (the account exists and works; the extras are best effort)
+        log('account extras failed:', repr(e))
+        return {'ok': True, 'hostname': socket.gethostname(), 'warning': str(e)}
+
+
+def finish_account(req, username, full, pw):
+    # picture
+    pic = picture_bytes(req.get('picture'))
+    if pic:
+        os.makedirs('/var/lib/AccountsService/icons', exist_ok=True)
+        write_file(f'/var/lib/AccountsService/icons/{username}', pic, 0o644)
+        write_file(os.path.join(pw.pw_dir, '.face'), pic, 0o644, pw.pw_uid, pw.pw_gid)
+    os.makedirs('/var/lib/AccountsService/users', exist_ok=True)
+    write_file(f'/var/lib/AccountsService/users/{username}',
+               '[User]\nSession=paladin\nXSession=paladin\n' + (f"Language={state.get('language')}\n" if state.get('language') else '') + (f'Icon=/var/lib/AccountsService/icons/{username}\n' if pic else '') + 'SystemAccount=false\n', 0o600)
+    # the language, formats and keyboard chosen in the installer become this account's own
+    try:
+        src = '/var/lib/palos-firstboot/locale.conf'
+        if os.path.exists(src):
+            d = os.path.join(pw.pw_dir, '.config', 'palos')
+            os.makedirs(d, exist_ok=True)
+            os.chown(os.path.join(pw.pw_dir, '.config'), pw.pw_uid, pw.pw_gid); os.chown(d, pw.pw_uid, pw.pw_gid)
+            body = open(src).read()
+            write_file(os.path.join(d, 'locale.conf'), '# palOS Language & Region (Settings). Read when you log in.\n' + body, 0o644, pw.pw_uid, pw.pw_gid)
+            lang = next((l.split('=', 1)[1].strip() for l in body.splitlines() if l.startswith('LANG=')), '')
+            if lang:
+                state['language'] = lang
+                af = f'/var/lib/AccountsService/users/{username}'
+                txt = open(af).read()
+                if 'Language=' not in txt:
+                    write_file(af, txt.replace('[User]\n', f'[User]\nLanguage={lang}\n', 1), 0o600)
+    except OSError as e:
+        log('locale:', e)
+    # light/dark: the user's own setting, and what the login screen shows for them
+    dark = bool(req.get('dark', state['dark']))
+    state['dark'] = dark
+    apply_appearance(username, pw, dark)
+    # the computer's name: chosen now, applied when setup finishes (renaming the computer while the
+    # setup screen is open would lock the screen's own programs out of the display: X login cookies
+    # are tied to the computer's name)
+    pretty = clean_computer_name(req.get('computer')) or pal_name(full)
+    state['pretty'] = pretty
+    name = hostname_from(pretty, username)
+    state['hostname'] = name
+    # the camera: allowed during setup (the person said so); the account itself is in the video group
+    if req.get('camera'):
+        state['camera'] = True
+    # restart accounts-daemon so the login screen sees the new account right away
+    run(['systemctl', 'try-restart', 'accounts-daemon.service'])
+    return {'ok': True, 'hostname': name, 'computer': pretty}
+
+
+def _group_exists(g):
+    try:
+        grp.getgrnam(g)
+        return True
+    except KeyError:
+        return False
+
+
+def picture_bytes(p):
+    if not p:
+        return None
+    if isinstance(p, str) and re.match(r'^[a-z0-9-]{1,40}$', p):
+        f = os.path.join(AVATARS, p + '.png')
+        if os.path.isfile(f):
+            return open(f, 'rb').read()
+        return None
+    if isinstance(p, str) and p.startswith('data:image/png;base64,'):
+        try:
+            data = base64.b64decode(p.split(',', 1)[1], validate=True)
+        except ValueError:
+            return None
+        if data[:8] == b'\x89PNG\r\n\x1a\n' and len(data) < 4 * 1024 * 1024:
+            return data
+    return None
+
+
+def apply_appearance(username, pw, dark):
+    scheme = "'prefer-dark'" if dark else "'default'"
+    theme = "'Paladin-Dark'" if dark else "'Paladin'"
+    cmd = (f"gsettings set org.gnome.desktop.interface color-scheme {scheme}; "
+           f"gsettings set org.gnome.desktop.interface gtk-theme {theme}; "
+           "gsettings set org.gnome.desktop.interface icon-theme 'palOS'")
+    env = {'HOME': pw.pw_dir, 'USER': username, 'LOGNAME': username, 'PATH': '/usr/sbin:/usr/bin:/sbin:/bin', 'XDG_RUNTIME_DIR': f'/tmp/palos-fb-{pw.pw_uid}'}
+    os.makedirs(env['XDG_RUNTIME_DIR'], mode=0o700, exist_ok=True)
+    os.chown(env['XDG_RUNTIME_DIR'], pw.pw_uid, pw.pw_gid)
+    try:
+        r = subprocess.run(['/usr/sbin/runuser', '-u', username, '--', '/usr/bin/dbus-run-session', '--', '/bin/sh', '-c', cmd], env=env, capture_output=True, text=True, timeout=30)
+        if r.returncode:
+            log('appearance:', r.stderr.strip())
+    except (subprocess.TimeoutExpired, OSError) as e:
+        log('appearance: gsettings failed:', e)
+    shutil.rmtree(env['XDG_RUNTIME_DIR'], ignore_errors=True)
+    # login screen look (LightDM's per-user shared data folder)
+    d = f'/var/lib/lightdm-data/{username}'
+    try:
+        lightdm_gid = grp.getgrnam('lightdm').gr_gid
+    except KeyError:
+        lightdm_gid = pw.pw_gid
+    os.makedirs(d, exist_ok=True)
+    os.chown(d, pw.pw_uid, lightdm_gid)
+    os.chmod(d, 0o770)
+    write_file(os.path.join(d, 'paladin.json'), json.dumps({'dark': dark}) + '\n', 0o644, pw.pw_uid, lightdm_gid)
+
+
+def set_hostname(name, pretty=None):
+    old = socket.gethostname()
+    r = run(['hostnamectl', 'set-hostname', '--static', '--transient', name])
+    if r.returncode != 0:
+        write_file('/etc/hostname', name + '\n')
+        run(['hostname', name])
+    # the name people chose, as they wrote it ("Joey's pal"): shown in Settings, Seeker and on the network
+    if pretty:
+        r = run(['hostnamectl', 'set-hostname', '--pretty', pretty])
+        if r.returncode != 0:
+            try:
+                lines = [ln for ln in open('/etc/machine-info').read().splitlines() if not ln.startswith('PRETTY_HOSTNAME=')]
+            except OSError:
+                lines = []
+            esc = pretty.replace('\\', '\\\\').replace('"', '\\"')
+            write_file('/etc/machine-info', '\n'.join(lines + [f'PRETTY_HOSTNAME="{esc}"']) + '\n')
+    try:
+        hosts = open('/etc/hosts').read()
+    except OSError:
+        hosts = '127.0.0.1\tlocalhost\n'
+    lines = [ln for ln in hosts.splitlines() if not re.match(r'^127\.0\.1\.1\s', ln)]
+    out, done = [], False
+    for ln in lines:
+        out.append(ln)
+        if not done and re.match(r'^127\.0\.0\.1\s', ln):
+            out.append(f'127.0.1.1\t{name}')
+            done = True
+    if not done:
+        out.insert(0, f'127.0.1.1\t{name}')
+    write_file('/etc/hosts', '\n'.join(out) + '\n')
+    log('hostname', old, '->', name)
+
+
+# ------------------------------------------------------------------ the camera (for the selfie)
+def _uvc_interfaces():
+    """USB interfaces of class 0x0e (USB Video Class) on this computer."""
+    found = []
+    for f in glob.glob('/sys/bus/usb/devices/*/bInterfaceClass'):
+        try:
+            if open(f).read().strip().lower() == '0e':
+                found.append(os.path.dirname(f))
+        except OSError:
+            pass
+    return found
+
+
+def _capture_nodes():
+    """/dev/videoN nodes that take pictures (not the metadata nodes UVC cameras also have)."""
+    nodes = []
+    for d in sorted(glob.glob('/sys/class/video4linux/video*')):
+        dev = '/dev/' + os.path.basename(d)
+        if not os.path.exists(dev):
+            continue
+        try:
+            idx = int(open(os.path.join(d, 'index')).read().strip())
+        except (OSError, ValueError):
+            idx = 0
+        try:
+            name = open(os.path.join(d, 'name')).read().strip()
+        except OSError:
+            name = ''
+        try:
+            caps = int(open(os.path.join(d, 'device', 'capabilities')).read().strip(), 16)
+        except (OSError, ValueError):
+            caps = None
+        if idx == 0 or caps is None:
+            nodes.append({'node': dev, 'name': name})
+    return nodes
+
+
+def a_camera(req):
+    """Find the camera; load the UVC driver if it isn't; with grant, let the setup screen open it."""
+    usb = _uvc_interfaces()
+    loaded = os.path.isdir('/sys/module/uvcvideo')
+    fixed = []
+    if usb and not loaded:
+        r = run(['modprobe', 'uvcvideo'])
+        loaded = r.returncode == 0 and os.path.isdir('/sys/module/uvcvideo')
+        if loaded:
+            fixed.append('loaded uvcvideo')
+            run(['udevadm', 'settle', '--timeout=5'])
+    nodes = _capture_nodes()
+    if usb and loaded and not nodes:
+        # the driver is in but no /dev/video node was made: ask udev to go through the cameras again
+        run(['udevadm', 'trigger', '--subsystem-match=usb', '--attr-match=bInterfaceClass=0e', '--action=add'])
+        run(['udevadm', 'trigger', '--subsystem-match=video4linux', '--action=add'])
+        run(['udevadm', 'settle', '--timeout=5'])
+        nodes = _capture_nodes()
+        if nodes:
+            fixed.append('udev re-ran')
+    if req.get('grant'):
+        try:
+            setup_uid = pwd.getpwnam(SETUP_USER).pw_uid
+        except KeyError:
+            setup_uid = None
+        try:
+            video_gid = grp.getgrnam('video').gr_gid
+        except KeyError:
+            video_gid = None
+        for n in glob.glob('/dev/video*'):
+            try:
+                st = os.stat(n)
+                if video_gid is not None and st.st_gid != video_gid:
+                    os.chown(n, -1, video_gid)
+                    fixed.append(f'{n} group')
+                if (st.st_mode & 0o060) != 0o060:
+                    os.chmod(n, (st.st_mode & 0o7777) | 0o060)
+                    fixed.append(f'{n} mode')
+                if setup_uid is not None and shutil.which('setfacl'):
+                    run(['setfacl', '-m', f'u:{SETUP_USER}:rw', n])
+            except OSError as e:
+                log('camera permission', n, e)
+        state['camera'] = True
+    if fixed:
+        log('camera:', ', '.join(fixed))
+    return {'ok': True, 'present': bool(nodes), 'usb': bool(usb), 'loaded': loaded, 'devices': nodes}
+
+
+# ------------------------------------------------------------------ Wi-Fi during setup
+# The setup screen's own account can't always change NetworkManager (it isn't a normal login session,
+# so NetworkManager answers "Insufficient privileges"); joining and turning Wi-Fi on go through here.
+def a_wifi_connect(req):
+    ssid = req.get('ssid')
+    pw = req.get('password') or ''
+    if not isinstance(ssid, str) or not ssid or len(ssid) > 64 or '\n' in ssid:
+        return {'ok': False, 'error': 'That network name can’t be used.'}
+    if not isinstance(pw, str) or len(pw) > 128 or '\n' in pw:
+        return {'ok': False, 'error': 'That password can’t be used.'}
+    args = ['nmcli', 'device', 'wifi', 'connect', ssid]
+    if pw:
+        args += ['password', pw]
+    try:
+        r = subprocess.run(args, capture_output=True, text=True, timeout=60)
+    except subprocess.TimeoutExpired:
+        return {'ok': False, 'error': 'The network didn’t answer.'}
+    msg = re.sub(r'^Error:\s*', '', (r.stderr or r.stdout).strip(), flags=re.M)
+    needs = r.returncode != 0 and bool(re.search(r'secrets|password|802-11-wireless-security|psk', r.stderr + r.stdout, re.I))
+    return {'ok': r.returncode == 0, 'error': None if r.returncode == 0 else msg, 'needsPassword': needs}
+
+
+def a_wifi_radio(req):
+    r = run(['nmcli', 'radio', 'wifi', 'on' if req.get('on') else 'off'])
+    return {'ok': r.returncode == 0}
+
+
+def a_wifi_rescan(_):
+    subprocess.run(['nmcli', 'device', 'wifi', 'rescan'], capture_output=True, timeout=20)
+    return {'ok': True}
+
+
+def a_appearance(req):
+    state['dark'] = bool(req.get('dark'))
+    return {'ok': True}
+
+
+# ------------------------------------------------------------------ restoring from Time Turner
+TT = ttrestore.Session()
+
+
+def a_tt_scan(_):
+    return TT.start('scan', TT.scan)
+
+
+def a_tt_open(req):
+    src = req.get('source') if isinstance(req.get('source'), dict) else {}
+    return TT.start('open', TT.open, src, req.get('key'))
+
+
+def a_tt_inspect(req):
+    return TT.start('inspect', TT.inspect, req.get('snapshot'))
+
+
+def a_tt_restore(req):
+    if state['user']:
+        return {'ok': False, 'error': 'An account has already been set up.'}
+    choices = {'users': req.get('users') if isinstance(req.get('users'), list) else [],
+               'wifi': req.get('wifi') is not False, 'apps': req.get('apps') is not False}
+
+    def job(j, sid, ch):
+        report = TT.restore(j, sid, ch)
+        state['user'] = TT.first_user
+        try:
+            name = hostname_for(TT.first_user, a_status({}).get('model'))
+            state['hostname'] = name            # applied when setup finishes (see finish_account)
+            report['hostname'] = state.get('pretty') or name
+        except Exception as e:  # noqa: BLE001
+            log('hostname:', repr(e))
+            report['hostname'] = socket.gethostname()
+        return report
+    return TT.start('restore', job, req.get('snapshot'), choices)
+
+
+def a_tt_job(_):
+    return TT.status()
+
+
+def a_tt_cancel(_):
+    return TT.cancel()
+
+
+def a_tt_release(_):
+    j = TT.job
+    if j and j['running']:
+        return {'ok': False, 'error': 'busy'}
+    TT.cleanup()
+    return {'ok': True}
+
+
+# ------------------------------------------------------------------ Migration Assistant (another computer's disk, read only)
+MIG = migrate.Migration()
+
+
+def a_mig_scan(_):
+    return MIG.start('scan', MIG.scan)
+
+
+def a_mig_copy(req):
+    if not state['user']:
+        return {'ok': False, 'error': 'Create your account first.'}
+    folders = [f for f in (req.get('folders') or []) if isinstance(f, str)]
+    apps = [a for a in (req.get('apps') or []) if isinstance(a, str)]
+    return MIG.start('copy', MIG.copy, str(req.get('source')), state['user'], folders, apps)
+
+
+def a_mig_job(_):
+    return MIG.status()
+
+
+def a_mig_release(_):
+    if MIG.job and MIG.job['running']:
+        return {'ok': False, 'error': 'busy'}
+    MIG.cleanup()
+    return {'ok': True}
+
+
+# ------------------------------------------------------------------ graphics drivers (NVIDIA)
+STORE_HELPER = '/usr/lib/palos-store/store-helper'
+STORE_BACKEND = '/usr/lib/palos-store/store-backend'
+DRV = {'running': False, 'kind': None, 'pct': 0, 'step': '', 'result': None, 'error': None}
+
+
+def nvidia_gpus():
+    """Names of the NVIDIA graphics chips in this computer (PCI vendor 10de, display class 03)."""
+    out = []
+    for d in glob.glob('/sys/bus/pci/devices/*'):
+        try:
+            vendor = open(os.path.join(d, 'vendor')).read().strip().lower()
+            cls = open(os.path.join(d, 'class')).read().strip().lower()
+        except OSError:
+            continue
+        if vendor != '0x10de' or not cls.startswith('0x03'):
+            continue
+        name = 'NVIDIA graphics'
+        try:
+            r = subprocess.run(['lspci', '-mm', '-s', os.path.basename(d)], capture_output=True, text=True, timeout=5)
+            f = re.findall(r'"([^"]*)"', r.stdout)
+            if len(f) >= 3 and f[2]:
+                name = f[2] if 'nvidia' in f[2].lower() else 'NVIDIA ' + f[2]
+                m = re.search(r'\[(.+)\]', name)
+                if m:
+                    name = 'NVIDIA ' + m.group(1)
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+        out.append(name)
+    return out
+
+
+def a_gpu(_):
+    g = nvidia_gpus()
+    loaded = ''
+    try:
+        # NVIDIA's driver running, or installed already (by the installer) and waiting for the restart
+        if os.path.exists('/sys/module/nvidia') or os.path.exists('/var/lib/palos-nvidia/installed.json'):
+            loaded = 'nvidia'
+    except OSError:
+        pass
+    return {'ok': True, 'nvidia': bool(g), 'names': g, 'driver': loaded}
+
+
+def _drv_job(kind, fn):
+    if DRV['running']:
+        return {'ok': False, 'error': 'busy'}
+    DRV.update({'running': True, 'kind': kind, 'pct': 0, 'step': '', 'result': None, 'error': None})
+
+    def body():
+        try:
+            DRV['result'] = fn()
+        except Exception as e:  # noqa: BLE001
+            DRV['error'] = str(e)
+            log('drivers:', repr(e))
+        DRV['running'] = False
+    import threading
+    threading.Thread(target=body, daemon=True).start()
+    return {'ok': True}
+
+
+def _store(args):
+    """Run the Store's helper (we're root already), following its progress lines."""
+    env = dict(os.environ, DEBIAN_FRONTEND='noninteractive', LC_ALL='C.UTF-8')
+    p = subprocess.Popen([STORE_HELPER] + args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env)
+    err, reason = [], []           # reason: the helper's own explanation (palos:error:), shown instead of apt's output
+    import threading
+    threading.Thread(target=lambda: err.extend(p.stderr.readlines()[-20:]), daemon=True).start()
+    for line in p.stdout:
+        line = line.strip()
+        if line.startswith('palos:step:'):
+            DRV['step'] = line[11:]
+        elif line.startswith('palos:error:'):
+            reason.append(line[12:])
+        elif line.startswith('pmstatus:') or line.startswith('dlstatus:'):
+            f = line.split(':', 3)
+            try:
+                pct = float(f[2])
+                DRV['pct'] = int(pct / 2) if f[0] == 'dlstatus' else 50 + int(pct / 2)
+            except (IndexError, ValueError):
+                pass
+    rc = p.wait()
+    if rc != 0:
+        if reason:
+            raise RuntimeError(reason[-1])
+        tail = ' '.join(x.strip() for x in err if x.strip())[-300:]
+        raise RuntimeError(tail or f'the driver couldn’t be installed ({rc})')
+    return rc
+
+
+def a_drv_scan(_):
+    """palOS's NVIDIA driver for this computer (palos-nvidia): one driver, NVIDIA's own, for the chips it runs."""
+    def scan():
+        DRV['step'] = 'Getting the list of drivers'
+        r = subprocess.run(['/usr/lib/palos-nvidia/palos-nvidia', 'status', '--json'], capture_output=True, text=True, timeout=60)
+        try:
+            st = json.loads(r.stdout)
+        except ValueError:
+            raise RuntimeError('the driver list couldn’t be read')
+        if not st.get('supported'):
+            raise RuntimeError('palOS’s NVIDIA driver runs GeForce RTX 20 series and newer graphics chips. This chip '
+                               'keeps using palOS’s built-in graphics driver, which supports it.')
+        v = st.get('version', '')
+        return {'drivers': [{'pkg': 'nvidia-driver-' + v.split('.')[0], 'recommended': True, 'free': False,
+                             'open': True, 'server': False, 'version': v}]}
+    return _drv_job('scan', scan)
+
+
+def a_drv_install(req):
+    pkg = req.get('pkg') or 'auto'
+    if pkg != 'auto' and not re.match(r'^nvidia-driver-\d+(-open|-server|-server-open)?$', pkg):
+        return {'ok': False, 'error': 'not an NVIDIA driver'}
+
+    def install():
+        DRV['step'] = 'Installing the graphics driver'
+        _store(['drivers-auto'] if pkg == 'auto' else ['drivers-install', pkg])
+        open('/var/lib/palos-firstboot/drivers-installed', 'w').write(pkg + '\n')
+        return {'installed': pkg}
+    return _drv_job('install', install)
+
+
+def a_drv_job(_):
+    return dict(DRV)
+
+
+# ------------------------------------------------------------------ language (setup for a new owner)
+def a_set_language(req):
+    """Any of palOS's languages, with a country or region: palos-locale makes the locale and picks the keyboard."""
+    lang, region = str(req.get('language') or ''), str(req.get('region') or '')
+    legacy = {'en-CA': ('en', 'CA'), 'fr-CA': ('fr', 'CA')}
+    if lang in legacy:
+        lang, region = legacy[lang]
+    if not re.match(r'^[a-z]{2,3}(-[A-Z]{2})?$', lang) or (region and not re.match(r'^[A-Z]{2}$', region)):
+        return {'ok': False, 'error': 'unknown language'}
+    r = subprocess.run(['/usr/lib/palos-l10n/palos-locale', 'resolve', lang, region], capture_output=True, text=True)
+    try:
+        info = json.loads(r.stdout)
+    except ValueError:
+        return {'ok': False, 'error': 'unknown language'}
+    loc, language = info['locale'], info['language']
+    run(['/usr/lib/palos-l10n/palos-locale', 'build', loc])
+    lay, var = info['keyboard']
+    kb = req.get('keyboard') or (f'{lay}:{var}' if var else lay)
+    os.makedirs('/var/lib/palos-firstboot', exist_ok=True)
+    write_file('/var/lib/palos-firstboot/locale.conf',
+               f'LANG={loc}\nLANGUAGE={language}\nLC_TIME={loc}\nLC_NUMERIC={loc}\nLC_MONETARY={loc}\nLC_PAPER={loc}\nLC_MEASUREMENT={loc}\nKEYBOARD={kb}\nPALOS_LANG={info["id"]}\nPALOS_REGION={info["region"]}\n')
+    write_file('/etc/default/locale', f'LANG={loc}\nLANGUAGE={language}\n')
+    l2, _, v2 = kb.partition(':')
+    opts = 'grp:alt_shift_toggle' if ',' in l2 else ''
+    try:
+        write_file('/etc/default/keyboard', f'XKBMODEL="pc105"\nXKBLAYOUT="{l2}"\nXKBVARIANT="{v2}"\nXKBOPTIONS="{opts}"\nBACKSPACE="guess"\n')
+    except OSError as e:
+        log('keyboard:', e)
+    open('/var/lib/palos-firstboot/language-chosen', 'w').write(f'{lang} {info["region"]}\n')
+    return {'ok': True}
+
+
+def a_finish(_):
+    if not state['user']:
+        return {'ok': False, 'error': 'Create your account first.'}
+    # the login screen should offer the new person first
+    try:
+        lightdm = pwd.getpwnam('lightdm')
+        f = os.path.join(lightdm.pw_dir, '.paladin-greeter-state')
+        write_file(f, json.dumps({'user': state['user'], 'session': 'paladin'}), 0o600, lightdm.pw_uid, lightdm.pw_gid)
+    except (KeyError, OSError) as e:
+        log('greeter state:', e)
+    try:
+        TT.cleanup()
+    except Exception as e:  # noqa: BLE001
+        log('cleanup:', repr(e))
+    run(['/usr/lib/palos-firstboot/disarm'])
+    # straight to the desktop: the new account logs in once by itself (finish-switch takes this away again)
+    try:
+        write_file('/etc/lightdm/lightdm.conf.d/91-palos-first-login.conf',
+                   f"# palOS: log the new account straight in after setup (removed right after)\n[Seat:*]\nautologin-user={state['user']}\nautologin-user-timeout=0\nautologin-session=paladin\ndisplay-setup-script=/usr/lib/palos-firstboot/blue-screen\n", 0o644)
+    except OSError as e:
+        log('first login:', e)
+    # now the computer takes its new name (the login screen restarts in a moment, with the new name)
+    if state.get('hostname'):
+        try:
+            set_hostname(state['hostname'], state.get('pretty'))
+        except Exception as e:  # noqa: BLE001
+            log('hostname:', repr(e))
+    # Switch to the login screen a moment from now, outside this process (restarting LightDM ends the
+    # setup session and stops this helper too).
+    # a new graphics driver (the NVIDIA page) only starts with the computer: restart instead of going to the login screen
+    how = ['reboot'] if os.path.exists('/var/lib/palos-firstboot/drivers-installed') else []
+    r = run(['systemd-run', '--quiet', '--unit=palos-firstboot-finish', '--on-active=2', '--timer-property=AccuracySec=100ms',
+             '/usr/lib/palos-firstboot/finish-switch'] + how)
+    if r.returncode != 0:
+        subprocess.Popen(['/bin/sh', '-c', 'sleep 2; exec /usr/lib/palos-firstboot/finish-switch'], start_new_session=True,
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return {'ok': True}
+
+
+ACTIONS = {'status': a_status, 'check-user': a_check_user, 'camera': a_camera, 'wifi-connect': a_wifi_connect, 'wifi-radio': a_wifi_radio, 'wifi-rescan': a_wifi_rescan, 'create-user': a_create_user, 'appearance': a_appearance, 'finish': a_finish,
+           'tt-scan': a_tt_scan, 'tt-open': a_tt_open, 'tt-inspect': a_tt_inspect, 'tt-restore': a_tt_restore,
+           'tt-job': a_tt_job, 'tt-cancel': a_tt_cancel, 'tt-release': a_tt_release,
+           'mig-scan': a_mig_scan, 'mig-copy': a_mig_copy, 'mig-job': a_mig_job, 'mig-release': a_mig_release,
+           'gpu': a_gpu, 'drv-scan': a_drv_scan, 'drv-install': a_drv_install, 'drv-job': a_drv_job, 'set-language': a_set_language}
+
+
+def serve():
+    try:
+        setup = pwd.getpwnam(SETUP_USER)
+    except KeyError:
+        log('no palos-setup user; nothing to do')
+        return 1
+    allowed = {setup.pw_uid}
+    try:
+        allowed.add(pwd.getpwnam('lightdm').pw_uid)
+    except KeyError:
+        pass
+    os.makedirs(SOCK_DIR, exist_ok=True)
+    os.chown(SOCK_DIR, 0, 0)
+    os.chmod(SOCK_DIR, 0o755)
+    try:
+        os.unlink(SOCK)
+    except FileNotFoundError:
+        pass
+    srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    srv.bind(SOCK)
+    os.chmod(SOCK, 0o666)          # who may talk to it is checked per connection, below
+    srv.listen(4)
+    log('ready')
+    while os.path.exists(FLAG) or state['user']:
+        conn, _ = srv.accept()
+        with conn:
+            try:
+                creds = conn.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, struct.calcsize('3i'))
+                _, uid, _ = struct.unpack('3i', creds)
+                if uid not in allowed:
+                    conn.sendall(b'{"ok":false,"error":"not allowed"}\n')
+                    continue
+                buf = b''
+                conn.settimeout(10)
+                while not buf.endswith(b'\n') and len(buf) < 8 * 1024 * 1024:
+                    chunk = conn.recv(65536)
+                    if not chunk:
+                        break
+                    buf += chunk
+                req = json.loads(buf.decode() or '{}')
+                fn = ACTIONS.get(req.get('action'))
+                res = fn(req) if fn else {'ok': False, 'error': 'unknown action'}
+                if req.get('action') == 'create-user':
+                    log('create-user', req.get('username'), '->', res.get('ok'))
+                elif req.get('action') in ('tt-job', 'camera', 'drv-job', 'mig-job'):
+                    pass
+                else:
+                    log(req.get('action'), '->', res.get('ok', True))
+            except Exception as e:  # noqa: BLE001
+                log('error:', repr(e))
+                res = {'ok': False, 'error': str(e)}
+            try:
+                conn.sendall(json.dumps(res).encode() + b'\n')
+            except OSError:
+                pass
+        if not os.path.exists(FLAG) and state['user']:
+            time.sleep(0.2)
+            break
+    return 0
+
+
+if __name__ == '__main__':
+    os.environ['PATH'] = '/usr/sbin:/usr/bin:/sbin:/bin'
+    ttrestore.set_logger(log)
+    migrate.set_logger(log)
+    if not os.path.exists(FLAG):
+        log('first boot is done; not starting')
+        sys.exit(0)
+    sys.exit(serve())

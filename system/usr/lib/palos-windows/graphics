@@ -1,0 +1,49 @@
+#!/bin/sh
+# Picks how Windows programs draw 3D (DirectX):
+#   graphics card with Vulkan -> DXVK (DirectX 8-11) and vkd3d-proton (DirectX 12): fast, like on Windows
+#   no Vulkan (older or virtual graphics) -> Wine's own DirectX through OpenGL
+# Runs when the Windows environment is set up and again whenever the graphics card changes.
+PREFIX="${WINEPREFIX:-$HOME/.local/share/palos-windows/prefix}"
+export WINEPREFIX="$PREFIX" WINEDEBUG=-all PATH="/opt/palos-windows/wine/bin:$PATH"
+STATE="$PREFIX/.palos-graphics"
+DXVK=/opt/palos-windows/dxvk VKD3D=/opt/palos-windows/vkd3d
+[ -d "$PREFIX/drive_c/windows" ] || exit 0
+
+gpu() {
+  # a real Vulkan device (not the CPU fallback)?
+  command -v vulkaninfo >/dev/null 2>&1 || { echo none; return; }
+  out=$(timeout 8 vulkaninfo --summary 2>/dev/null) || { echo none; return; }
+  echo "$out" | grep -E 'deviceType *=' | grep -qv 'PHYSICAL_DEVICE_TYPE_CPU' || { echo none; return; }
+  echo "$out" | awk -F'= ' '/deviceName/ {print $2; exit}'
+}
+NOW="$(gpu)"
+[ "$1" != "--force" ] && [ -f "$STATE" ] && [ "$(cat "$STATE")" = "$NOW" ] && exit 0
+
+S64="$PREFIX/drive_c/windows/system32" S32="$PREFIX/drive_c/windows/syswow64"
+DX="d3d8 d3d9 d3d10core d3d11 dxgi"
+D12="d3d12 d3d12core"
+if [ "$NOW" != none ]; then
+  echo "graphics: Vulkan on $NOW: DirectX through DXVK and vkd3d-proton"
+  for d in $DX; do
+    [ -f "$DXVK/x64/$d.dll" ] && cp -f "$DXVK/x64/$d.dll" "$S64/$d.dll"
+    [ -f "$DXVK/x32/$d.dll" ] && cp -f "$DXVK/x32/$d.dll" "$S32/$d.dll"
+    wine reg add 'HKCU\Software\Wine\DllOverrides' /v "$d" /d native /f >/dev/null 2>&1
+  done
+  for d in $D12; do
+    [ -f "$VKD3D/x64/$d.dll" ] && cp -f "$VKD3D/x64/$d.dll" "$S64/$d.dll"
+    [ -f "$VKD3D/x86/$d.dll" ] && cp -f "$VKD3D/x86/$d.dll" "$S32/$d.dll"
+    wine reg add 'HKCU\Software\Wine\DllOverrides' /v "$d" /d native /f >/dev/null 2>&1
+  done
+else
+  echo "graphics: no Vulkan device: Wine's own DirectX (OpenGL)"
+  for d in $DX $D12; do
+    wine reg delete 'HKCU\Software\Wine\DllOverrides' /v "$d" /f >/dev/null 2>&1
+    # put Wine's own DLL back where DXVK's was
+    for pair in "x86_64-windows:$S64" "i386-windows:$S32"; do
+      src="/opt/palos-windows/wine/lib/wine/${pair%%:*}/$d.dll"; dst="${pair#*:}/$d.dll"
+      [ -f "$src" ] && cp -f "$src" "$dst"
+    done
+  done
+fi
+wineserver -w
+echo "$NOW" > "$STATE"

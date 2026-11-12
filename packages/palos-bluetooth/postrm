@@ -1,0 +1,7 @@
+#!/bin/sh
+set -e
+if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+  rm -rf /opt/palos-bluetooth/runtime
+  rmdir /opt/palos-bluetooth 2>/dev/null || true
+fi
+exit 0

@@ -1,0 +1,11 @@
+{
+ "name": "Fen",
+ "id": "palos-fen",
+ "command": "fen",
+ "icon": "palos-fen",
+ "version": "1.0.0",
+ "folder": "",
+ "kind": "shared",
+ "runtime": "kibble",
+ "fallback": "electron-44"
+}

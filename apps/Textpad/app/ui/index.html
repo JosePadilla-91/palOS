@@ -1,0 +1,16 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Textpad</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+<link rel="stylesheet" href="base.css"><link rel="stylesheet" href="textpad.css"></head>
+<body>
+<div id="findbar" hidden>
+  <div class="row"><input id="fq" placeholder="Find" spellcheck="false"><span id="fcount"></span>
+    <button id="fprev" title="Previous (Ctrl+Shift+G)">‹</button><button id="fnext" title="Next (Ctrl+G)">›</button>
+    <label class="opt"><input type="checkbox" id="fcase"> Match Case</label><label class="opt"><input type="checkbox" id="fword"> Whole Words</label>
+    <span class="grow"></span><button id="fdone">Done</button></div>
+  <div class="row" id="rrow"><input id="rq" placeholder="Replace with" spellcheck="false"><button id="rone">Replace</button><button id="rall">Replace All</button></div>
+</div>
+<div id="editor"><div id="gutter" aria-hidden="true"><div id="nums"></div></div><textarea id="ta" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" wrap="soft"></textarea></div>
+<div id="measure" aria-hidden="true"></div>
+<footer id="status"><span id="pos">Line 1, Column 1</span><span id="count"></span><span class="grow"></span><span id="ro" hidden>Read Only</span><span id="eol">LF</span><span id="enc">UTF-8</span></footer>
+<div id="print" aria-hidden="true"></div>
+<script src="textpad.js"></script></body></html>

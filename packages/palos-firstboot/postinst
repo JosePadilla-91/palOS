@@ -1,0 +1,22 @@
+#!/bin/sh
+set -e
+if [ "$1" = "configure" ]; then
+  if ! getent passwd palos-setup >/dev/null; then
+    adduser --system --group --home /var/lib/palos-setup --shell /bin/bash --gecos "palOS Setup" palos-setup >/dev/null
+  fi
+  passwd -l palos-setup >/dev/null 2>&1 || true
+  # sound, network, removable drives and the graphics card (so the setup screen can draw on any computer)
+  for g in audio video render netdev plugdev; do getent group "$g" >/dev/null && adduser palos-setup "$g" >/dev/null 2>&1 || true; done
+  for g in input; do
+    if id -nG palos-setup 2>/dev/null | tr ' ' '\n' | grep -qx "$g"; then deluser palos-setup "$g" >/dev/null 2>&1 || true; fi
+  done
+  # keep the setup account off the login screen's user list
+  mkdir -p /var/lib/AccountsService/users
+  printf '[User]\nSystemAccount=true\n' > /var/lib/AccountsService/users/palos-setup
+  if command -v apparmor_parser >/dev/null 2>&1 && [ -d /sys/kernel/security/apparmor ]; then
+    apparmor_parser -r -T -W /etc/apparmor.d/palos-firstboot 2>/dev/null || true
+  fi
+  if [ -d /run/systemd/system ]; then systemctl daemon-reload || true; fi
+  if [ -e /var/lib/palos/firstboot ]; then systemctl enable palos-firstboot-helper.service >/dev/null 2>&1 || true; fi
+fi
+exit 0

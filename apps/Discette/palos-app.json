@@ -1,0 +1,10 @@
+{
+ "name": "Discette",
+ "id": "discette",
+ "command": "discette",
+ "icon": "discette",
+ "version": "1.0",
+ "folder": "",
+ "kind": "kibble",
+ "runtime": "kibble"
+}

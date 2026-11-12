@@ -1,0 +1,11 @@
+{
+ "name": "Chancery DataBase",
+ "id": "chancery-database",
+ "command": "chancery-database",
+ "icon": "chancery-database",
+ "version": "1.0",
+ "folder": "",
+ "kind": "shared",
+ "runtime": "kibble",
+ "fallback": "electron-45"
+}

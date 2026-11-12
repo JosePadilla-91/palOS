@@ -1,0 +1,19 @@
+#!/bin/sh
+# Microsoft Visual C++ 2015-2022 runtimes (what most Windows programs are built with), from Microsoft,
+# the first time the computer is online. Until then Wine's built-in versions stand in for them, and most
+# installers bring their own copy anyway. Files put in /opt/palos-windows/runtimes are used first.
+PREFIX="${WINEPREFIX:-$HOME/.local/share/palos-windows/prefix}"
+export WINEPREFIX="$PREFIX" WINEDEBUG=-all PATH="/opt/palos-windows/wine/bin:$PATH"
+MARK="$PREFIX/.palos-vcrun"
+[ -e "$MARK" ] && exit 0
+CACHE="$HOME/.cache/palos-windows"; mkdir -p "$CACHE"
+get() {  # get NAME URL
+  for d in /opt/palos-windows/runtimes "$CACHE"; do [ -s "$d/$1" ] && { echo "$d/$1"; return 0; }; done
+  curl -fsSL --max-time 300 -o "$CACHE/$1.part" "$2" && mv "$CACHE/$1.part" "$CACHE/$1" && echo "$CACHE/$1"
+}
+X64=$(get vc_redist.x64.exe https://aka.ms/vs/17/release/vc_redist.x64.exe) || exit 0
+X86=$(get vc_redist.x86.exe https://aka.ms/vs/17/release/vc_redist.x86.exe) || exit 0
+wine "$X86" /install /quiet /norestart
+wine "$X64" /install /quiet /norestart
+wineserver -w
+touch "$MARK"

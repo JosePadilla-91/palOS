@@ -1,0 +1,303 @@
+/* Paladin look for Seeker, loaded after every other stylesheet.
+   Steel-blue accent, cool gray surfaces; slate gray when Dark Mode is on.
+   Dark Mode comes from Paladin Settings (Electron's prefers-color-scheme follows it). */
+
+:root {
+  --font: "Noto Sans", "DejaVu Sans", "Cantarell", sans-serif;
+  --pl-accent: #4c6278; --pl-accent-hover: #2c3d4e; --pl-accent-soft: rgba(76, 98, 120, .18); --pl-ring: rgba(76, 98, 120, .45);
+  --pl-on-accent: #fff;
+  --pl-bg: #eef0f2; --pl-view: #fff; --pl-side: #e4e7eb; --pl-side-in: #eceef1; --pl-stripe: #f4f6f8;
+  --pl-text: #1b1e22; --pl-dim: #66707b; --pl-faint: #9aa3ad;
+  --pl-border: #b9bfc7; --pl-border-soft: #d5d9de;
+  --pl-chrome-top: #dde1e5; --pl-chrome-bot: #d3d7dc; --pl-chrome-line: #b4bac2;
+  --pl-chrome-in-top: #eceef1; --pl-chrome-in-bot: #e6e8eb; --pl-chrome-in-line: #cdd1d6;
+  --pl-btn: #fff; --pl-btn-border: #b4bac2; --pl-field: #fff;
+  --pl-menu: rgba(250, 251, 252, .97); --pl-bar: rgba(232, 235, 238, .74); --pl-bar-solid: #e6e9ec;
+  --pl-sel-inactive: #cfd4da; --pl-sel-inactive-text: #1b1e22;
+  --pl-win-btn: #4c6278; --pl-win-btn-hover: #2c3d4e; --pl-win-btn-ring: #9fb3c6; --pl-win-btn-off: #a3aab3;
+  --pl-scroll: #a7b0ba; --pl-scroll-hover: #4c6278;
+
+  --sel-top: var(--pl-accent); --sel-bot: var(--pl-accent); --sel-border: var(--pl-accent);
+  --sel-inactive-top: var(--pl-sel-inactive); --sel-inactive-bot: var(--pl-sel-inactive);
+  --text: var(--pl-text); --text-dim: var(--pl-dim); --menu-bg: var(--pl-menu);
+  --chrome-top: var(--pl-chrome-top); --chrome-bot: var(--pl-chrome-bot); --chrome-line: var(--pl-chrome-line);
+  --chrome-in-top: var(--pl-chrome-in-top); --chrome-in-bot: var(--pl-chrome-in-bot); --chrome-in-line: var(--pl-chrome-in-line);
+  --source-bg: var(--pl-side); --source-in-bg: var(--pl-side-in);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --pl-accent: #56708a; --pl-accent-hover: #7891ab; --pl-accent-soft: rgba(120, 145, 171, .22); --pl-ring: rgba(120, 145, 171, .55);
+    --pl-bg: #2e343b; --pl-view: #262b31; --pl-side: #292e34; --pl-side-in: #2c3137; --pl-stripe: #2a3036;
+    --pl-text: #e3e7eb; --pl-dim: #9aa3ad; --pl-faint: #6b737c;
+    --pl-border: #444b53; --pl-border-soft: #3a4047;
+    --pl-chrome-top: #363c43; --pl-chrome-bot: #30363c; --pl-chrome-line: #1c2025;
+    --pl-chrome-in-top: #2c3137; --pl-chrome-in-bot: #292e33; --pl-chrome-in-line: #1f2328;
+    --pl-btn: #3a4148; --pl-btn-border: #1f2328; --pl-field: #22272c;
+    --pl-menu: rgba(52, 58, 65, .97); --pl-bar: rgba(40, 45, 51, .76); --pl-bar-solid: #2b3036;
+    --pl-sel-inactive: #444b53; --pl-sel-inactive-text: #e3e7eb;
+    --pl-win-btn: #56708a; --pl-win-btn-hover: #7891ab; --pl-win-btn-ring: #3e5368; --pl-win-btn-off: #5a626b;
+    --pl-scroll: #5a626b; --pl-scroll-hover: #7891ab;
+    color-scheme: dark;
+  }
+}
+
+html, body { color: var(--pl-text); }
+.window, body.no-composite, .window.panel-like { background: var(--pl-bg); }
+.muted, .lr .c-dim, .preview td:first-child, .hint, .ver, .copy, .desc, .head .m { color: var(--pl-dim) !important; }
+
+/* ---------------- window chrome: flat bar, steel window buttons ---------------- */
+.chrome { background: linear-gradient(var(--chrome-top), var(--chrome-bot)); border-bottom-color: var(--chrome-line); }
+.chrome .titlebar { color: var(--pl-text); text-shadow: none; }
+body.inactive .chrome .titlebar { color: var(--pl-faint); }
+.window { box-shadow: inset 0 0 0 1px var(--pl-border) !important; }
+.lights { gap: 7px; top: 3px; }
+.lights .l { width: 15px; height: 15px; border-radius: 4px; background: var(--pl-win-btn) !important; box-shadow: none; }
+.lights .l::after { display: none; }
+.lights .l > span { opacity: 1; color: #fff !important; font: 600 12px/15px var(--font); }
+.lights .l:hover { background: var(--pl-win-btn-hover) !important; box-shadow: 0 0 0 2px var(--pl-win-btn-ring); }
+.lights .l.off { background: transparent !important; box-shadow: inset 0 0 0 1px var(--pl-win-btn-off); }
+.lights .l.off > span { opacity: 0; }
+body.inactive .lights .l:not(:hover) { background: transparent !important; box-shadow: inset 0 0 0 1px var(--pl-win-btn-off); }
+body.inactive .lights .l:not(:hover) > span { opacity: 0; }
+.grip { background: linear-gradient(135deg, transparent 0 55%, var(--pl-faint) 55% 60%, transparent 60% 70%, var(--pl-faint) 70% 75%, transparent 75% 85%, var(--pl-faint) 85% 90%, transparent 90%); }
+
+/* ---------------- menus ---------------- */
+.menu { color: var(--pl-text); background: var(--pl-menu); border-radius: 6px; box-shadow: 0 8px 22px rgba(0, 0, 0, .32), 0 0 0 1px rgba(0, 0, 0, .16); }
+.menu.from-bar { border-radius: 0 0 6px 6px; }
+body.no-composite .menu { background: var(--pl-bar-solid); border-color: var(--pl-border); }
+.menu .mi .ac { color: var(--pl-dim); }
+.menu .mi.disabled, .menu .mi.disabled .ac { color: var(--pl-faint); }
+.menu .mi.header { color: var(--pl-dim); }
+.menu .mi.hl:not(.disabled):not(.header) { background: var(--pl-accent); color: var(--pl-on-accent); border-radius: 4px; margin: 0 4px; padding-left: 16px; padding-right: 12px; }
+.menu .mi.hl:not(.disabled):not(.header) .ck { left: 2px; }
+.menu .sep { background: var(--pl-border-soft); }
+.menu .mi.flash { color: var(--pl-text) !important; }
+
+/* ---------------- controls ---------------- */
+.btn { border-radius: 6px; border: 1px solid var(--pl-btn-border); background: var(--pl-btn); box-shadow: 0 1px 1px rgba(0, 0, 0, .08); color: var(--pl-text); }
+.btn:hover { border-color: var(--pl-accent); }
+.btn:active { background: var(--pl-accent-soft); color: var(--pl-text); }
+.btn.default { background: var(--pl-accent); border-color: var(--pl-accent); color: var(--pl-on-accent); }
+.btn.default:hover { background: var(--pl-accent-hover); }
+.btn:disabled { color: var(--pl-faint); }
+.seg { box-shadow: none; }
+.seg button { border-color: var(--pl-btn-border); background: var(--pl-btn); }
+.seg button svg { fill: var(--pl-text); }
+.seg button.on, .seg button:active:not(:disabled) { background: var(--pl-accent); box-shadow: none; }
+.seg button.on svg { fill: var(--pl-on-accent); }
+input[type=text], input[type=password], input[type=search], textarea, select {
+  background: var(--pl-field); color: var(--pl-text); border: 1px solid var(--pl-border); border-radius: 5px; box-shadow: none;
+}
+input:focus, textarea:focus, select:focus { box-shadow: 0 0 0 3px var(--pl-ring); border-color: var(--pl-accent); }
+.search::before { border-color: var(--pl-dim); } .search::after { background: var(--pl-dim); }
+input[type=checkbox], input[type=radio], input[type=range] { accent-color: var(--pl-accent); }
+.disclosure { border-left-color: var(--pl-dim); }
+textarea.rename, input.rename { border-color: var(--pl-accent) !important; background: var(--pl-field); color: var(--pl-text); }
+#tbtoggle { border-color: var(--pl-btn-border); background: var(--pl-btn); }
+
+/* scrollbars: thin, flat */
+::-webkit-scrollbar, ::-webkit-scrollbar:horizontal { width: 12px; height: 12px; background: transparent; }
+::-webkit-scrollbar-thumb, ::-webkit-scrollbar-thumb:horizontal, body.inactive ::-webkit-scrollbar-thumb {
+  border-radius: 6px; border: 3px solid transparent; background-clip: padding-box; background-color: var(--pl-scroll); background-image: none;
+}
+::-webkit-scrollbar-thumb:hover { background-color: var(--pl-scroll-hover); }
+::-webkit-scrollbar-corner { background: transparent; }
+
+/* ---------------- file browser ---------------- */
+.main, .view, .flowlist { background: var(--pl-view); }
+.sidebar .sh { color: var(--pl-dim); text-shadow: none; }
+body.inactive .sidebar .sh { color: var(--pl-faint); }
+.sidebar .si { color: var(--pl-text); }
+.sidebar .si.on { background: var(--pl-accent); border-top: 0; color: var(--pl-on-accent); text-shadow: none; font-weight: 600; border-radius: 5px; margin: 0 6px; padding-left: 12px; }
+body.inactive .sidebar .si.on { background: var(--pl-sel-inactive); color: var(--pl-sel-inactive-text); }
+.sidebar .si.drop, .lr.drop, .col .cr.drop { background: var(--pl-accent-soft); box-shadow: inset 0 0 0 2px var(--pl-accent); }
+.sidebar .si .ej svg { fill: var(--pl-text); }
+.splitter { background: var(--pl-border); }
+.banner, .pathbar { background: var(--pl-bg); border-color: var(--pl-border-soft); color: var(--pl-text); }
+.banner .scope button { color: var(--pl-text); }
+.banner .scope button.on { background: var(--pl-accent); color: var(--pl-on-accent); }
+.pathbar .pc:hover { background: var(--pl-accent-soft); }
+.pathbar .sepr { color: var(--pl-faint); }
+.statusbar { background: linear-gradient(var(--chrome-top), var(--chrome-bot)); border-top-color: var(--chrome-line); color: var(--pl-dim); text-shadow: none; }
+body.inactive .statusbar { background: var(--pl-chrome-in-top); border-top-color: var(--pl-chrome-in-line); color: var(--pl-faint); }
+#marquee { border-color: var(--pl-accent); background: var(--pl-accent-soft); }
+.empty-msg { color: var(--pl-faint); }
+.icons .it .lbl { color: var(--pl-text); }
+.icons .it.sel .img { background: var(--pl-accent-soft); border-color: transparent; }
+.icons .it.sel .lbl { background: var(--pl-accent); color: var(--pl-on-accent); }
+body.inactive .icons .it.sel .lbl { background: var(--pl-sel-inactive); color: var(--pl-sel-inactive-text); }
+.icons .it .img img.thumb { border-color: var(--pl-border); }
+.icons .it .img img.thumb.alpha { border: none; }
+.lh { background: var(--pl-bg); border-bottom-color: var(--pl-border); color: var(--pl-dim); }
+.lh div { border-right-color: var(--pl-border-soft); }
+.lh div.sorted { background: var(--pl-accent-soft); color: var(--pl-text); }
+.lr { color: var(--pl-text); }
+.lr:nth-child(even) { background: var(--pl-stripe); }
+.lr.sel { background: var(--pl-accent) !important; color: var(--pl-on-accent); }
+body.inactive .lr.sel { background: var(--pl-sel-inactive) !important; color: var(--pl-sel-inactive-text); }
+body.inactive .lr.sel .c-dim { color: var(--pl-sel-inactive-text) !important; }
+.lr.sel .c-dim { color: var(--pl-on-accent) !important; }
+.col { border-right-color: var(--pl-border-soft); }
+.col .cr { color: var(--pl-text); }
+.col .cr .ar { color: var(--pl-dim); }
+.col .cr.sel { background: var(--pl-accent); color: var(--pl-on-accent); }
+.col .cr.path, .col:not(.active) .cr.sel { background: var(--pl-sel-inactive); color: var(--pl-sel-inactive-text); }
+.preview { color: var(--pl-text); }
+.flowsplit { background: var(--pl-bg); border-color: var(--pl-border); }
+.sheet { background: var(--pl-bg); border-color: var(--pl-border); color: var(--pl-text); border-radius: 0 0 8px 8px; }
+
+/* ---------------- menu bar ---------------- */
+#bar { background: var(--pl-bar) !important; box-shadow: 0 1px 0 rgba(0, 0, 0, .22) !important; }
+body.no-composite #bar { background: var(--pl-bar-solid) !important; }
+/* (no compositor: no see-through, so the solid bar; this rule is repeated after the glass one below) */
+#bar .t { color: var(--pl-text); text-shadow: none; }
+#bar .t.open, #bar .x.open { background: var(--pl-accent); color: var(--pl-on-accent); }
+#shield i { background: var(--pl-text); }
+#shield.open i { background: var(--pl-on-accent); }
+#bar .x svg { fill: var(--pl-text); }
+#bar .x svg [stroke="#111"] { stroke: var(--pl-text); }
+#bar .x svg [fill="#111"] { fill: var(--pl-text); }      /* filled parts too (the Widgets tiles stayed black on a dark menu bar) */
+#bar .x.open svg, #bar .x.open svg [stroke], #bar .x.open svg [fill="#111"] { fill: var(--pl-on-accent); stroke: var(--pl-on-accent); }
+/* Wi-Fi: the rays it doesn't reach are hollow channels filled with the bar's own colour ("empty rays") */
+#bar .x svg.wifi path.well { stroke: #c4cad1 !important; }
+@media (prefers-color-scheme: dark) { #bar .x svg.wifi path.well { stroke: #1d2126 !important; } }
+#bar .x.open svg.wifi path.well { stroke: var(--pl-accent) !important; }
+#bar .x svg.wifi circle[fill="none"] { fill: none !important; }
+/* Screens: the boxes take the menu bar's text colour like every other icon (fixed black made the one-screen box a
+   solid black square on a dark menu bar) */
+#bar .scr-box { background: color-mix(in srgb, var(--pl-text) 14%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pl-text) 60%, transparent); }
+#bar .scr-box.on { background: color-mix(in srgb, var(--pl-text) 62%, transparent); }
+#bar .x.open .scr-box { background: color-mix(in srgb, var(--pl-on-accent) 30%, transparent); box-shadow: inset 0 0 0 1px var(--pl-on-accent); }
+#bar .x.open .scr-box.on { background: var(--pl-on-accent); }
+.clock { color: var(--pl-text); }
+.vol-pop { background: var(--pl-menu); }
+.vol-pop .track { background: var(--pl-border); box-shadow: none; }
+.vol-pop .fill { background: var(--pl-accent); }
+.vol-pop .knob { background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .4); }
+.vol-pop svg { fill: var(--pl-dim); }
+
+/* ---------------- small windows ---------------- */
+.body { color: var(--pl-text); }
+.tab.on { background: var(--pl-accent-soft); box-shadow: none; }
+.bgside, .grid, .list, .perm, .help .body { background: var(--pl-view) !important; border-color: var(--pl-border) !important; }
+.bgside .si.on, .row.sel { background: var(--pl-accent) !important; color: var(--pl-on-accent); }
+.grid .w { outline-color: var(--pl-border); }
+.grid .w.on { border-color: var(--pl-accent); outline-color: var(--pl-accent); }
+.head, .sec { border-color: var(--pl-border-soft) !important; }
+.perm th { background: var(--pl-bg); border-color: var(--pl-border); }
+.perm tr:nth-child(even) td { background: var(--pl-stripe); }
+.name, td:first-child, h2 { color: var(--pl-text) !important; text-shadow: none !important; }
+td:last-child { color: var(--pl-text); }
+td { border-color: var(--pl-border-soft) !important; }
+.shield { background: linear-gradient(160deg, #9fb3c6, #4c6278 55%, #2c3d4e) !important; }
+
+/* desktop: selection uses the accent */
+.di.sel .lbl { background: var(--pl-accent) !important; }
+.window .body { background: var(--pl-bg) !important; }
+.stage pre { background: var(--pl-view) !important; color: var(--pl-text) !important; }
+
+/* the battery: "78%" then the icon; yellow at 25% and below, red at 10% and below */
+#bar .x.batt-x { display: flex; align-items: center; gap: 5px; }
+#bar .x .batt-pct { font-size: 12.5px; font-variant-numeric: tabular-nums; }
+#bar .x svg.batt { width: 26px; height: 14px; }
+#bar .x svg.batt.warn .lvl { fill: #e0a800; }
+#bar .x svg.batt.low .lvl { fill: #d93a32; }
+#bar .x svg.batt.charging .lvl { opacity: .35; }
+#bar .x svg.batt .bolt { fill: var(--pl-text); }
+#bar .x .batt-pct { color: var(--pl-text); }
+#bar .x.open .batt-pct { color: var(--pl-on-accent); }
+
+/* ---------------------------------------------------------------- Paladin: brushed steel and glass (build 8)
+   Window toolbars, the status bar and the menu bar are brushed steel with a glass sheen, matching the title bars. */
+.chrome { background: url("../assets/paladin-brushed-toolbar.png") center / 100% 100% no-repeat, linear-gradient(var(--chrome-top), var(--chrome-bot)); border-bottom-color: #7f8791; box-shadow: inset 0 1px rgba(255,255,255,.6); }
+body.inactive .chrome { background: url("../assets/paladin-brushed-title-inactive.png") center / 100% 100% no-repeat, linear-gradient(var(--chrome-top), var(--chrome-bot)); }
+.statusbar { background: url("../assets/paladin-brushed-toolbar.png") center / 100% 100% no-repeat; border-top-color: #7f8791; }
+/* the menu bar stays see-through glass: the desktop picture shows through it (build 9) */
+#bar { background: linear-gradient(rgba(250, 251, 253, .70), rgba(228, 232, 237, .62)) !important; box-shadow: 0 1px 0 rgba(0, 0, 0, .22), inset 0 -1px rgba(255,255,255,.30) !important; }
+#bar .t, .clock { text-shadow: 0 1px rgba(255,255,255,.55); }
+@media (prefers-color-scheme: dark) {
+  .chrome { background: url("../assets/paladin-brushed-toolbar-dark.png") center / 100% 100% no-repeat, linear-gradient(var(--chrome-top), var(--chrome-bot)); border-bottom-color: #1d2126; box-shadow: inset 0 1px rgba(255,255,255,.08); }
+  body.inactive .chrome { background: url("../assets/paladin-brushed-title-inactive-dark.png") center / 100% 100% no-repeat; }
+  .statusbar { background: url("../assets/paladin-brushed-toolbar-dark.png") center / 100% 100% no-repeat; border-top-color: #1d2126; }
+  #bar { background: linear-gradient(rgba(46, 51, 58, .72), rgba(32, 36, 41, .66)) !important; box-shadow: 0 1px 0 rgba(0, 0, 0, .45) !important; }
+  #bar .t, .clock { text-shadow: 0 -1px rgba(0,0,0,.5); }
+}
+/* glass over steel for toolbar buttons */
+.toolbar button, .toolbar .seg { background-image: linear-gradient(#fbfcfd, #dfe3e7 50%, #d4d9de) !important; border-color: #9aa1aa !important; box-shadow: inset 0 1px rgba(255,255,255,.9), 0 1px rgba(0,0,0,.08) !important; }
+@media (prefers-color-scheme: dark) { .toolbar button, .toolbar .seg { background-image: linear-gradient(#5b626b, #454b53 50%, #3d434a) !important; border-color: #1d2126 !important; box-shadow: inset 0 1px rgba(255,255,255,.12) !important; } }
+
+body.no-composite #bar { background: var(--pl-bar-solid) !important; }
+
+/* ---------------- one title bar + toolbar (build 15) ----------------
+   Browser windows draw their own title bar: the system title bar's artwork (Paladin theme), stretched over
+   the title bar and the toolbar together, so the steel runs from the top edge to the toolbar's bottom edge
+   with no join. Edges, lines, title colours and buttons are the window manager's own. */
+body.unified .window { border: 1px solid #8f969f; border-radius: 5px 5px 0 0; }
+body.unified.inactive .window { border-color: #b0b6be; }
+body.unified .window.maximized, body.unified.no-composite .window { border-radius: 0; }
+body.unified .window.maximized { border-width: 0; }
+body.unified .chrome { -webkit-app-region: drag; border-radius: 4px 4px 0 0;
+  background: url("file:///usr/share/themes/Paladin/metacity-1/titlebar-active.png") 0 0 / 100% 100% no-repeat, #c9ced4;
+  box-shadow: inset 0 1px #f4f6f8; border-bottom: 1px solid #7f8791; }
+body.unified.inactive .chrome { background: url("file:///usr/share/themes/Paladin/metacity-1/titlebar-inactive.png") 0 0 / 100% 100% no-repeat, #dde0e4;
+  box-shadow: inset 0 1px #f6f7f9; border-bottom-color: #a9b0b8; }
+body.unified .window.maximized .chrome, body.unified.no-composite .chrome { border-radius: 0; }
+body.unified .chrome .titlebar { height: 28px; font: 13.5px/1 var(--font); color: #1f2329; text-shadow: 0 1px #eef1f4; }
+body.unified.inactive .chrome .titlebar { color: #5f6771; text-shadow: 0 1px #f1f3f5; }
+body.unified .chrome .titlebar .title { gap: 5px; }
+/* the window manager's own glass beads: ruby, amber, jade */
+body.unified .lights { left: 7px; top: 6px; gap: 5px; }
+body.unified .lights .l { width: 15px; height: 15px; border-radius: 0; box-shadow: none !important; background: none no-repeat center / 15px 15px !important; }
+body.unified .lights .l::after, body.unified .lights .l > span { display: none; }
+body.unified .lights .close { background-image: -webkit-image-set(url("file:///usr/share/themes/Paladin/metacity-1/close-normal.png") 1x, url("file:///usr/share/themes/Paladin/metacity-1/close-normal@2.png") 2x) !important; }
+body.unified .lights .min { background-image: -webkit-image-set(url("file:///usr/share/themes/Paladin/metacity-1/minimize-normal.png") 1x, url("file:///usr/share/themes/Paladin/metacity-1/minimize-normal@2.png") 2x) !important; }
+body.unified .lights .zoom { background-image: -webkit-image-set(url("file:///usr/share/themes/Paladin/metacity-1/maximize-normal.png") 1x, url("file:///usr/share/themes/Paladin/metacity-1/maximize-normal@2.png") 2x) !important; }
+body.unified .lights .close:hover { background-image: -webkit-image-set(url("file:///usr/share/themes/Paladin/metacity-1/close-prelight.png") 1x, url("file:///usr/share/themes/Paladin/metacity-1/close-prelight@2.png") 2x) !important; }
+body.unified .lights .min:hover { background-image: -webkit-image-set(url("file:///usr/share/themes/Paladin/metacity-1/minimize-prelight.png") 1x, url("file:///usr/share/themes/Paladin/metacity-1/minimize-prelight@2.png") 2x) !important; }
+body.unified .lights .zoom:hover { background-image: -webkit-image-set(url("file:///usr/share/themes/Paladin/metacity-1/maximize-prelight.png") 1x, url("file:///usr/share/themes/Paladin/metacity-1/maximize-prelight@2.png") 2x) !important; }
+body.unified .lights .close:active { background-image: -webkit-image-set(url("file:///usr/share/themes/Paladin/metacity-1/close-pressed.png") 1x, url("file:///usr/share/themes/Paladin/metacity-1/close-pressed@2.png") 2x) !important; }
+body.unified .lights .min:active { background-image: -webkit-image-set(url("file:///usr/share/themes/Paladin/metacity-1/minimize-pressed.png") 1x, url("file:///usr/share/themes/Paladin/metacity-1/minimize-pressed@2.png") 2x) !important; }
+body.unified .lights .zoom:active { background-image: -webkit-image-set(url("file:///usr/share/themes/Paladin/metacity-1/maximize-pressed.png") 1x, url("file:///usr/share/themes/Paladin/metacity-1/maximize-pressed@2.png") 2x) !important; }
+body.unified.inactive .lights .close:not(:hover) { background-image: -webkit-image-set(url("file:///usr/share/themes/Paladin/metacity-1/close-inactive.png") 1x, url("file:///usr/share/themes/Paladin/metacity-1/close-inactive@2.png") 2x) !important; }
+body.unified.inactive .lights .min:not(:hover) { background-image: -webkit-image-set(url("file:///usr/share/themes/Paladin/metacity-1/minimize-inactive.png") 1x, url("file:///usr/share/themes/Paladin/metacity-1/minimize-inactive@2.png") 2x) !important; }
+body.unified.inactive .lights .zoom:not(:hover) { background-image: -webkit-image-set(url("file:///usr/share/themes/Paladin/metacity-1/maximize-inactive.png") 1x, url("file:///usr/share/themes/Paladin/metacity-1/maximize-inactive@2.png") 2x) !important; }
+/* Dark Mode: the same single surface in dark steel */
+@media (prefers-color-scheme: dark) {
+  body.unified .window { border-color: #15181c; }
+  body.unified .chrome { background: url("../assets/paladin-brushed-toolbar-dark.png") center / 100% 100% no-repeat, linear-gradient(var(--chrome-top), var(--chrome-bot));
+    box-shadow: inset 0 1px rgba(255,255,255,.10); border-bottom-color: #1d2126; }
+  body.unified.inactive .chrome { background: url("../assets/paladin-brushed-title-inactive-dark.png") center / 100% 100% no-repeat, linear-gradient(var(--chrome-top), var(--chrome-bot)); }
+  body.unified .chrome .titlebar { color: #e9ecef; text-shadow: 0 -1px rgba(0,0,0,.6); }
+  body.unified.inactive .chrome .titlebar { color: #8b939c; text-shadow: none; }
+}
+
+/* solid (no compositor) menu bar: the menu window is cut to a rectangle, so menus are square with no shadow */
+body.no-composite .menu { border-radius: 0 !important; box-shadow: none !important; }
+
+/* the search field: an oval; when typing in it, a thin blue outline (no square frame, no thick ring) */
+.search input[type=search] { -webkit-appearance: none; appearance: none; border-radius: 11px !important; outline: none !important; }
+.search input[type=search]::-webkit-search-decoration, .search input[type=search]::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
+.search input[type=search]:focus { box-shadow: none !important; border: 1px solid var(--pl-accent) !important; outline: none !important; }
+
+/* Inactive Seeker windows: the same steel, gently dimmed (no washed-out white), like every other palOS window */
+body.inactive .chrome {
+  background: linear-gradient(rgba(40,46,54,.07), rgba(40,46,54,.07)), url("../assets/paladin-brushed-toolbar.png") center / 100% 100% no-repeat, linear-gradient(var(--chrome-top), var(--chrome-bot)) !important; }
+body.unified.inactive .chrome {
+  background: linear-gradient(rgba(40,46,54,.07), rgba(40,46,54,.07)), url("file:///usr/share/themes/Paladin/metacity-1/titlebar-active.png") 0 0 / 100% 100% no-repeat, #c9ced4 !important;
+  box-shadow: inset 0 1px #e9edf1 !important; border-bottom-color: #7f8791 !important; }
+body.unified.inactive .window { border-color: #8f969f !important; }
+body.inactive .statusbar {
+  background: linear-gradient(rgba(40,46,54,.07), rgba(40,46,54,.07)), url("../assets/paladin-brushed-toolbar.png") center / 100% 100% no-repeat !important; border-top-color: #7f8791 !important; }
+@media (prefers-color-scheme: dark) {
+  body.unified.inactive .window { border-color: #15181c !important; }
+  body.inactive .chrome, body.unified.inactive .chrome {
+    background: linear-gradient(rgba(0,0,0,.18), rgba(0,0,0,.18)), url("../assets/paladin-brushed-toolbar-dark.png") center / 100% 100% no-repeat, linear-gradient(var(--chrome-top), var(--chrome-bot)) !important; }
+  body.inactive .statusbar { background: linear-gradient(rgba(0,0,0,.18), rgba(0,0,0,.18)), url("../assets/paladin-brushed-toolbar-dark.png") center / 100% 100% no-repeat !important; border-top-color: #1d2126 !important; }
+}
+/* Dark Mode: Seeker windows keep a dark edge like every gunmetal window (no light outline, active or not) */
+@media (prefers-color-scheme: dark) {
+  .window, body.inactive .window { box-shadow: inset 0 0 0 1px rgba(0,0,0,.55) !important; }
+  body.unified .window, body.unified.inactive .window { border-color: #101317 !important; }
+  body.inactive .chrome .titlebar { color: #7d858e !important; }
+}

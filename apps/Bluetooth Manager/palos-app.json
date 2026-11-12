@@ -1,0 +1,11 @@
+{
+ "name": "Bluetooth Manager",
+ "id": "palos-bluetooth",
+ "command": "palos-bluetooth",
+ "icon": "palos-bluetooth",
+ "version": "1.0.0",
+ "folder": "Utilities",
+ "kind": "shared",
+ "runtime": "kibble",
+ "fallback": "electron-44"
+}

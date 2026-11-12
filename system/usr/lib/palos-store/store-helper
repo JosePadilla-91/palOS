@@ -1,0 +1,370 @@
+#!/usr/bin/python3
+"""palOS Store privileged helper. Run only through pkexec (org.palos.store.policy).
+
+    store-helper refresh                      download fresh package lists (apt-get update)
+    store-helper install PKG [PKG ...]        install packages from the archive
+    store-helper install-32bit PKG [...]      turn on 32-bit (i386) support, then install (Steam and the like)
+    store-helper snap-install NAME [classic]  install a snap (sets up snapd the first time)
+    store-helper snap-remove NAME             remove a snap
+    store-helper snap-refresh [NAME ...]      update snaps (all of them when no name is given)
+    store-helper remove PKG [PKG ...]         remove packages
+    store-helper upgrade                      install every available update (apt-get full-upgrade)
+    store-helper drivers-install PKG [...]    install drivers chosen in the Drivers tab
+    store-helper drivers-auto                 install the recommended drivers (ubuntu-drivers install)
+                                              (NVIDIA drivers also get their 32-bit graphics library)
+
+Progress goes to stdout as apt's machine-readable status lines (pmstatus:/dlstatus:), plus
+"palos:" lines from this helper (palos:pct:N:text for snap progress). Errors go to stderr.
+"""
+import http.client
+import glob
+import json
+import os
+import socket
+import time
+import re
+import subprocess
+import sys
+
+PKG_RE = re.compile(r"^[a-z0-9][a-z0-9+.\-]{0,99}(:[a-z0-9]+)?$")
+SNAP_RE = re.compile(r"^[a-z0-9](?:-?[a-z0-9]){0,39}$")
+SNAPD_SOCK = "/run/snapd.socket"
+MAX = 200
+
+
+
+def with_dkms(pk):
+    """nvidia-driver-N with its DKMS module (built for the running Puso kernel against its headers)."""
+    out = list(pk)
+    for x in pk:
+        if x.startswith("nvidia-driver-"):
+            out.append(x.replace("nvidia-driver-", "nvidia-dkms-"))
+    if len(out) > len(pk):
+        out.append("dkms")
+    return out
+
+PALOS_NVIDIA = "/usr/lib/palos-nvidia/palos-nvidia"
+
+
+def nvidia_present():
+    for d in glob.glob("/sys/bus/pci/devices/*"):
+        try:
+            if open(f"{d}/vendor").read().strip() == "0x10de" and open(f"{d}/class").read().strip().startswith("0x03"):
+                return True
+        except OSError:
+            pass
+    return False
+
+
+def palos_nvidia():
+    """palos-nvidia install, its progress and its reason (if any) passed on as they come"""
+    say("step:Installing the graphics driver")
+    p = subprocess.Popen([PALOS_NVIDIA, "install"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+    for line in p.stdout:
+        line = line.strip()
+        if line.startswith("palos:"):
+            say(line[6:])
+    return p.wait()
+
+
+def fail(msg, code=2):
+    print(f"store-helper: {msg}", file=sys.stderr, flush=True)
+    sys.exit(code)
+
+
+def say(msg):
+    print(f"palos:{msg}", flush=True)
+
+
+def packages(args):
+    if not args:
+        fail("no packages given")
+    if len(args) > MAX:
+        fail("too many packages at once")
+    out = []
+    for a in args:
+        if not PKG_RE.match(a):
+            fail(f"invalid package name: {a}")
+        if a not in out:
+            out.append(a)
+    return out
+
+
+APT = [
+    "apt-get", "-y", "-q",
+    "-o", "APT::Status-Fd=3",
+    "-o", "DPkg::Lock::Timeout=600",
+    "-o", "Dpkg::Options::=--force-confdef",
+    "-o", "Dpkg::Options::=--force-confold",
+    "-o", "Dpkg::Use-Pty=0",
+]
+
+
+def run(cmd):
+    """Run with apt's status lines on fd 3 (a copy of stdout) and everything else on stderr,
+    so package scripts that print can't break the progress stream."""
+    sys.stdout.flush()
+    r = subprocess.run(cmd, stdout=sys.stderr, stderr=sys.stderr, pass_fds=(3,))
+    return r.returncode
+
+
+# ------------------------------------------------------------------ 32-bit support
+def foreign_archs():
+    r = subprocess.run(["dpkg", "--print-foreign-architectures"], capture_output=True, text=True)
+    return r.stdout.split()
+
+
+def install_32bit(pk):
+    added = "i386" not in foreign_archs()
+    if added:
+        say("step:Turning on 32-bit support")
+        if subprocess.run(["dpkg", "--add-architecture", "i386"], stdout=sys.stderr, stderr=sys.stderr).returncode != 0:
+            fail("32-bit support couldn't be turned on", 1)
+    say("step:Getting the 32-bit software lists")
+    rc = run(APT + ["update"])
+    if rc == 0:
+        say("step:Installing")
+        rc = run(APT + ["install", "--no-remove"] + pk)
+    if rc != 0 and added:
+        # leave the computer as it was: no 32-bit support if nothing 32-bit got installed
+        r = subprocess.run(["dpkg-query", "-W", "-f", "${Architecture} ${db:Status-Abbrev}\n"], capture_output=True, text=True)
+        if not any(ln.startswith("i386 ii") for ln in r.stdout.splitlines()):
+            subprocess.run(["dpkg", "--remove-architecture", "i386"], stdout=sys.stderr, stderr=sys.stderr)
+            run(APT + ["update"])
+    return rc
+
+
+def nvidia_32bit():
+    """After an NVIDIA driver goes in: its 32-bit graphics library too (libnvidia-gl-NNN:i386), which games,
+    Steam and Windows programs need. Ubuntu leaves that to a terminal (dpkg --add-architecture i386,
+    apt update, apt install libnvidia-gl-NNN:i386); palOS does it with the driver."""
+    r = subprocess.run(["dpkg-query", "-W", "-f", "${Package} ${db:Status-Abbrev}\n", "nvidia-driver-*"], capture_output=True, text=True)
+    vers = sorted({m.group(1) for ln in r.stdout.splitlines() if ln.split()[1:2] == ["ii"]
+                   for m in [re.match(r"nvidia-driver-(\d+)(?:-open|-server|-server-open)?$", ln.split()[0])] if m}, key=int)
+    if not vers:
+        return 0
+    ver = vers[-1]
+    lib = f"libnvidia-gl-{ver}:i386"
+    q = subprocess.run(["dpkg-query", "-W", "-f", "${db:Status-Abbrev}", lib], capture_output=True, text=True)
+    if q.stdout.startswith("ii"):
+        return 0
+    say("step:Adding 32-bit graphics support for games")
+    return install_32bit([lib])
+
+
+# ------------------------------------------------------------------ snaps (snapd's REST API)
+class UnixHTTP(http.client.HTTPConnection):
+    def __init__(self, timeout=30):
+        super().__init__("localhost", timeout=timeout)
+
+    def connect(self):
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s.settimeout(self.timeout)
+        s.connect(SNAPD_SOCK)
+        self.sock = s
+
+
+def snapd(method, path, body=None, timeout=30):
+    c = UnixHTTP(timeout)
+    try:
+        c.request(method, path, body=json.dumps(body) if body is not None else None,
+                  headers={"Content-Type": "application/json"} if body is not None else {})
+        r = c.getresponse()
+        return json.loads(r.read().decode("utf-8", "replace") or "{}")
+    finally:
+        c.close()
+
+
+def snapd_ready():
+    try:
+        return snapd("GET", "/v2/system-info", timeout=5).get("type") == "sync"
+    except (OSError, ValueError, http.client.HTTPException):
+        return False
+
+
+def ensure_snapd():
+    """Install snapd the first time a snap is wanted, and wait until it's ready to install snaps."""
+    if not os.path.exists("/usr/lib/snapd/snapd"):
+        say("step:Setting up Snap")
+        rc = run(APT + ["install", "--no-remove", "snapd"])
+        if rc != 0:
+            fail("Snap support (snapd) couldn't be installed", rc)
+    subprocess.run(["systemctl", "start", "snapd.socket", "snapd.service"], stdout=sys.stderr, stderr=sys.stderr)
+    for _ in range(120):
+        if os.path.exists(SNAPD_SOCK) and snapd_ready():
+            break
+        time.sleep(0.5)
+    else:
+        fail("Snap support didn't start", 1)
+    say("step:Getting Snap ready")
+    try:
+        subprocess.run(["snap", "wait", "system", "seed.loaded"], stdout=sys.stderr, stderr=sys.stderr, timeout=600)
+    except (OSError, subprocess.TimeoutExpired):
+        pass   # installing will say what's wrong, if anything is
+
+
+def task_label(t):
+    k = t.get("kind", "")
+    if k.startswith("download"):
+        return "Downloading"
+    if "remove" in k or "discard" in k or "unlink" in k:
+        return "Removing"
+    return "Installing"
+
+
+def follow(reply, verb):
+    """Wait for a snapd change to finish, printing progress. Returns 0 on success."""
+    if reply.get("type") == "error":
+        r = reply.get("result") or {}
+        print(f"store-helper: {r.get('message') or 'snapd refused'}", file=sys.stderr, flush=True)
+        if r.get("kind"):
+            print(f"store-helper: kind={r['kind']}", file=sys.stderr, flush=True)
+        return 1
+    if reply.get("type") == "sync":
+        return 0
+    cid = reply.get("change")
+    if not cid:
+        return 1
+    last = None
+    while True:
+        try:
+            ch = snapd("GET", f"/v2/changes/{cid}").get("result") or {}
+        except (OSError, ValueError, http.client.HTTPException):
+            time.sleep(1)
+            continue
+        tasks = ch.get("tasks") or []
+        done = sum((t.get("progress") or {}).get("done", 0) for t in tasks)
+        total = sum((t.get("progress") or {}).get("total", 0) for t in tasks) or 1
+        doing = next((t for t in tasks if t.get("status") == "Doing"), None)
+        pct = int(100 * done / total)
+        text = f"{task_label(doing)}…" if doing else verb
+        if (pct, text) != last:
+            say(f"pct:{pct}:{text}")
+            last = (pct, text)
+        if ch.get("ready"):
+            if ch.get("status") == "Done":
+                return 0
+            print(f"store-helper: {ch.get('err') or ch.get('status')}", file=sys.stderr, flush=True)
+            return 1
+        time.sleep(0.5)
+
+
+def snap_names(args, at_least=1):
+    if len(args) < at_least or len(args) > 50 or not all(SNAP_RE.match(a) for a in args):
+        fail("invalid snap name")
+    return args
+
+
+def palos_update(ver):
+    """palOS updates come only from palOS's own software source (Origin or Label "palOS"); Ubuntu's own
+    system updates are never offered (palOS isn't updated from Ubuntu's store)."""
+    try:
+        return any((pf.origin or '').lower() == 'palos' or (pf.label or '').lower() == 'palos' for pf, _ in ver.file_list)
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def palos_upgradable():
+    import apt_pkg
+    apt_pkg.init_config()
+    apt_pkg.init_system()
+    cache = apt_pkg.Cache(None)
+    dc = apt_pkg.DepCache(cache)
+    out = []
+    for p in cache.packages:
+        if p.current_ver is None:
+            continue
+        v = dc.get_candidate_ver(p)
+        if v and v.ver_str != p.current_ver.ver_str and apt_pkg.version_compare(v.ver_str, p.current_ver.ver_str) > 0 and palos_update(v):
+            out.append(p.name)
+    return out
+
+
+def main():
+    if os.geteuid() != 0:
+        fail("must be run as root (through pkexec)")
+    if len(sys.argv) < 2:
+        fail("usage: store-helper refresh|install|install-32bit|remove|upgrade|drivers-install|drivers-auto|snap-install|snap-remove|snap-refresh ...")
+    os.environ.update({
+        "DEBIAN_FRONTEND": "noninteractive",
+        "APT_LISTCHANGES_FRONTEND": "none",
+        "NEEDRESTART_MODE": "l",
+        "NEEDRESTART_SUSPEND": "1",
+        "LC_ALL": "C.UTF-8",
+        "PATH": "/usr/sbin:/usr/bin:/sbin:/bin",
+    })
+    os.dup2(1, 3)
+    action, args = sys.argv[1], sys.argv[2:]
+    if action == "refresh":
+        if args:
+            fail("refresh takes no arguments")
+        say("step:Checking for updates")
+        rc = run(APT + ["update"])
+    elif action == "install":
+        pk = packages(args)
+        say("step:Installing")
+        rc = run(APT + ["install", "--no-remove"] + pk)
+    elif action == "install-32bit":
+        rc = install_32bit(packages(args))
+    elif action == "snap-install":
+        name = snap_names(args[:1])[0]
+        classic = args[1:] == ["classic"]
+        if len(args) > 2 or (len(args) == 2 and not classic):
+            fail("snap-install NAME [classic]")
+        ensure_snapd()
+        say("step:Installing")
+        rc = follow(snapd("POST", f"/v2/snaps/{name}", {"action": "install", "classic": classic}), "Installing")
+    elif action == "snap-remove":
+        name = snap_names(args)[0]
+        if not snapd_ready():
+            fail("Snap support isn't running")
+        say("step:Removing")
+        rc = follow(snapd("POST", f"/v2/snaps/{name}", {"action": "remove"}), "Removing")
+    elif action == "snap-refresh":
+        names = snap_names(args, 0)
+        if not snapd_ready():
+            fail("Snap support isn't running")
+        say("step:Updating")
+        rc = follow(snapd("POST", "/v2/snaps", {"action": "refresh", "snaps": names} if names else {"action": "refresh"}), "Updating")
+    elif action == "remove":
+        pk = packages(args)
+        say("step:Removing")
+        rc = run(APT + ["remove", "--autoremove"] + pk)
+    elif action == "upgrade":
+        if args:
+            fail("upgrade takes no arguments")
+        say("step:Updating")
+        rc = run(APT + ["-f", "install"])
+        # only palOS's own updates (Ubuntu's system updates aren't installed by palOS)
+        todo = palos_upgradable() if rc == 0 else []
+        if rc == 0 and todo:
+            rc = run(APT + ["install", "--only-upgrade"] + todo)
+        if rc == 0 and snapd_ready():
+            say("step:Updating snaps")
+            rc = follow(snapd("POST", "/v2/snaps", {"action": "refresh"}), "Updating snaps")
+    elif action == "drivers-install":
+        pk = packages(args)
+        nv = [x for x in pk if x.startswith("nvidia-")]
+        rest = [x for x in pk if not x.startswith("nvidia-")]
+        rc = 0
+        if rest:
+            say("step:Installing drivers")
+            rc = run(APT + ["install", "--no-remove"] + with_dkms(rest))
+        if nv and rc == 0:
+            rc = palos_nvidia()     # palOS's own NVIDIA driver, whichever NVIDIA package name was asked for
+    elif action == "drivers-auto":
+        if args:
+            fail("drivers-auto takes no arguments")
+        # NVIDIA graphics: palOS's own driver (palos-nvidia), never ubuntu-drivers' pick (it listed every series
+        # it knew, oldest first, and setup installed 470 on an RTX 2070)
+        rc = palos_nvidia() if nvidia_present() else 0
+    else:
+        fail(f"unknown action: {action}")
+    if os.path.exists("/run/reboot-required") or os.path.exists("/var/run/reboot-required"):
+        say("reboot-required")
+    say(f"done:{rc}")
+    sys.exit(rc)
+
+
+if __name__ == "__main__":
+    main()

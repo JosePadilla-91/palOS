@@ -1,0 +1,14 @@
+{
+  "name": "vidview",
+  "productName": "Vid-View",
+  "version": "2.0.0",
+  "description": "Vid-View: palOS\u2019s video viewer.",
+  "main": "src/main/main.js",
+  "desktopName": "vid-view.desktop",
+  "author": {
+    "name": "Joe Lucas",
+    "email": "joe.lucas0413@gmail.com"
+  },
+  "license": "GPL-3.0-or-later",
+  "homepage": "https://example.com/vidview"
+}

@@ -1,0 +1,702 @@
+#!/usr/bin/python3
+"""Screenshot: pictures and recordings of the screen.
+
+  palos-screenshot                   show the Screenshot bar (Print Screen does this)
+  palos-screenshot screen|window|area [--clipboard]
+  palos-screenshot record [--area] [--audio none|mic|system|both]
+  palos-screenshot stop              stop the recording in progress
+
+Pictures are saved on the Desktop as "Screenshot YYYY-MM-DD at H.MM.SS.png", recordings as
+"Screen Recording YYYY-MM-DD at H.MM.SS.mp4" (H.264 video, AAC sound). Pressing Print Screen while a
+recording is running stops it.
+"""
+try:
+    from palos_l10n import tr as _tr
+except Exception:  # noqa: BLE001
+    _tr = str
+import datetime
+import json
+import math
+import os
+import shutil
+import signal
+import subprocess
+import sys
+import tempfile
+import time
+
+HOME = os.path.expanduser('~')
+CONF = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.join(HOME, '.config')), 'palos-screenshot.json')
+RUN = os.path.join(os.environ.get('XDG_RUNTIME_DIR', tempfile.gettempdir()), 'palos-screenshot')
+REC_PID = os.path.join(RUN, 'recording.pid')
+SHUTTER = '/usr/share/sounds/freedesktop/stereo/camera-shutter.oga'
+AUDIO = [('none', 'No Sound'), ('mic', 'Microphone'), ('system', 'Computer Sound'), ('both', 'Microphone and Computer Sound')]
+TIMERS = [(0, 'None'), (5, '5 Seconds'), (10, '10 Seconds')]
+
+
+# ------------------------------------------------------------------ settings and places
+def load_conf():
+    try:
+        with open(CONF) as f:
+            c = json.load(f)
+    except Exception:  # noqa: BLE001
+        c = {}
+    c.setdefault('audio', 'none')
+    c.setdefault('timer', 0)
+    c.setdefault('pointer', True)
+    return c
+
+
+def save_conf(c):
+    try:
+        os.makedirs(os.path.dirname(CONF), exist_ok=True)
+        with open(CONF, 'w') as f:
+            json.dump(c, f)
+    except OSError:
+        pass
+
+
+def desktop_dir():
+    d = None
+    try:
+        d = subprocess.run(['xdg-user-dir', 'DESKTOP'], capture_output=True, text=True, timeout=3).stdout.strip()
+    except Exception:  # noqa: BLE001
+        pass
+    if not d or d == HOME:
+        d = os.path.join(HOME, 'Desktop')
+    os.makedirs(d, exist_ok=True)
+    return d
+
+
+def stamp():
+    n = datetime.datetime.now()
+    return f'{n:%Y-%m-%d} at {n.hour}.{n:%M.%S}'
+
+
+def unique(path):
+    if not os.path.exists(path):
+        return path
+    base, ext = os.path.splitext(path)
+    i = 2
+    while os.path.exists(f'{base} ({i}){ext}'):
+        i += 1
+    return f'{base} ({i}){ext}'
+
+
+def notify(title, body='', icon='palos-screenshot'):
+    if shutil.which('notify-send'):
+        subprocess.Popen(['notify-send', '-a', 'Screenshot', '-i', icon, title] + ([body] if body else []),
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def sound_on():
+    try:
+        out = subprocess.run(['gsettings', 'get', 'org.gnome.desktop.sound', 'event-sounds'], capture_output=True, text=True, timeout=2).stdout
+        return 'false' not in out
+    except Exception:  # noqa: BLE001
+        return True
+
+
+def shutter():
+    if not sound_on() or not os.path.exists(SHUTTER):
+        return
+    for player in ('paplay', 'pw-play'):
+        if shutil.which(player):
+            subprocess.Popen([player, SHUTTER], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return
+
+
+# ------------------------------------------------------------------ what to capture
+def select_area():
+    """drag out a rectangle; returns (x, y, w, h) or None"""
+    try:
+        r = subprocess.run(['slop', '-f', '%x %y %w %h', '-l', '-c', '0.25,0.52,0.96,0.22', '-b', '1.5', '--nokeyboard'],
+                           capture_output=True, text=True)
+    except FileNotFoundError:
+        return None
+    try:
+        x, y, w, h = (int(v) for v in r.stdout.split())
+    except ValueError:
+        return None
+    return (x, y, w, h) if w > 2 and h > 2 else None
+
+
+def frame_of(wid):
+    """the window's frame (title bar included): its ancestor just below the root window"""
+    try:
+        cur = wid
+        for _ in range(8):
+            out = subprocess.run(['xwininfo', '-children', '-id', cur], capture_output=True, text=True, timeout=3).stdout
+            for line in out.splitlines():
+                line = line.strip()
+                if line.startswith('Parent window id:'):
+                    if '(the root window)' in line:
+                        return cur
+                    cur = line.split(':', 1)[1].split()[0]
+                    break
+            else:
+                return cur
+    except Exception:  # noqa: BLE001
+        pass
+    return wid
+
+
+def pick_window():
+    """click a window; returns its frame's id"""
+    try:
+        r = subprocess.run(['xdotool', 'selectwindow'], capture_output=True, text=True, timeout=60)
+        wid = r.stdout.strip()
+    except Exception:  # noqa: BLE001
+        return None
+    if not wid or not wid.isdigit():
+        return None
+    return frame_of(hex(int(wid)))
+
+
+def _client_in(wid, depth=4):
+    """the app's own window inside a window manager frame (the one that carries _NET_FRAME_EXTENTS)"""
+    try:
+        if '_NET_FRAME_EXTENTS(CARDINAL)' in subprocess.run(['xprop', '-id', wid, '_NET_FRAME_EXTENTS'], capture_output=True, text=True, timeout=3).stdout:
+            return wid
+        if depth <= 0:
+            return None
+        out = subprocess.run(['xwininfo', '-children', '-id', wid], capture_output=True, text=True, timeout=3).stdout
+    except Exception:  # noqa: BLE001
+        return None
+    for line in out.splitlines():
+        line = line.strip()
+        if line.startswith('0x'):
+            c = _client_in(line.split()[0], depth - 1)
+            if c:
+                return c
+    return None
+
+
+def _extents(wid):
+    try:
+        out = subprocess.run(['xprop', '-id', wid, '_NET_FRAME_EXTENTS'], capture_output=True, text=True, timeout=3).stdout
+        return [int(x) for x in out.split('=', 1)[1].replace(' ', '').split(',')][:4]
+    except Exception:  # noqa: BLE001
+        return [0, 0, 0, 0]
+
+
+def window_geometry(wid):
+    """(x, y, w, h) of a window on screen with its title bar but without the frame's shadow, kept on screen"""
+    client = _client_in(wid)
+    ext = [0, 0, 0, 0]
+    if client:
+        ext, wid = _extents(client), client
+    try:
+        out = subprocess.run(['xwininfo', '-id', wid], capture_output=True, text=True, timeout=3).stdout
+    except Exception:  # noqa: BLE001
+        return None
+    v = {}
+    for line in out.splitlines():
+        k, _, val = line.strip().partition(':')
+        if k in ('Absolute upper-left X', 'Absolute upper-left Y', 'Width', 'Height'):
+            try:
+                v[k] = int(val.strip())
+            except ValueError:
+                pass
+    if len(v) < 4:
+        return None
+    l, r, t, b = (ext + [0, 0, 0, 0])[:4]
+    v['Absolute upper-left X'] -= l
+    v['Absolute upper-left Y'] -= t
+    v['Width'] += l + r
+    v['Height'] += t + b
+    sw, sh = screen_size()
+    x, y = max(0, v['Absolute upper-left X']), max(0, v['Absolute upper-left Y'])
+    w = min(v['Width'] + min(0, v['Absolute upper-left X']), sw - x)
+    h = min(v['Height'] + min(0, v['Absolute upper-left Y']), sh - y)
+    return (x, y, w, h) if w > 2 and h > 2 else None
+
+
+def screen_size():
+    try:
+        out = subprocess.run(['xdpyinfo'], capture_output=True, text=True, timeout=3).stdout
+        for line in out.splitlines():
+            if 'dimensions:' in line:
+                w, h = line.split()[1].split('x')
+                return int(w), int(h)
+    except Exception:  # noqa: BLE001
+        pass
+    return 1920, 1080
+
+
+# ------------------------------------------------------------------ pictures
+def take(mode, clipboard=False, pointer=False):
+    args = ['maim', '-u'] if not pointer else ['maim']
+    if mode == 'area':
+        g = select_area()
+        if not g:
+            return None
+        args += ['-g', '{2}x{3}+{0}+{1}'.format(*g)]
+    elif mode == 'window':
+        wid = pick_window()
+        if not wid:
+            return None
+        g = window_geometry(wid)
+        if not g:
+            return None
+        # the window as it is on screen (title bar included), cut out of the screen: `maim -i` asks the X
+        # server for the frame's own picture, which Compiz doesn't keep, so it failed or came out black
+        args += ['-g', '{2}x{3}+{0}+{1}'.format(*g)]
+    time.sleep(0.15)          # let the bar and the selection outline leave the screen
+    if clipboard:
+        png = subprocess.run(args + ['-f', 'png'], capture_output=True).stdout
+        if not png:
+            return None
+        subprocess.run(['xclip', '-selection', 'clipboard', '-t', 'image/png'], input=png)
+        shutter()
+        return 'clipboard'
+    path = unique(os.path.join(desktop_dir(), _tr(f'Screenshot {stamp()}') + '.png'))
+    if subprocess.run(args + [path], stderr=subprocess.DEVNULL).returncode != 0:
+        notify('The screenshot could not be taken')
+        return None
+    shutter()
+    return path
+
+
+# ------------------------------------------------------------------ recordings
+def pulse_sources():
+    """(microphone, computer sound) as ffmpeg pulse source names"""
+    mic, mon = 'default', None
+    try:
+        info = subprocess.run(['pactl', 'info'], capture_output=True, text=True, timeout=3).stdout
+        for line in info.splitlines():
+            if line.startswith('Default Sink:'):
+                mon = line.split(':', 1)[1].strip() + '.monitor'
+            elif line.startswith('Default Source:'):
+                s = line.split(':', 1)[1].strip()
+                if s and not s.endswith('.monitor'):
+                    mic = s
+    except Exception:  # noqa: BLE001
+        pass
+    return mic, mon or '@DEFAULT_MONITOR@'
+
+
+def recording_pid():
+    try:
+        pid = int(open(REC_PID).read().strip())
+        os.kill(pid, 0)
+        return pid
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def stop_recording():
+    pid = recording_pid()
+    if pid:
+        os.kill(pid, signal.SIGINT)
+        return True
+    return False
+
+
+def record(area=False, audio='none', pointer=True):
+    """record until stopped (Stop button, Print Screen, or `palos-screenshot stop`)"""
+    if recording_pid():
+        return stop_recording()
+    if area:
+        g = select_area()
+        if not g:
+            return None
+        x, y, w, h = g
+    else:
+        x, y = 0, 0
+        w, h = screen_size()
+    w, h = w - w % 2, h - h % 2           # H.264 needs even sizes
+    disp = os.environ.get('DISPLAY', ':0')
+    path = unique(os.path.join(desktop_dir(), _tr(f'Screen Recording {stamp()}') + '.mp4'))
+    cmd = ['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y', '-thread_queue_size', '512',
+           '-f', 'x11grab', '-framerate', '30', '-draw_mouse', '1' if pointer else '0',
+           '-video_size', f'{w}x{h}', '-i', f'{disp}+{x},{y}']
+    mic, mon = pulse_sources()
+    srcs = {'mic': [mic], 'system': [mon], 'both': [mic, mon]}.get(audio, [])
+    for s in srcs:
+        cmd += ['-thread_queue_size', '512', '-f', 'pulse', '-i', s]
+    if len(srcs) == 2:
+        cmd += ['-filter_complex', '[1:a][2:a]amix=inputs=2:duration=longest:normalize=0[a]', '-map', '0:v', '-map', '[a]']
+    cmd += ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-pix_fmt', 'yuv420p']
+    if srcs:
+        cmd += ['-c:a', 'aac', '-b:a', '160k']
+    cmd += ['-movflags', '+faststart', path]
+    os.makedirs(RUN, exist_ok=True)
+    proc = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stderr=subprocess.PIPE, start_new_session=True)
+    with open(REC_PID, 'w') as f:
+        f.write(str(os.getpid()))
+    stopped = {'v': False}
+
+    def stop(*_):
+        if not stopped['v']:
+            stopped['v'] = True
+            try:
+                proc.send_signal(signal.SIGINT)    # ffmpeg finishes the file properly
+            except ProcessLookupError:
+                pass
+    signal.signal(signal.SIGINT, stop)
+    signal.signal(signal.SIGTERM, stop)
+    pill = RecordingPill(stop) if gtk_ok() else None
+    if pill:
+        pill.run(proc)
+    _, err = proc.communicate()
+    try:
+        os.unlink(REC_PID)
+    except OSError:
+        pass
+    if os.path.exists(path) and os.path.getsize(path) > 0:
+        notify('Screen recording saved', os.path.basename(path), 'video-x-generic')
+        return path
+    if err:
+        sys.stderr.write(err.decode('utf-8', 'replace'))
+    notify('The recording could not be made', (err or b'').decode('utf-8', 'replace').strip().splitlines()[-1:][0] if err else '')
+    return None
+
+
+# ------------------------------------------------------------------ the bar
+def gtk_ok():
+    if not os.environ.get('DISPLAY'):
+        return False
+    try:
+        import gi
+        gi.require_version('Gtk', '3.0')
+        from gi.repository import Gtk  # noqa: F401
+        return True
+    except Exception:  # noqa: BLE001
+        return False
+
+
+CSS = b"""
+.ssbar { background-color: rgba(38, 38, 40, 0.90); border-radius: 12px; border: 1px solid rgba(255,255,255,0.14); padding: 6px 8px; }
+.ssbar.solid { background-color: #2a2a2c; border-radius: 0; }
+.ssbar button { background: none; border: none; box-shadow: none; border-radius: 7px; padding: 4px 6px; color: #f2f2f2; min-height: 0; }
+.ssbar button:hover { background-color: rgba(255,255,255,0.12); }
+.ssbar button:active { background-color: rgba(255,255,255,0.22); }
+.ssbar button.capture { background-color: rgba(255,255,255,0.16); padding: 4px 14px; font-weight: bold; }
+.ssbar button.capture:hover { background-color: rgba(255,255,255,0.26); }
+.ssbar button.on { background-color: rgba(90,150,240,0.55); }
+.ssbar .sep { background-color: rgba(255,255,255,0.22); min-width: 1px; margin: 4px 6px; }
+.ssbar label { color: #f2f2f2; }
+.ssbar .lbl { font-size: 9pt; color: #d8d8d8; }
+.sspill { background-color: rgba(38, 38, 40, 0.92); border-radius: 15px; border: 1px solid rgba(255,255,255,0.14); padding: 3px 6px 3px 10px; }
+.sspill label { color: #fff; font-feature-settings: "tnum"; }
+.sspill button { background: none; border: none; box-shadow: none; color: #fff; padding: 2px 6px; min-height: 0; }
+.sspill button:hover { background-color: rgba(255,255,255,0.14); border-radius: 10px; }
+"""
+
+
+def draw_glyph(cr, kind, w, h):
+    """the bar's pictures: white line drawings"""
+    cr.set_source_rgba(1, 1, 1, 0.95)
+    cr.set_line_width(1.6)
+    cx, cy = w / 2, h / 2
+
+    def rect(x, y, rw, rh, dashed=False):
+        if dashed:
+            cr.set_dash([3.0, 2.2])
+        cr.rectangle(x, y, rw, rh)
+        cr.stroke()
+        cr.set_dash([])
+    if kind == 'screen':
+        rect(cx - 13, cy - 9, 26, 17)
+        cr.rectangle(cx - 13, cy - 9, 26, 3); cr.fill()
+    elif kind == 'window':
+        rect(cx - 13, cy - 9, 26, 17, dashed=True)
+        rect(cx - 9, cy - 6, 18, 12)
+        cr.rectangle(cx - 9, cy - 6, 18, 3); cr.fill()
+    elif kind == 'area':
+        rect(cx - 13, cy - 9, 26, 17, dashed=True)
+        cr.rectangle(cx - 6, cy - 3, 12, 8); cr.fill()
+    elif kind == 'rec-screen':
+        rect(cx - 13, cy - 9, 26, 17)
+        cr.rectangle(cx - 13, cy - 9, 26, 3); cr.fill()
+        cr.arc(cx, cy + 1.5, 4.2, 0, 2 * math.pi); cr.fill()
+    elif kind == 'rec-area':
+        rect(cx - 13, cy - 9, 26, 17, dashed=True)
+        cr.arc(cx, cy, 4.2, 0, 2 * math.pi); cr.fill()
+    elif kind == 'close':
+        cr.set_line_width(1.8)
+        cr.move_to(cx - 5, cy - 5); cr.line_to(cx + 5, cy + 5)
+        cr.move_to(cx + 5, cy - 5); cr.line_to(cx - 5, cy + 5)
+        cr.stroke()
+    elif kind == 'stop':
+        cr.rectangle(cx - 5, cy - 5, 10, 10); cr.fill()
+
+
+class Bar:
+    """the floating Screenshot bar at the bottom of the screen"""
+
+    MODES = [('screen', 'Capture Entire Screen'), ('window', 'Capture Selected Window'), ('area', 'Capture Selected Portion'),
+             ('rec-screen', 'Record Entire Screen'), ('rec-area', 'Record Selected Portion')]
+
+    def __init__(self):
+        import gi
+        gi.require_version('Gtk', '3.0')
+        gi.require_version('Gdk', '3.0')
+        from gi.repository import Gtk, Gdk
+        try:
+            import palos_l10n; palos_l10n.install_gtk()
+        except Exception:  # noqa: BLE001
+            pass
+        self.Gtk, self.Gdk = Gtk, Gdk
+        self.conf = load_conf()
+        self.mode = self.conf.get('mode', 'screen')
+        self.result = None
+        prov = Gtk.CssProvider(); prov.load_from_data(CSS)
+        Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(), prov, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION + 1)
+        w = self.win = Gtk.Window(type=Gtk.WindowType.TOPLEVEL)
+        w.set_title('Screenshot')
+        w.set_wmclass('palos-screenshot', 'Screenshot')
+        w.set_icon_name('palos-screenshot')
+        w.set_decorated(False)
+        w.set_keep_above(True)
+        w.set_skip_taskbar_hint(True)
+        w.set_resizable(False)
+        w.set_type_hint(Gdk.WindowTypeHint.UTILITY)
+        scr = w.get_screen()
+        vis = scr.get_rgba_visual()
+        composited = vis is not None and scr.is_composited()
+        if composited:
+            w.set_visual(vis)
+            w.set_app_paintable(True)
+            w.connect('draw', self._clear)
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=2)
+        box.get_style_context().add_class('ssbar')
+        if not composited:
+            box.get_style_context().add_class('solid')
+        box.pack_start(self._glyph_button('close', 'Close (Esc)', lambda *_: self.quit()), False, False, 0)
+        box.pack_start(self._sep(), False, False, 0)
+        self.mode_buttons = {}
+        for i, (key, tip) in enumerate(self.MODES):
+            if i == 3:
+                box.pack_start(self._sep(), False, False, 0)
+            b = self._glyph_button(key, tip, lambda _b, k=key: self.set_mode(k))
+            self.mode_buttons[key] = b
+            box.pack_start(b, False, False, 0)
+        box.pack_start(self._sep(), False, False, 0)
+        opts = Gtk.MenuButton(label='Options ▾')
+        opts.set_tooltip_text('Sound, timer and pointer')
+        opts.set_popup(self._options_menu())
+        box.pack_start(opts, False, False, 0)
+        self.go = Gtk.Button(label='Capture')
+        self.go.get_style_context().add_class('capture')
+        self.go.connect('clicked', lambda *_: self.fire())
+        box.pack_start(self.go, False, False, 4)
+        w.add(box)
+        w.connect('key-press-event', self._key)
+        w.connect('destroy', lambda *_: Gtk.main_quit())
+        self.set_mode(self.mode)
+        box.show_all()
+        w.realize()
+        dpy = Gdk.Display.get_default()
+        mon = dpy.get_primary_monitor() or dpy.get_monitor(0)
+        geo = mon.get_geometry()
+        pw, ph = w.get_preferred_size()[1].width, w.get_preferred_size()[1].height
+        w.move(geo.x + (geo.width - pw) // 2, geo.y + geo.height - ph - 110)
+        w.show_all()
+        w.present()
+
+    def _clear(self, widget, cr):
+        import cairo
+        cr.set_operator(cairo.OPERATOR_SOURCE)
+        cr.set_source_rgba(0, 0, 0, 0)
+        cr.paint()
+        cr.set_operator(cairo.OPERATOR_OVER)
+        return False
+
+    def _sep(self):
+        s = self.Gtk.Box()
+        s.get_style_context().add_class('sep')
+        return s
+
+    def _glyph_button(self, kind, tip, cb):
+        Gtk = self.Gtk
+        b = Gtk.Button()
+        da = Gtk.DrawingArea()
+        sz = (22, 22) if kind in ('close', 'stop') else (36, 26)
+        da.set_size_request(*sz)
+        da.connect('draw', lambda wdg, cr: draw_glyph(cr, kind, wdg.get_allocated_width(), wdg.get_allocated_height()))
+        b.add(da)
+        b.set_tooltip_text(tip)
+        b.connect('clicked', cb)
+        return b
+
+    def _options_menu(self):
+        Gtk = self.Gtk
+        m = Gtk.Menu()
+
+        def head(text):
+            it = Gtk.MenuItem(label=text); it.set_sensitive(False); m.append(it)
+
+        head('Sound (for recordings)')
+        group = None
+        for key, label in AUDIO:
+            it = Gtk.RadioMenuItem.new_with_label_from_widget(group, label)
+            group = group or it
+            it.set_active(self.conf['audio'] == key)
+            it.connect('toggled', lambda i, k=key: i.get_active() and self._set('audio', k))
+            m.append(it)
+        m.append(Gtk.SeparatorMenuItem())
+        head('Timer')
+        group = None
+        for secs, label in TIMERS:
+            it = Gtk.RadioMenuItem.new_with_label_from_widget(group, label)
+            group = group or it
+            it.set_active(int(self.conf['timer']) == secs)
+            it.connect('toggled', lambda i, s=secs: i.get_active() and self._set('timer', s))
+            m.append(it)
+        m.append(Gtk.SeparatorMenuItem())
+        it = Gtk.CheckMenuItem(label='Show Mouse Pointer')
+        it.set_active(bool(self.conf['pointer']))
+        it.connect('toggled', lambda i: self._set('pointer', i.get_active()))
+        m.append(it)
+        m.append(Gtk.SeparatorMenuItem())
+        it = Gtk.MenuItem(label='Saves to the Desktop'); it.set_sensitive(False); m.append(it)
+        m.show_all()
+        return m
+
+    def _set(self, k, v):
+        self.conf[k] = v
+        save_conf(self.conf)
+        self.set_mode(self.mode)
+
+    def set_mode(self, key):
+        self.mode = key
+        for k, b in self.mode_buttons.items():
+            ctx = b.get_style_context()
+            (ctx.add_class if k == key else ctx.remove_class)('on')
+        if key.startswith('rec'):
+            snd = dict(AUDIO).get(self.conf['audio'], 'No Sound')
+            self.go.set_label('Record' if self.conf['audio'] == 'none' else 'Record with Sound')
+            self.go.set_tooltip_text(f'Sound: {snd}')
+        else:
+            self.go.set_label('Capture')
+            self.go.set_tooltip_text(None)
+
+    def _key(self, w, ev):
+        Gdk = self.Gdk
+        if ev.keyval == Gdk.KEY_Escape:
+            self.quit()
+        elif ev.keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter, Gdk.KEY_space):
+            self.fire()
+        elif ev.keyval in (Gdk.KEY_Left, Gdk.KEY_Right):
+            keys = [k for k, _ in self.MODES]
+            i = keys.index(self.mode) + (1 if ev.keyval == Gdk.KEY_Right else -1)
+            self.set_mode(keys[i % len(keys)])
+        return False
+
+    def quit(self):
+        self.win.destroy()
+
+    def fire(self):
+        self.conf['mode'] = self.mode
+        save_conf(self.conf)
+        self.result = (self.mode, dict(self.conf))
+        self.win.destroy()
+
+    def run(self):
+        self.Gtk.main()
+        while self.Gtk.events_pending():
+            self.Gtk.main_iteration()
+        return self.result
+
+
+class RecordingPill:
+    """while recording: a small "● 0:12  ■" pill under the menu bar; click the square to stop"""
+
+    def __init__(self, stop_cb):
+        self.stop_cb = stop_cb
+
+    def run(self, proc):
+        import gi
+        gi.require_version('Gtk', '3.0')
+        from gi.repository import Gtk, Gdk, GLib
+        prov = Gtk.CssProvider(); prov.load_from_data(CSS)
+        Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(), prov, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION + 1)
+        w = Gtk.Window(type=Gtk.WindowType.POPUP)
+        scr = w.get_screen()
+        vis = scr.get_rgba_visual()
+        if vis is not None and scr.is_composited():
+            w.set_visual(vis); w.set_app_paintable(True)
+            w.connect('draw', lambda wd, cr: (cr.set_source_rgba(0, 0, 0, 0), cr.set_operator(1), cr.paint(), cr.set_operator(2)) and False)
+        box = Gtk.Box(spacing=6)
+        box.get_style_context().add_class('sspill')
+        dot = Gtk.Label(); dot.set_markup('<span foreground="#ff453a">●</span>')
+        clock = Gtk.Label(label='0:00')
+        stop = Gtk.Button()
+        da = Gtk.DrawingArea(); da.set_size_request(18, 18)
+        da.connect('draw', lambda wdg, cr: draw_glyph(cr, 'stop', wdg.get_allocated_width(), wdg.get_allocated_height()))
+        stop.add(da); stop.set_tooltip_text('Stop Recording (Print Screen)')
+        stop.connect('clicked', lambda *_: self.stop_cb())
+        box.pack_start(dot, False, False, 0); box.pack_start(clock, False, False, 0); box.pack_start(stop, False, False, 0)
+        w.add(box)
+        box.show_all()
+        pw = w.get_preferred_size()[1].width
+        w.move(scr.get_width() - pw - 250, 26)
+        w.show_all()
+        t0 = time.time()
+
+        def tick():
+            if proc.poll() is not None:
+                Gtk.main_quit()
+                return False
+            s = int(time.time() - t0)
+            clock.set_text(f'{s // 60}:{s % 60:02d}')
+            return True
+        GLib.timeout_add(250, tick)
+        GLib.unix_signal_add(GLib.PRIORITY_HIGH, signal.SIGINT, lambda *_: (self.stop_cb(), True)[1])
+        GLib.unix_signal_add(GLib.PRIORITY_HIGH, signal.SIGTERM, lambda *_: (self.stop_cb(), True)[1])
+        Gtk.main()
+        w.destroy()
+        while Gtk.events_pending():
+            Gtk.main_iteration()
+
+
+def countdown(secs):
+    if secs > 0:
+        notify(f'Taking the screenshot in {secs} seconds')
+        time.sleep(secs)
+
+
+def act(mode, conf, clipboard=False):
+    if mode.startswith('rec'):
+        countdown(int(conf.get('timer', 0)))
+        return record(area=(mode == 'rec-area'), audio=conf.get('audio', 'none'), pointer=bool(conf.get('pointer', True)))
+    if mode == 'screen':
+        countdown(int(conf.get('timer', 0)))
+    return take(mode, clipboard=clipboard, pointer=bool(conf.get('pointer', False)) and mode != 'area')
+
+
+def main(argv):
+    args = argv[1:]
+    if args and args[0] in ('-h', '--help'):
+        print(__doc__.strip())
+        return 0
+    if args and args[0] == 'stop':
+        return 0 if stop_recording() else 1
+    if not args:
+        # Print Screen during a recording stops it
+        if stop_recording():
+            return 0
+        if not gtk_ok():
+            return 0 if take('screen') else 1
+        res = Bar().run()
+        if not res:
+            return 0
+        mode, conf = res
+        time.sleep(0.25)       # the bar has gone
+        return 0 if act(mode, conf) else 1
+    conf = load_conf()
+    if args[0] == 'record':
+        audio = conf['audio']
+        if '--audio' in args:
+            audio = args[args.index('--audio') + 1]
+        return 0 if record(area='--area' in args, audio=audio, pointer=bool(conf['pointer'])) else 1
+    if args[0] in ('screen', 'window', 'area'):
+        return 0 if take(args[0], clipboard='--clipboard' in args) else 1
+    print(__doc__.strip(), file=sys.stderr)
+    return 2
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

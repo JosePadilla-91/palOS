@@ -1,0 +1,6 @@
+#!/bin/sh
+# Run palOS first-boot setup again at the next restart (for making a new first account, or for
+# preparing a computer for someone else). Doesn't change accounts that already exist.
+[ "$(id -u)" = 0 ] || { echo "Run this with sudo." >&2; exit 1; }
+rm -f /var/lib/palos-setup/.video-seen /var/lib/palos-setup/.video-started 2>/dev/null
+/usr/lib/palos-firstboot/arm && echo "palOS setup will run the next time this computer starts."

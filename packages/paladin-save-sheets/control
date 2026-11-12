@@ -1,0 +1,16 @@
+Package: paladin-save-sheets
+Status: install ok installed
+Priority: optional
+Section: x11
+Maintainer: palOS <joe.lucas0413@gmail.com>
+Architecture: amd64
+Version: 1.0.1
+Depends: libgtk-3-0t64 | libgtk-3-0, xdg-desktop-portal-gtk
+Description: compact Save sheets for every program
+ Save dialogs open small, as on the Mac: the file name and a "Where:" menu
+ of the usual places (Desktop, Documents, Downloads ...) ending in
+ "Someplace Else…"; the disclosure button opens the full folder browser.
+ A GTK 3 module loaded by the Paladin session. Programs that use the GTK
+ desktop portal for their dialogs (Electron, Chromium, Firefox, GTK 4,
+ Flatpak) get the same compact sheet. Set PALADIN_FULL_SAVE=1 to turn it off
+ for one program.

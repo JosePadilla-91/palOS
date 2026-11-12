@@ -1,0 +1,23 @@
+[Desktop Entry]
+TryExec=/Applications/Utilities/Scanner.app
+X-Palos-App=/Applications/Utilities/Scanner.app
+X-Palos-Folder=Utilities
+X-AppImage-Name=Scanner
+Type=Application
+Name=Scanner
+Name[fr]=Numériseur
+Name[fr_CA]=Numériseur
+GenericName=Scanner
+GenericName[fr]=Numérisation
+GenericName[fr_CA]=Numérisation
+Comment=Scan documents and photos, and save them as PDF, JPEG, PNG or TIFF
+Comment[fr]=Numériser des documents et des photos, et les enregistrer en PDF, JPEG, PNG ou TIFF
+Comment[fr_CA]=Numériser des documents et des photos, et les enregistrer en PDF, JPEG, PNG ou TIFF
+Keywords=scan;scanner;document;photo;pdf;sane;numériser;numériseur;
+Exec="/Applications/Utilities/Scanner.app"
+Icon=palos-scanner
+Terminal=false
+StartupNotify=true
+StartupWMClass=Scanner
+Categories=Graphics;Scanning;Office;
+X-AppImage-Version=1.0.0

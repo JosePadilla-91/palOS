@@ -1,0 +1,14 @@
+Package: palos-icons
+Status: install ok installed
+Priority: optional
+Section: x11
+Maintainer: palOS <joe.lucas0413@gmail.com>
+Architecture: all
+Version: 1.3.0
+Depends: yaru-theme-icon | adwaita-icon-theme
+Description: palOS icon theme: folders, drives, trash and the palOS logo
+ Blue paper folders (Documents, Downloads, Music, Pictures, Videos and the
+ rest), silver system drives, yellow USB drives, green backup drives, purple
+ network drives and a wooden wastebasket for the Trash. Every other icon comes
+ from Yaru. Also installs the palOS shield logo, the palOS Store and installer
+ icons.

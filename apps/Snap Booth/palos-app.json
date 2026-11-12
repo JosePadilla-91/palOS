@@ -1,0 +1,10 @@
+{
+ "name": "Snap Booth",
+ "id": "palos-snap-booth",
+ "command": "snap-booth",
+ "icon": "palos-snap-booth",
+ "version": "1.0.0",
+ "folder": "",
+ "kind": "shared",
+ "runtime": "electron-44"
+}

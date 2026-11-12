@@ -1,0 +1,11 @@
+{
+ "name": "BrushBoard",
+ "id": "brushboard",
+ "command": "brushboard",
+ "icon": "brushboard",
+ "version": "1.0",
+ "folder": "",
+ "kind": "electron-own",
+ "fallback": "own",
+ "runtime": "kibble"
+}

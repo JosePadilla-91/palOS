@@ -1,0 +1,42 @@
+Windows Registry Editor Version 5.00
+
+; Windows programs don't take over palOS's own file types (text, pictures, web pages)
+[HKEY_CURRENT_USER\Software\Wine\FileOpenAssociations]
+"Enable"="N"
+
+; fonts Windows programs expect, drawn with metric-compatible free fonts of the same shape
+[HKEY_CURRENT_USER\Software\Wine\Fonts\Replacements]
+"Arial"="Liberation Sans"
+"Arial Narrow"="Liberation Sans Narrow"
+"Helvetica"="Liberation Sans"
+"Times New Roman"="Liberation Serif"
+"Times"="Liberation Serif"
+"Courier New"="Liberation Mono"
+"Courier"="Liberation Mono"
+"Calibri"="Carlito"
+"Cambria"="Caladea"
+"Segoe UI"="Noto Sans"
+"Segoe UI Semibold"="Noto Sans"
+"Verdana"="DejaVu Sans"
+"Consolas"="DejaVu Sans Mono"
+
+; smooth (subpixel) text, as on Windows 11
+[HKEY_CURRENT_USER\Control Panel\Desktop]
+"FontSmoothing"="2"
+"FontSmoothingType"=dword:00000002
+"FontSmoothingGamma"=dword:00000578
+"FontSmoothingOrientation"=dword:00000001
+
+; the program's own window frames and title bars are drawn by palOS (Compiz), like any app
+[HKEY_CURRENT_USER\Software\Wine\X11 Driver]
+"Decorated"="Y"
+"Managed"="Y"
+"UseTakeFocus"="N"
+
+; no Wine pop-ups about debugging when a program crashes; it just closes
+[HKEY_CURRENT_USER\Software\Wine\WineDbg]
+"ShowCrashDialog"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\Software\Microsoft\Windows NT\CurrentVersion]
+"RegisteredOwner"="palOS"
+"RegisteredOrganization"=""

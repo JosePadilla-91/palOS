@@ -1,0 +1,16 @@
+# palOS: packages added later don't bring back what palOS doesn't ship
+# (their documentation, other systems' bug-report and packaging files, other desktops' extras)
+path-exclude=/usr/share/doc/*
+path-include=/usr/share/doc/*/copyright
+path-exclude=/usr/share/lintian/*
+path-exclude=/usr/share/bug/*
+path-exclude=/usr/share/doc-base/*
+path-exclude=/usr/share/apport/*
+path-exclude=/usr/share/debhelper/*
+path-exclude=/usr/share/upstart/*
+path-exclude=/usr/share/apps/*
+path-exclude=/usr/share/kde4/*
+path-exclude=/usr/share/gnome-shell/*
+path-exclude=/usr/share/GConf/*
+path-exclude=/usr/share/gnome-control-center/*
+path-exclude=/usr/share/unity-control-center/*

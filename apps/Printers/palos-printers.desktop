@@ -1,0 +1,21 @@
+[Desktop Entry]
+X-AppImage-Name=Printers
+Type=Application
+Name=Printers
+Name[fr]=Imprimantes
+Name[fr_CA]=Imprimantes
+GenericName=Printer Settings
+GenericName[fr]=Réglages des imprimantes
+GenericName[fr_CA]=Réglages des imprimantes
+Comment=Add printers, choose the default and see what's printing
+Comment[fr]=Ajouter des imprimantes, choisir celle par défaut et voir ce qui s’imprime
+Comment[fr_CA]=Ajouter des imprimantes, choisir celle par défaut et voir ce qui s’imprime
+Keywords=printer;print;queue;cups;scanner;driver;
+Exec=AppRun
+Icon=palos-printers
+Terminal=false
+StartupNotify=true
+StartupWMClass=Printers
+Categories=Settings;HardwareSettings;Printing;
+X-Palos-Folder=Utilities
+X-AppImage-Version=1.0.0

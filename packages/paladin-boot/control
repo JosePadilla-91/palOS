@@ -1,0 +1,15 @@
+Package: paladin-boot
+Status: install ok installed
+Priority: optional
+Section: x11
+Maintainer: Paladin Maintainer <joe.lucas0413@gmail.com>
+Architecture: all
+Version: 1.1.1
+Depends: plymouth, plymouth-label, initramfs-tools
+Recommends: fonts-ubuntu
+Description: Paladin boot screen
+ The white Paladin shield on black with a spinning hoop while the computer
+ starts and shuts down, and a matching password box when the disk is
+ encrypted. Becomes the default boot screen (Plymouth theme "paladin").
+ .
+ (Repackaged on Thu, 22 Oct 2026 22:03:29 -0400 by dpkg-repack.)

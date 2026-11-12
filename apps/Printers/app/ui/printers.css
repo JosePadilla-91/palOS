@@ -1,0 +1,19 @@
+.pview { flex: 1; overflow-y: auto; padding: 22px 28px 30px; }
+.phead { display: flex; gap: 18px; align-items: center; margin-bottom: 18px; }
+.phead img { width: 96px; height: 96px; object-fit: contain; }
+.phead h1 { font-size: 20px; margin: 0 0 4px; }
+.phead .s { color: var(--dim); font-size: 13px; }
+.state { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; margin-top: 6px; color: var(--dim); }
+.state i { width: 9px; height: 9px; border-radius: 50%; background: var(--ok); }
+.state.paused i { background: var(--warn); } .state.printing i { background: var(--accent); animation: pulse 1.2s infinite; }
+@keyframes pulse { 50% { opacity: .35; } }
+.btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 22px; }
+.jobs .row .lbl .t { font-size: 13.5px; }
+#side button.nav img { width: 24px; height: 24px; object-fit: contain; flex: none; }
+#side button.nav .def { font-size: 10.5px; opacity: .75; }
+.found .row { cursor: default; }
+.found .row img { width: 34px; height: 34px; }
+.scan { display: flex; align-items: center; gap: 10px; color: var(--dim); font-size: 13px; padding: 14px 16px; }
+.spinner { width: 16px; height: 16px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.addpane { max-width: 640px; }

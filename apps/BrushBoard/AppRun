@@ -1,0 +1,8 @@
+#!/bin/sh
+# palOS .app: runs on Kibble, palOS's app runtime (WebKit and palOS windows; no Electron, no GTK).
+# PALOS_ELECTRON=1 starts it on its Electron runtime instead (kept for now, in case an app misbehaves).
+HERE="$(dirname "$(readlink -f "$0")")"
+export PALOS_APP="${APPIMAGE:-$HERE}"
+export PALOS_APP_DIR="$HERE/resources/app.asar" PALOS_APP_RESOURCES="$HERE/resources"
+if [ -z "$PALOS_ELECTRON" ] && [ -x /usr/lib/kibble/kibble ]; then exec /usr/lib/kibble/kibble "$@"; fi
+exec "$HERE/brushboard" --ozone-platform=x11 "$@"

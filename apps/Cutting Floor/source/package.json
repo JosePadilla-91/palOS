@@ -1,0 +1,22 @@
+{
+  "name": "cuttingfloor",
+  "productName": "Cutting Floor",
+  "version": "2.1.0",
+  "description": "GPU-accelerated video editor and compositor for Linux",
+  "main": "./out/main/index.js",
+  "author": {
+    "name": "Joey",
+    "email": "joey@localhost"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@fontsource/ibm-plex-sans": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "onnxruntime-node": "^1.22.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "zustand": "^5.0.8"
+  },
+  "homepage": "https://github.com/joey/cuttingfloor",
+  "desktopName": "cutting-floor.desktop"
+}

@@ -1,0 +1,18 @@
+#!/bin/sh
+# Time Turner initramfs hook: adds what the boot-time restore needs.
+# Installed as /usr/share/initramfs-tools/hooks/time-turner
+PREREQ=""
+prereqs() { echo "$PREREQ"; }
+case "$1" in prereqs) prereqs; exit 0 ;; esac
+
+. /usr/share/initramfs-tools/hook-functions
+
+# Filesystems a backup drive may use, and USB storage.
+for m in exfat ntfs3 vfat nls_utf8 nls_cp437 nls_iso8859-1 btrfs xfs f2fs ext4 usb_storage uas; do
+  manual_add_modules "$m" 2>/dev/null || true
+done
+
+# util-linux mount understands every option in /etc/fstab (busybox's does not).
+copy_exec /usr/bin/mount /bin/tt-mount
+copy_exec /usr/bin/umount /bin/tt-umount
+exit 0

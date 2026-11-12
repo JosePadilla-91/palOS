@@ -1,0 +1,21 @@
+#!/bin/sh
+# Keeps the Applications folder in step with installed Windows programs (started at log-in).
+# Watches the Windows Start Menu, where installers put a shortcut for each program they install.
+PREFIX="${WINEPREFIX:-$HOME/.local/share/palos-windows/prefix}"
+/usr/lib/palos-windows/sync
+command -v inotifywait >/dev/null 2>&1 || exit 0
+while :; do
+  # nothing to watch until Windows apps have been set up for this account
+  while [ ! -d "$PREFIX/drive_c/ProgramData/Microsoft/Windows/Start Menu/Programs" ]; do sleep 30; done
+  DIRS="$PREFIX/drive_c/ProgramData/Microsoft/Windows/Start Menu/Programs"
+  for d in "$PREFIX"/drive_c/users/*/Desktop; do [ -d "$d" ] && DIRS="$DIRS
+$d"; done
+  for d in "$PREFIX"/drive_c/users/*/AppData/Roaming/Microsoft/Windows/Start\ Menu/Programs; do [ -d "$d" ] && DIRS="$DIRS
+$d"; done
+  # the Start Menu and Desktop folders, and Windows' registry (installers with no shortcut, like the EA app,
+  # only add themselves to the installed-programs list there); at the latest every 2 minutes
+  { echo "$DIRS"; echo "$PREFIX/system.reg"; echo "$PREFIX/user.reg"; } | tr '\n' '\0' | xargs -0 inotifywait -q -r -t 120 -e create -e delete -e moved_to -e moved_from -e close_write >/dev/null 2>&1
+  [ $? -gt 2 ] && sleep 10
+  sleep 3          # an installer writes several files; wait for it to settle
+  /usr/lib/palos-windows/sync
+done

@@ -1,0 +1,11 @@
+{
+ "name": "Calculator",
+ "id": "palos-calculator",
+ "command": "palos-calculator",
+ "icon": "palos-calculator",
+ "version": "1.0.0",
+ "folder": "",
+ "kind": "shared",
+ "runtime": "kibble",
+ "fallback": "electron-44"
+}

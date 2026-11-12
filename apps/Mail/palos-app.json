@@ -1,0 +1,11 @@
+{
+ "name": "Mail",
+ "id": "paladin-mail",
+ "command": "paladin-mail",
+ "icon": "paladin-mail",
+ "version": "1.0",
+ "folder": "",
+ "kind": "shared",
+ "runtime": "kibble",
+ "fallback": "electron-44"
+}

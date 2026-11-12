@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' seeker: file: data:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+<link rel="stylesheet" href="common.css"><link rel="stylesheet" href="panel.css">
+<style>
+  .body { background: #fff; padding: 16px 22px 24px; font-size: 13px; line-height: 1.5; user-select: text; }
+  h2 { font-size: 16px; font-weight: bold; margin: 14px 0 6px; color: #333; }
+  h2:first-child { margin-top: 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  td { padding: 2px 6px; border-bottom: 1px solid #eee; }
+  td:first-child { width: 110px; font-family: var(--font); color: #333; white-space: nowrap; }
+  p { margin: 4px 0 8px; }
+</style>
+<link rel="stylesheet" href="paladin.css">
+</head>
+<body>
+<div class="window rounded">
+  <div class="chrome"><div class="titlebar"><div class="lights"></div><div class="title">Seeker Help</div></div></div>
+  <div class="body" id="body">
+    <h2>Seeker</h2>
+    <p>Seeker draws your desktop and the menu bar, and opens folders in windows. Click Seeker in the dock for a new window. The menu bar always shows the menus of the application you are using.</p>
+    <h2>Views</h2>
+    <p>Use the view buttons in the toolbar, or the View menu: icons, list, columns and Carousel. In Carousel, scroll or use the arrow keys to flip through your files.</p>
+    <h2>Keyboard shortcuts</h2>
+    <table id="keys"></table>
+    <h2>Tips</h2>
+    <p>Press the Space bar to Quick Look the selected items. Hold a file over a folder while dragging and the folder springs open. Hold Ctrl or Alt while dropping to copy instead of move. Drag a folder onto empty space in the sidebar to keep it there.</p>
+  </div>
+</div>
+<script src="common.js"></script>
+<script src="help.js"></script>
+</body>
+</html>

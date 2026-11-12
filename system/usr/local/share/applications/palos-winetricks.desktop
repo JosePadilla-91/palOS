@@ -1,0 +1,21 @@
+[Desktop Entry]
+TryExec=/Applications/Utilities/Winetricks.app
+X-Palos-App=/Applications/Utilities/Winetricks.app
+X-Palos-Folder=Utilities
+X-AppImage-Name=Winetricks
+Type=Application
+Name=Winetricks
+GenericName=Windows Components
+GenericName[fr]=Composants Windows
+GenericName[fr_CA]=Composants Windows
+Comment=Add Windows components, fonts and settings for Windows apps
+Comment[fr]=Ajouter des composants, des polices et des réglages Windows pour les applications Windows
+Comment[fr_CA]=Ajouter des composants, des polices et des réglages Windows pour les applications Windows
+Keywords=wine;windows;dll;runtime;directx;dotnet;vcrun;fonts;
+Exec="/Applications/Utilities/Winetricks.app" %U
+Icon=palos-winetricks
+Terminal=false
+StartupNotify=true
+StartupWMClass=Winetricks
+Categories=Utility;
+X-AppImage-Version=20260125

@@ -1,0 +1,3 @@
+// palOS Store: download app icons along with the software catalog (AppStream DEP-11)
+Acquire::IndexTargets::deb::DEP-11-icons::DefaultEnabled "true";
+Acquire::IndexTargets::deb::DEP-11-icons-large::DefaultEnabled "true";

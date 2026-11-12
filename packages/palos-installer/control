@@ -1,0 +1,15 @@
+Package: palos-installer
+Status: install ok installed
+Priority: optional
+Section: admin
+Maintainer: palOS <joe.lucas0413@gmail.com>
+Architecture: all
+Version: 1.1.1
+Depends: casper, fdisk, python3, palos-firstboot, palos-branding, sudo, efibootmgr, rsync, squashfs-tools, dosfstools, e2fsprogs, grub-efi-amd64-bin, grub-pc-bin, shim-signed, paladin-seeker
+Description: palOS Installer (Language, Time Zone, Install Destination, Install, Restart)
+ Settings, artwork and helpers for installing palOS from the live USB stick
+ with Calamares: choose language, keyboard, time zone and disk, then palOS
+ is copied to the computer. The first account is made after the restart by
+ palOS setup. Removed from the installed system automatically.
+ .
+ (Repackaged on Thu, 22 Oct 2026 22:03:29 -0400 by dpkg-repack.)

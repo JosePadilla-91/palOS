@@ -1,0 +1,20 @@
+[Desktop Entry]
+TryExec=/Applications/Snap Booth.app
+X-Palos-App=/Applications/Snap Booth.app
+X-AppImage-Name=Snap Booth
+Type=Application
+Name=Snap Booth
+GenericName=Camera
+GenericName[fr]=Caméra
+GenericName[fr_CA]=Caméra
+Comment=Take photos, photo strips and movies with the camera
+Comment[fr]=Prendre des photos, des bandes de photos et des films avec la caméra
+Comment[fr_CA]=Prendre des photos, des bandes de photos et des films avec la caméra
+Keywords=camera;webcam;photo;booth;selfie;video;
+Exec="/Applications/Snap Booth.app"
+Icon=palos-snap-booth
+Terminal=false
+StartupNotify=true
+StartupWMClass=Snap Booth
+Categories=AudioVideo;Video;Graphics;
+X-AppImage-Version=1.0.0

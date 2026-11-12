@@ -1,0 +1,1 @@
+{ "name": "palos-bluetooth", "productName": "Bluetooth Manager", "version": "1.0.0", "main": "main.js", "private": true, "type": "commonjs" }

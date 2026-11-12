@@ -1,0 +1,11 @@
+{
+ "name": "Passkeys",
+ "id": "palos-passkeys",
+ "command": "passkeys",
+ "icon": "palos-passkeys",
+ "version": "1.0.0",
+ "folder": "Utilities",
+ "kind": "shared",
+ "runtime": "kibble",
+ "fallback": "electron-44"
+}

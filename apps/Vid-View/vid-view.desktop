@@ -1,0 +1,18 @@
+[Desktop Entry]
+X-AppImage-Name=Vid-View
+Name=Vid-View
+Exec=AppRun %U
+Terminal=false
+Type=Application
+Icon=vid-view
+StartupWMClass=vidview
+GenericName=Video Player
+GenericName[fr]=Lecteur vidéo
+GenericName[fr_CA]=Lecteur vidéo
+Comment=Vid-View plays your videos: practically any format, with subtitles and a choice of audio tracks. ffmpeg is built in.
+Comment[fr]=Vid-View lit vos vidéos : pratiquement tous les formats, avec sous-titres et choix de la piste audio. ffmpeg est intégré.
+Comment[fr_CA]=Vid-View lit vos vidéos : pratiquement tous les formats, avec sous-titres et choix de la piste audio. ffmpeg est intégré.
+Keywords=video;movie;film;player;viewer;subtitles;mkv;mp4;
+MimeType=video/mp4;video/x-m4v;video/x-matroska;video/webm;video/quicktime;video/x-msvideo;video/vnd.avi;video/avi;video/x-ms-wmv;video/x-ms-asf;video/x-flv;video/mpeg;video/x-mpeg;video/mp2t;video/vnd.dlna.mpeg-tts;video/ogg;video/x-ogm+ogg;video/x-theora+ogg;video/3gpp;video/3gpp2;video/dv;video/x-dv;video/vnd.rn-realvideo;application/vnd.rn-realmedia;application/mxf;video/x-nut;video/x-ivf;video/divx;video/x-divx;
+Categories=AudioVideo;Video;Player;
+X-AppImage-Version=2.0

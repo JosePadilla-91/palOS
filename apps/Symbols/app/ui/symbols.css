@@ -1,0 +1,35 @@
+/* Symbols */
+#side { width: 220px; display: flex; flex-direction: column; padding: 10px 8px; }
+#side .search { padding: 0 2px 8px; }
+#side .search input { width: 100%; }
+#nav { overflow-y: auto; flex: 1; }
+#nav .nav { font-size: 13.5px; height: 30px; }
+#nav .nav .n { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#nav .nav .g { width: 22px; text-align: center; font-size: 16px; flex: none; font-family: "Noto Sans", "Noto Sans Symbols", "Noto Sans Symbols 2", "Noto Color Emoji", sans-serif; }
+#nav .sep { height: 1px; background: var(--line); margin: 8px 6px; }
+#main2 { flex: 1; display: flex; min-width: 0; }
+#gridwrap { flex: 1; overflow-y: auto; position: relative; background: var(--card); }
+#sizer { position: relative; }
+#grid { position: absolute; left: 0; right: 0; display: grid; grid-template-columns: repeat(auto-fill, var(--cell)); justify-content: center; padding: 0 10px; }
+:root { --cell: 52px; --glyph: 26px; }
+body.small { --cell: 40px; --glyph: 19px; } body.large { --cell: 72px; --glyph: 40px; }
+.cell { width: var(--cell); height: var(--cell); display: flex; align-items: center; justify-content: center; font-size: var(--glyph); border-radius: 6px;
+  font-family: "Noto Sans", "Noto Sans Symbols", "Noto Sans Symbols 2", "Noto Sans Math", "Noto Sans CJK SC", "Noto Color Emoji", "DejaVu Sans", sans-serif; color: var(--text); }
+.cell:hover { background: var(--hover); }
+.cell.on { background: var(--accent); color: var(--on-accent); }
+.cell.comb::before { content: '◌'; opacity: .35; }
+#detail { width: 250px; flex: none; border-left: 1px solid var(--line); padding: 18px 16px; display: flex; flex-direction: column; align-items: center; overflow-y: auto; }
+#big { width: 150px; height: 150px; display: flex; align-items: center; justify-content: center; font-size: 96px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow);
+  font-family: "Noto Sans", "Noto Sans Symbols", "Noto Sans Symbols 2", "Noto Sans Math", "Noto Sans CJK SC", "Noto Color Emoji", "DejaVu Sans", sans-serif; user-select: text; }
+#dname { margin: 14px 0 10px; font-weight: 600; text-align: center; font-size: 14px; }
+#dinfo { width: 100%; font-size: 12px; border-collapse: collapse; }
+#dinfo td { padding: 3px 0; vertical-align: top; } #dinfo td:first-child { color: var(--dim); width: 82px; }
+#dinfo td:last-child { user-select: text; font-family: "Noto Sans Mono", monospace; word-break: break-all; }
+#detail .acts { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; justify-content: center; }
+#variants { margin-top: 18px; width: 100%; }
+#variants h4 { font-size: 12px; color: var(--dim); font-weight: 600; margin: 0 0 6px; }
+#variants .fonts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+#variants .fonts div { height: 54px; border: 1px solid var(--line); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 28px; background: var(--card); }
+#detail.none > * { visibility: hidden; }
+.empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--dim); font-size: 14px; }
+#toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: rgba(20, 24, 28, .9); color: #fff; padding: 8px 16px; border-radius: 8px; font-size: 13px; pointer-events: none; }

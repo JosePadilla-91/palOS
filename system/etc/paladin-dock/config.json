@@ -1,0 +1,40 @@
+{
+  "position": "bottom",
+  "icon_size": 56,
+  "magnify": true,
+  "magnify_size": 104,
+  "autohide": false,
+  "minimize_effect": "magic_lamp",
+  "minimize_into_app": false,
+  "animate_launch": true,
+  "apps": [
+    "paladin-seeker|org.gnome.Nautilus|nemo|thunar|pcmanfm|caja",
+    "palos-firefox|firefox|firefox_firefox|firefox-esr|org.gnome.Epiphany|chromium_chromium|chromium|google-chrome",
+    "paladin-mail",
+    "paladin-calendar",
+    "discette",
+    "palos-notes",
+    "chancery-writer",
+    "chancery-presentation",
+    "chancery-sheets",
+    "composer",
+    "cutting-floor",
+    "vid-view",
+    "time-turner",
+    "paladin-settings|org.gnome.Settings"
+  ],
+  "stacks": [
+    {
+      "path": "~/Downloads",
+      "sort": "date_added",
+      "view": "auto",
+      "display": "stack"
+    },
+    {
+      "path": "~/Documents",
+      "sort": "name",
+      "view": "auto",
+      "display": "stack"
+    }
+  ]
+}

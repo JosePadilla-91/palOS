@@ -1,0 +1,4 @@
+# Windows programs, and `wine` typed in a terminal, all use the same ready-made Windows 11 environment.
+WINEPREFIX="$HOME/.local/share/palos-windows/prefix"
+WINEDEBUG=-all
+export WINEPREFIX WINEDEBUG

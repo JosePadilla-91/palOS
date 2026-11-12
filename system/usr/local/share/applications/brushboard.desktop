@@ -1,0 +1,16 @@
+[Desktop Entry]
+TryExec=/Applications/BrushBoard.app
+X-Palos-App=/Applications/BrushBoard.app
+X-AppImage-Name=BrushBoard
+Name=BrushBoard
+Exec="/Applications/BrushBoard.app" %U
+Terminal=false
+Type=Application
+Icon=brushboard
+StartupWMClass=brushboard
+Comment=BrushBoard — a photo editing studio with Python extensions
+Comment[fr]=BrushBoard — un studio de retouche photo avec des extensions Python
+Comment[fr_CA]=BrushBoard — un studio de retouche photo avec des extensions Python
+MimeType=image/png;image/jpeg;image/webp;image/tiff;image/vnd.adobe.photoshop;application/x-brushboard;
+Categories=Graphics;
+X-AppImage-Version=1.0

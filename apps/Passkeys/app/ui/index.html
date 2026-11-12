@@ -1,0 +1,12 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Passkeys</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+<link rel="stylesheet" href="kit.css"><link rel="stylesheet" href="app.css"></head>
+<body>
+<div id="app">
+  <aside id="side"><div id="nav"></div><div class="foot"><button class="btn small" id="addRing" title="New keyring">New Keyring…</button></div></aside>
+  <main id="main">
+    <div class="toolbar"><h1 id="title">Passwords</h1><input type="search" id="q" placeholder="Search" spellcheck="false"><span id="tbtns"></span></div>
+    <div class="split"><div class="list" id="list"></div><aside class="detail" id="detail"></aside></div>
+  </main>
+</div>
+<script src="helpers.js"></script><script src="passkeys.js"></script></body></html>

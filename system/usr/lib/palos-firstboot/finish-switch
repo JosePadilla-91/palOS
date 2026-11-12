@@ -1,0 +1,34 @@
+#!/bin/sh
+# Run (as a transient systemd unit) a moment after setup finishes: show the normal login screen.
+#   finish-switch          the login screen restarts and the new account logs in once by itself
+#   finish-switch reboot   a graphics driver was installed during setup: restart the computer, and the new
+#                          account logs in once by itself after the restart
+if [ "$1" = reboot ]; then
+  # the one automatic login happens after the restart; a one-time service takes it away again afterwards
+  cat > /etc/systemd/system/palos-first-login-cleanup.service <<'UNIT'
+[Unit]
+Description=palOS: end the one automatic login after setup
+After=display-manager.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'sleep 25; rm -f /etc/lightdm/lightdm.conf.d/91-palos-first-login.conf; pkill -u palos-setup 2>/dev/null; cp -f /var/lib/palos-setup/.cache/palos-setup.log /var/log/palos-setup.log 2>/dev/null; find /var/lib/palos-setup -mindepth 1 -delete 2>/dev/null; systemctl disable palos-first-login-cleanup.service; rm -f /etc/systemd/system/palos-first-login-cleanup.service; systemctl daemon-reload'
+
+[Install]
+WantedBy=graphical.target
+UNIT
+  systemctl daemon-reload 2>/dev/null
+  systemctl enable palos-first-login-cleanup.service 2>/dev/null
+  rm -f /var/lib/palos-firstboot/drivers-installed
+  systemctl reboot
+  exit 0
+fi
+systemctl restart lightdm.service 2>/dev/null || systemctl restart display-manager.service
+sleep 4
+# the one automatic login has happened: from now on the login screen asks as usual
+sleep 12
+rm -f /etc/lightdm/lightdm.conf.d/91-palos-first-login.conf
+# tidy the setup account's home (it stays as a locked system account)
+pkill -u palos-setup 2>/dev/null || true
+cp -f /var/lib/palos-setup/.cache/palos-setup.log /var/log/palos-setup.log 2>/dev/null; find /var/lib/palos-setup -mindepth 1 -delete 2>/dev/null || true
+exit 0

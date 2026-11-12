@@ -1,0 +1,11 @@
+{
+ "name": "Symbols",
+ "id": "palos-symbols",
+ "command": "symbols",
+ "icon": "palos-symbols",
+ "version": "1.0.0",
+ "folder": "Utilities",
+ "kind": "shared",
+ "runtime": "kibble",
+ "fallback": "electron-44"
+}

@@ -1,0 +1,19 @@
+{
+  "name": "discette",
+  "productName": "Discette",
+  "version": "1.0.0",
+  "description": "Discette - a music and video library and player for Linux",
+  "main": "./out/main/index.js",
+  "author": {
+    "name": "Discette",
+    "email": "joe.lucas0413@gmail.com"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/discette-player/discette",
+  "dependencies": {
+    "better-sqlite3": "12.2.0",
+    "ffmpeg-static": "5.2.0",
+    "music-metadata": "7.14.0",
+    "node-taglib-sharp": "6.0.1"
+  }
+}

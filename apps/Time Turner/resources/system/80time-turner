@@ -1,0 +1,2 @@
+// Time Turner: make a full system image after kernel installs and Ubuntu upgrades.
+DPkg::Post-Invoke { "if [ -x /usr/lib/time-turner/apt-hook ]; then /usr/lib/time-turner/apt-hook || true; fi"; };

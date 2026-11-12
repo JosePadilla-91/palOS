@@ -1,0 +1,36 @@
+Package: palos-app-sandbox
+Status: install ok installed
+Priority: optional
+Section: admin
+Installed-Size: 100
+Maintainer: palOS <joe.lucas0413@gmail.com>
+Architecture: all
+Version: 27.9.0
+Conffiles:
+ /etc/apparmor.d/bundler 8a1bddcf0c7fcacff17192b5ff585609
+ /etc/apparmor.d/chancery-press 98c5a346b3f8e54f0627757e14e89e8a
+ /etc/apparmor.d/paladin-addressbook b063807d5bf1c20fade3d5c337304e02
+ /etc/apparmor.d/paladin-calendar 4684b1c73093a4adbddabf36e2ce3093
+ /etc/apparmor.d/paladin-mail 28c7f5e71e63b3500c22dc83fbe2998c
+ /etc/apparmor.d/palos-disks ab780da19a79815b7e745429509892f1
+ /etc/apparmor.d/palos-fonts 066346da62c4018e784e54c599076f8c
+ /etc/apparmor.d/palos-installer ca8610e0b195b8ed976f0a77165fede7
+ /etc/apparmor.d/palos-iso-writer f0b1e042d7a4e5d37e1f9994742ca35d
+ /etc/apparmor.d/palos-monitor 7d023fcd03462f88c5f14743079295ab
+ /etc/apparmor.d/palos-notes 6711b795e4a27636b72b5cca0121762b
+ /etc/apparmor.d/palos-passkeys c5983850da4c564a35e57ccea80ee91b
+ /etc/apparmor.d/palos-printers 33ee11b22511494587058b675bc9f8d7
+ /etc/apparmor.d/palos-remote-drive cf785694cfdf6bd74a9aca0a4e3142c4
+ /etc/apparmor.d/palos-snap-booth 3b526aa4654cfa398e2c297bbd3d9736
+ /etc/apparmor.d/palos-symbols bf27a488c01ed18661edb1f27d737f81
+ /etc/apparmor.d/palos-textpad 9e2bb77e10f153461eb919739516657c
+ /etc/apparmor.d/palos-utilities 9a01a30d29614e405197ab92691e1e85
+ /etc/apparmor.d/time-turner 4d0a345142679814d6bd99bdfeb1457d
+ /etc/apparmor.d/palos-scanner 55b58e02e2568a866545c15d5a26cf3c
+ /etc/apparmor.d/palos-bluetooth 9a33524c8de444e96c8db77f826ef592
+ /etc/apparmor.d/palos-network b2c4394cda7b5eb97acf0a41583218f5
+Description: Sandbox permissions for every palOS app
+ Ubuntu 24.04 only lets an app start its own sandbox when an AppArmor profile
+ says it may. Apps without one fell back to an older sandbox and could fail to
+ start (Mail, Calendar and Time Turner from the Dock). This gives every palOS
+ app built on Electron its profile.

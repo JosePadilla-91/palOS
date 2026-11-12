@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; img-src 'self' file: data:; style-src 'self'; script-src 'self'">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Time Turner</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- ===================== Icon sprite ===================== -->
+  <svg class="sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <!-- App icon (original design: hourglass inside a turning arrow) -->
+    <symbol id="i-app" viewBox="0 0 64 64">
+      <!-- palOS: the Time Turner icon itself -->
+      <image href="../assets/icon.png" x="0" y="0" width="64" height="64"/>
+    </symbol>
+
+    <!-- palOS folder-style item icons (placeholders; Electron can swap in real Yaru icons) -->
+    <symbol id="i-folder" viewBox="0 0 64 64">
+      <path d="M6 15a4 4 0 0 1 4-4h13.5a4 4 0 0 1 2.8 1.2L30 16h24a4 4 0 0 1 4 4v6H6z" fill="#2f6f9a"/>
+      <rect x="6" y="20" width="52" height="34" rx="4" fill="#3b8fc4"/>
+      <rect x="8" y="21" width="48" height="2.4" rx="1.2" fill="#8cc3e6" opacity=".85"/>
+    </symbol>
+    <symbol id="i-file" viewBox="0 0 64 64">
+      <path d="M15 6h24l12 12v38a3 3 0 0 1-3 3H15a3 3 0 0 1-3-3V9a3 3 0 0 1 3-3z" fill="#FDFDFD" stroke="#000" stroke-opacity=".18"/>
+      <path d="M39 6v9a3 3 0 0 0 3 3h9z" fill="#DADADA"/>
+    </symbol>
+    <symbol id="g-doc" viewBox="0 0 64 64">
+      <rect class="tc-fill" x="19" y="27" width="25" height="3" rx="1.5"/>
+      <rect class="tc-fill" x="19" y="34" width="25" height="3" rx="1.5"/>
+      <rect class="tc-fill" x="19" y="41" width="17" height="3" rx="1.5"/>
+    </symbol>
+    <symbol id="g-sheet" viewBox="0 0 64 64">
+      <rect class="tc-stroke" x="19" y="26" width="25" height="20" rx="1.5" stroke-width="2.4"/>
+      <path class="tc-stroke" d="M19 32.6h25M19 39.3h25M27.3 26v20" stroke-width="2.4"/>
+    </symbol>
+    <symbol id="g-image" viewBox="0 0 64 64">
+      <rect class="tc-fill" x="18" y="26" width="27" height="21" rx="2" opacity=".18"/>
+      <path class="tc-fill" d="M20 45l7-9 5 6 4-4 7 7z"/>
+      <circle class="tc-fill" cx="38" cy="31.5" r="2.6"/>
+    </symbol>
+    <symbol id="g-audio" viewBox="0 0 64 64">
+      <circle class="tc-fill" cx="25" cy="43" r="4.5"/>
+      <circle class="tc-fill" cx="38" cy="40" r="4.5"/>
+      <path class="tc-stroke" d="M29.3 43V29l13-3v14" stroke-width="2.6"/>
+    </symbol>
+    <symbol id="g-video" viewBox="0 0 64 64">
+      <rect class="tc-fill" x="18" y="27" width="27" height="19" rx="3"/>
+      <path d="M29 32v9l7-4.5z" fill="#fff"/>
+    </symbol>
+    <symbol id="g-code" viewBox="0 0 64 64">
+      <path class="tc-stroke" d="M25 30l-6 6 6 6M38 30l6 6-6 6M34 27l-5 18" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="g-archive" viewBox="0 0 64 64">
+      <path class="tc-stroke" d="M31 7v37" stroke-width="4" stroke-dasharray="3 3"/>
+      <rect class="tc-fill" x="27.5" y="43" width="7" height="10" rx="1.5"/>
+    </symbol>
+    <symbol id="g-disc" viewBox="0 0 64 64">
+      <circle class="tc-fill" cx="31.5" cy="37" r="11"/>
+      <circle cx="31.5" cy="37" r="3" fill="#fff"/>
+    </symbol>
+
+    <!-- Symbolic (16px) icons -->
+    <symbol id="s-search" viewBox="0 0 16 16"><circle cx="6.8" cy="6.8" r="4.6"/><path d="M10.3 10.3l3.7 3.7" stroke-width="1.8"/></symbol>
+    <symbol id="s-gear" viewBox="0 0 16 16"><circle cx="8" cy="8" r="3.4" stroke-width="2.8"/><circle cx="8" cy="8" r="5.9" stroke-width="2.2" stroke-dasharray="2.317 2.317" stroke-linecap="butt"/></symbol>
+    <symbol id="s-up" viewBox="0 0 16 16"><path d="M8 13.5V3M3.5 7.5L8 3l4.5 4.5"/></symbol>
+    <symbol id="s-home" viewBox="0 0 16 16"><path d="M2.5 7.5L8 2.5l5.5 5v6H10v-4H6v4H2.5z"/></symbol>
+    <symbol id="s-chev-up" viewBox="0 0 16 16"><path d="M4 10l4-4 4 4"/></symbol>
+    <symbol id="s-chev-down" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></symbol>
+    <symbol id="s-x" viewBox="0 0 16 16"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/></symbol>
+    <symbol id="s-drive" viewBox="0 0 16 16"><rect x="1.5" y="4" width="13" height="8" rx="2"/><circle cx="11.5" cy="8" r=".9" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="s-usb" viewBox="0 0 16 16"><rect x="5.5" y="1.5" width="5" height="4" rx=".6"/><rect x="3.5" y="5.5" width="9" height="9" rx="2"/></symbol>
+    <symbol id="s-network" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.2"/><path d="M1.8 8h12.4M8 1.8c-2.3 2.3-2.3 10.1 0 12.4M8 1.8c2.3 2.3 2.3 10.1 0 12.4"/></symbol>
+    <symbol id="s-folder" viewBox="0 0 16 16"><path d="M1.5 4.5a1 1 0 0 1 1-1h3.5l1.5 1.5h6a1 1 0 0 1 1 1v6.5a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1z"/></symbol>
+    <symbol id="s-plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></symbol>
+    <symbol id="s-clock" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.2"/><path d="M8 4.5V8l2.5 1.5"/></symbol>
+    <symbol id="s-warn" viewBox="0 0 16 16"><path d="M8 2.2l6.3 11.3H1.7z"/><path d="M8 6.5v3M8 11.6v.1"/></symbol>
+    <symbol id="s-restore" viewBox="0 0 16 16"><path d="M3 8a5 5 0 1 0 1.5-3.6M3.5 2v3h3"/></symbol>
+    <symbol id="s-lock" viewBox="0 0 16 16"><rect x="3" y="7" width="10" height="7.5" rx="1.5"/><path d="M5.3 7V5a2.7 2.7 0 0 1 5.4 0v2"/></symbol>
+    <symbol id="s-backup"viewBox="0 0 16 16"><path d="M8 10V2.5M5 5.5l3-3 3 3M2.5 9.5v3a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-3"/></symbol>
+  </svg>
+
+  <!-- Wallpaper (set from GNOME settings by app.js) with a 60% black layer -->
+  <div class="backdrop" aria-hidden="true"></div>
+
+  <!-- ===================== Setup wizard (first launch) ===================== -->
+  <section id="wizard" class="wizard" hidden>
+    <div class="wiz-window" role="dialog" aria-labelledby="wizTitle">
+      <header class="wiz-head">
+        <svg class="wiz-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="#i-app"/></svg>
+        <div class="wiz-heading">
+          <h1 id="wizTitle">Welcome to Time Turner</h1>
+          <p id="wizSub"></p>
+        </div>
+        <ol class="wiz-steps" id="wizSteps" aria-label="Progress"></ol>
+      </header>
+      <div class="wiz-body" id="wizBody"></div>
+      <footer class="wiz-foot">
+        <button class="btn" id="wizBack" type="button">Back</button>
+        <span class="spacer"></span>
+        <button class="btn suggested" id="wizNext" type="button">Continue</button>
+      </footer>
+    </div>
+  </section>
+
+  <!-- Wizard step templates -->
+  <template id="tpl-welcome">
+    <div class="list">
+      <label class="row activatable choice">
+        <span class="row-icon big"><svg class="sym"><use href="#s-backup"/></svg></span>
+        <span class="row-text">
+          <span class="row-title">Set up new backups</span>
+          <span class="row-sub">Choose a drive and start backing up this computer.</span>
+        </span>
+        <input type="radio" name="mode" value="setup" checked>
+      </label>
+      <label class="row activatable choice">
+        <span class="row-icon big"><svg class="sym"><use href="#s-restore"/></svg></span>
+        <span class="row-text">
+          <span class="row-title">Restore from Time Turner Backup</span>
+          <span class="row-sub">Bring back this computer, or move to a new one, from an existing backup.</span>
+        </span>
+        <input type="radio" name="mode" value="restore">
+      </label>
+    </div>
+  </template>
+
+  <template id="tpl-destination">
+    <h3 class="group-title">Connected drives</h3>
+    <div class="list" id="destList"></div>
+    <h3 class="group-title">Network location</h3>
+    <div class="list">
+      <div class="row">
+        <span class="row-icon"><svg class="sym"><use href="#s-network"/></svg></span>
+        <input class="entry" id="netAddress" type="text" placeholder="smb://server/share or sftp://server/path" spellcheck="false">
+        <button class="btn" id="netConnect" type="button">Connect</button>
+      </div>
+      <div class="row" id="netCreds" hidden>
+        <span class="row-icon"><svg class="sym"><use href="#s-lock"/></svg></span>
+        <input class="entry" id="netUser" type="text" placeholder="Username" autocomplete="username" spellcheck="false">
+        <input class="entry" id="netPass" type="password" placeholder="Password" autocomplete="current-password">
+      </div>
+    </div>
+    <p class="note warn" id="destWarn" hidden>
+      <svg class="sym"><use href="#s-warn"/></svg>
+      <span>This is the same disk palOS runs on. If the disk fails, your backups go with it.</span>
+    </p>
+  </template>
+
+  <template id="tpl-targets">
+    <div class="list" id="targetList"></div>
+    <div class="list-actions">
+      <button class="btn" id="addFolder" type="button"><svg class="sym"><use href="#s-plus"/></svg>Add Folder…</button>
+    </div>
+    <p class="note">
+      <svg class="sym"><use href="#s-clock"/></svg>
+      <span>Your first backup is always a full system image. Later backups only copy what changed.</span>
+    </p>
+  </template>
+
+  <template id="tpl-frequency">
+    <div class="list" id="freqList"></div>
+    <p class="note">
+      <svg class="sym"><use href="#s-clock"/></svg>
+      <span>Time Turner also makes a full system image after major palOS upgrades and kernel updates.</span>
+    </p>
+  </template>
+
+  <template id="tpl-recovery-key">
+    <div class="key-box">
+      <code class="recovery-key" id="recoveryKey"></code>
+      <button class="btn" id="copyKey" type="button">Copy</button>
+    </div>
+    <p class="note warn">
+      <svg class="sym"><use href="#s-warn"/></svg>
+      <span>Write it down or store it in a password manager. Anyone with this key and your backup drive can read your backups.</span>
+    </p>
+    <div class="list key-confirm">
+      <label class="row activatable">
+        <span class="row-text"><span class="row-title">I’ve saved my recovery key somewhere safe</span></span>
+        <input type="checkbox" id="keySaved">
+      </label>
+    </div>
+  </template>
+
+  <template id="tpl-enter-key">
+    <div class="list">
+      <div class="row">
+        <span class="row-icon"><svg class="sym"><use href="#s-lock"/></svg></span>
+        <input class="entry key-entry" id="keyInput" type="text" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" spellcheck="false" autocomplete="off">
+      </div>
+    </div>
+    <p class="note">
+      <svg class="sym"><use href="#s-clock"/></svg>
+      <span>Capitals, spaces and dashes don’t matter.</span>
+    </p>
+  </template>
+
+  <template id="tpl-progress">
+    <div class="progress-step">
+      <svg class="big-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="#i-app"/></svg>
+      <h2 class="progress-title" id="progTitle"></h2>
+      <p class="progress-sub" id="progSub"></p>
+      <div class="progressbar" role="progressbar" aria-valuemin="0" aria-valuemax="100"><div id="progFill"></div></div>
+      <div class="progress-meta"><span id="progLeft"></span><span id="progRight"></span></div>
+    </div>
+  </template>
+
+  <template id="tpl-restore-source">
+    <div class="list" id="srcList"></div>
+  </template>
+
+  <template id="tpl-restore-pick">
+    <div class="list scroll" id="pickList"></div>
+    <p class="note warn">
+      <svg class="sym"><use href="#s-warn"/></svg>
+      <span>Your computer will restart when the restore is finished.</span>
+    </p>
+  </template>
+
+  <!-- ===================== Main window ===================== -->
+  <section id="main" class="main" hidden>
+    <header class="toolbar">
+      <svg class="app-icon" viewBox="0 0 64 64" role="img" aria-label="Time Turner"><use href="#i-app"/></svg>
+
+      <div class="search" id="searchBox">
+        <svg class="sym search-icon"><use href="#s-search"/></svg>
+        <input id="search" type="search" placeholder="Search all backups" autocomplete="off" spellcheck="false" aria-controls="resultList">
+        <button class="clear" id="searchClear" type="button" title="Clear" hidden><svg class="sym"><use href="#s-x"/></svg></button>
+
+        <div class="search-pop" id="searchPop" hidden>
+          <div class="pop-head">
+            <span id="resultCount">No results</span>
+            <span class="spacer"></span>
+            <div class="linked">
+              <button class="btn icon-btn small" id="resPrev" type="button" title="Newer result"><svg class="sym"><use href="#s-chev-up"/></svg></button>
+              <button class="btn icon-btn small" id="resNext" type="button" title="Older result"><svg class="sym"><use href="#s-chev-down"/></svg></button>
+            </div>
+          </div>
+          <ul class="results" id="resultList" role="listbox"></ul>
+        </div>
+      </div>
+
+      <span class="spacer"></span>
+
+      <button class="btn icon-btn" id="settingsBtn" type="button" title="Settings" aria-label="Settings"><svg class="sym"><use href="#s-gear"/></svg></button>
+      <button class="btn danger" id="restoreSysBtn" type="button" disabled>Restore System</button>
+      <button class="btn" id="backupBtn" type="button"><span class="spinner" aria-hidden="true"></span><span id="backupLabel">Backup Now</span></button>
+      <button class="btn suggested" id="restoreBtn" type="button" disabled>Restore</button>
+    </header>
+
+    <main class="stage" id="stage" aria-label="Backups">
+      <div class="flow" id="flow"></div>
+    </main>
+
+    <footer class="scrubber-bar">
+      <div class="scrubber" id="scrubber">
+        <div class="trough"><div class="fill" id="scrubFill"></div></div>
+        <div class="thumb" id="scrubThumb" role="slider" tabindex="0" aria-label="Backup time">
+          <span class="thumb-label" id="scrubLabel"></span>
+        </div>
+      </div>
+    </footer>
+
+    <div class="toast" id="toast" role="status" hidden></div>
+  </section>
+
+  <!-- Restore conflict -->
+  <dialog id="conflictDlg" class="msg">
+    <form method="dialog">
+      <div class="msg-body">
+        <h2 id="conflictTitle"></h2>
+        <p id="conflictText"></p>
+      </div>
+      <div class="msg-actions">
+        <button value="original">Keep Original</button>
+        <button value="both">Keep Both</button>
+        <button value="replace" class="destructive">Replace</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- System restore: 1. confirm -->
+  <dialog id="sysConfirmDlg" class="msg">
+    <form method="dialog">
+      <div class="msg-body">
+        <h2>Restore your entire system?</h2>
+        <p id="sysConfirmText"></p>
+      </div>
+      <div class="msg-actions">
+        <button value="cancel">Cancel</button>
+        <button value="restore" class="destructive">Restore System</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- System restore: 2. password.
+       PREVIEW STAND-IN ONLY. In Electron, Ubuntu's own polkit dialog appears instead
+       (triggered by pkexec in the main process), so this element is never shown there. -->
+  <dialog id="authDlg" class="auth">
+    <form method="dialog">
+      <div class="auth-body">
+        <span class="auth-icon"><svg class="sym"><use href="#s-lock"/></svg></span>
+        <h2>Authentication Required</h2>
+        <p>Authentication is required to restore the system.</p>
+        <input class="entry" id="authPass" type="password" placeholder="Password" autocomplete="current-password">
+        <p class="auth-error" id="authError" hidden>Enter your password to continue.</p>
+      </div>
+      <div class="msg-actions">
+        <button value="cancel" formnovalidate>Cancel</button>
+        <button value="auth" class="suggested-text">Authenticate</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- System restore: 3. safety backup, then 60-second countdown -->
+  <dialog id="sysProgDlg" class="msg sysprog">
+    <div class="msg-body">
+      <h2 id="sysProgTitle"></h2>
+      <p id="sysProgText"></p>
+      <div class="countdown" id="sysCountdown" hidden></div>
+      <div class="progressbar" id="sysProgBar"><div id="sysProgFill"></div></div>
+      <div class="progress-meta" id="sysProgMeta"><span id="sysProgLeft"></span><span id="sysProgRight"></span></div>
+    </div>
+    <div class="msg-actions">
+      <button type="button" id="sysCancel">Cancel</button>
+      <button type="button" id="sysRestartNow" class="destructive" hidden>Restart Now</button>
+    </div>
+  </dialog>
+
+  <!-- Settings -->
+  <dialog id="settingsDlg" class="prefs">
+    <form method="dialog">
+      <header class="prefs-head">
+        <span class="spacer"></span>
+        <h2>Settings</h2>
+        <span class="spacer"></span>
+        <button class="btn flat icon-btn" value="close" title="Close" aria-label="Close"><svg class="sym"><use href="#s-x"/></svg></button>
+      </header>
+      <div class="prefs-body">
+        <h3 class="group-title">Backups</h3>
+        <div class="list">
+          <div class="row">
+            <span class="row-text"><span class="row-title">Back Up Automatically</span></span>
+            <input class="switch" id="setAuto" type="checkbox" aria-label="Back up automatically">
+          </div>
+          <div class="row">
+            <span class="row-text"><span class="row-title">Frequency</span></span>
+            <select class="dropdown" id="setFreq" aria-label="Frequency">
+              <option value="hourly">Every hour</option><option value="6h">Every 6 hours</option><option value="daily">Once a day</option><option value="weekly">Once a week</option>
+            </select>
+          </div>
+          <div class="row">
+            <span class="row-text"><span class="row-title">Destination</span><span class="row-sub" id="prefsDest">Loading…</span></span>
+            <button class="btn" id="setChangeDest" type="button">Change…</button>
+          </div>
+        </div>
+        <h3 class="group-title">Backed-up locations</h3>
+        <div class="list" id="prefsLocations"></div>
+        <h3 class="group-title">Storage</h3>
+        <div class="list">
+          <div class="row">
+            <span class="row-text">
+              <span class="row-title" id="prefsStorage">Loading…</span>
+              <span class="meter"><span class="meter-fill" id="prefsMeter"></span></span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Shown when the background service can't be reached -->
+  <section id="serviceError" class="service-error" hidden>
+    <div class="service-error-box">
+      <svg class="wiz-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="#i-app"/></svg>
+      <h1>Time Turner isn’t ready</h1>
+      <p id="serviceErrorText"></p>
+      <p class="hint">The background service may still be starting. If this keeps happening, run <code>systemctl status time-turnerd</code> in a terminal.</p>
+      <button class="btn suggested" id="serviceRetry" type="button">Try Again</button>
+    </div>
+  </section>
+
+  <script src="mock-api.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

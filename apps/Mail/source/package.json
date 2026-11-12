@@ -1,0 +1,12 @@
+{
+  "name": "paladin-mail",
+  "productName": "Mail",
+  "version": "0.1.0",
+  "description": "Read and send email",
+  "author": "Paladin Project <maintainers@paladin.invalid>",
+  "homepage": "https://paladin.invalid",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "out/main/index.js",
+  "desktopName": "paladin-mail.desktop"
+}

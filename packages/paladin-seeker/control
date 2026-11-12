@@ -1,0 +1,26 @@
+Package: paladin-seeker
+Status: install ok installed
+Priority: optional
+Section: x11
+Maintainer: Paladin Seeker Maintainer <joe.lucas0413@gmail.com>
+Architecture: amd64
+Version: 1.8.0
+Replaces: paladin-scout
+Provides: paladin-scout
+Depends: python3, ca-certificates, x11-utils, wmctrl, xdotool, libglib2.0-bin, util-linux, shared-mime-info, xdg-utils, libgtk-3-0t64 | libgtk-3-0, libnss3, libasound2t64 | libasound2, libgbm1, libdrm2, libxkbcommon0, libxss1, libxtst6, libatk-bridge2.0-0t64 | libatk-bridge2.0-0, libatspi2.0-0t64 | libatspi2.0-0, libcups2t64 | libcups2, libdbus-1-3
+Recommends: xdotool, appmenu-gtk3-module, libdbusmenu-glib4, picom, udisks2, poppler-utils, ffmpegthumbnailer, network-manager, pipewire-bin | pulseaudio-utils, libnotify-bin, dex, plocate, libarchive-tools, unar
+Conflicts: paladin-scout
+Conffiles:
+ /etc/paladin-seeker/config.json f4f45bd6157cb118465a3b845c739553
+ /etc/xdg/autostart/paladin-seeker.desktop a7d358ad3bc9989f3ec6e664c3ddc728
+ /etc/X11/Xsession.d/85paladin-seeker-global-menu b3b1844ff532de2997963df227d09c24
+ /etc/apparmor.d/paladin-seeker 1bd9649547bdc4ab4c6592b90ef88eca
+Description: Leopard-style desktop, menu bar and file browser for X11
+ Seeker draws the desktop (wallpaper, files in ~/Desktop, mounted drives) and
+ runs a global menu bar that follows the active application: real menus from
+ GTK 3, Qt, Electron, Chromium and LibreOffice apps, basic menus for the rest,
+ a palOS menu, clock, volume, Wi-Fi and tray icons. Opening Seeker gives a
+ file browser with icon, list, column and Cover Flow views, Quick Look,
+ Get Info, spring-loaded folders, search and the freedesktop Trash.
+ .
+ The Electron runtime is downloaded once during installation and verified.

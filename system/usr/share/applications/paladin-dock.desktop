@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Dock
+Name[fr]=Dock
+Name[fr_CA]=Dock
+Comment=The palOS application dock
+Comment[fr]=Le Dock d’applications de palOS
+Comment[fr_CA]=Le Dock d’applications de palOS
+Exec=paladin-dock
+Icon=paladin-dock
+Categories=Utility;
+StartupNotify=false

@@ -1,0 +1,8 @@
+id = "palette_studio"
+name = "Palette Studio"
+version = "1.0.0"
+author = "BrushBoard Project"
+description = "A dockable panel that extracts a colour palette (k-means) from your image. Click a swatch to paint with it."
+entry = "main.py"
+api = 1
+requirements = []

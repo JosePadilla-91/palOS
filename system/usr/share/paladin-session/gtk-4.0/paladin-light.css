@@ -1,0 +1,49 @@
+/* Paladin for GTK 4 / libadwaita apps, light. Loaded through ~/.config/gtk-4.0/gtk.css,
+   which the Paladin session points at this file or at paladin-dark.css.
+   libadwaita does not accept full themes; these named colors are the parts it lets us set. */
+
+@define-color accent_color #3f5469;
+@define-color accent_bg_color #4c6278;
+@define-color accent_fg_color #ffffff;
+
+@define-color window_bg_color #eef0f2;
+@define-color window_fg_color #23272d;
+@define-color view_bg_color #ffffff;
+@define-color view_fg_color #1b1e22;
+@define-color headerbar_bg_color #dadee3;
+@define-color headerbar_fg_color #23272d;
+@define-color headerbar_backdrop_color #e9ebee;
+@define-color headerbar_border_color #b4bac2;
+@define-color sidebar_bg_color #e4e7eb;
+@define-color sidebar_fg_color #23272d;
+@define-color sidebar_backdrop_color #eceef1;
+@define-color card_bg_color #ffffff;
+@define-color card_fg_color #1b1e22;
+@define-color dialog_bg_color #f4f5f7;
+@define-color dialog_fg_color #23272d;
+@define-color popover_bg_color #ffffff;
+@define-color popover_fg_color #1b1e22;
+
+/* Paladin: brushed steel and glass (palOS 27 build 8). Header bars are brushed steel; the window buttons are
+   ruby, amber and jade glass beads in steel bezels, matching the title bars. */
+headerbar, .titlebar, toolbarview > .top-bar headerbar {
+  background-color: transparent;
+  background-image: url("file:///usr/share/paladin-session/gtk-4.0/assets/paladin-brushed-toolbar.png");
+  background-size: 100% 100%;
+  color: #1f2329;
+  box-shadow: inset 0 -1px #7f8791;
+  text-shadow: 0 1px rgba(255,255,255,.75);
+}
+headerbar:backdrop, .titlebar:backdrop { background-image: url("file:///usr/share/paladin-session/gtk-4.0/assets/paladin-brushed-title-inactive.png"); }
+windowcontrols > button {
+  min-width: 15px; min-height: 15px; padding: 0; margin: 0 2px; border-radius: 50%;
+  background: transparent no-repeat center / 15px 15px; color: transparent; box-shadow: none;
+}
+windowcontrols > button > image { opacity: 0; }
+windowcontrols > button.close { background-image: url("file:///usr/share/paladin-session/gtk-4.0/assets/paladin-close-normal@2.png"); }
+windowcontrols > button.close:hover { background-image: url("file:///usr/share/paladin-session/gtk-4.0/assets/paladin-close-prelight@2.png"); }
+windowcontrols > button.minimize { background-image: url("file:///usr/share/paladin-session/gtk-4.0/assets/paladin-minimize-normal@2.png"); }
+windowcontrols > button.minimize:hover { background-image: url("file:///usr/share/paladin-session/gtk-4.0/assets/paladin-minimize-prelight@2.png"); }
+windowcontrols > button.maximize { background-image: url("file:///usr/share/paladin-session/gtk-4.0/assets/paladin-maximize-normal@2.png"); }
+windowcontrols > button.maximize:hover { background-image: url("file:///usr/share/paladin-session/gtk-4.0/assets/paladin-maximize-prelight@2.png"); }
+window:backdrop windowcontrols > button { background-image: url("file:///usr/share/paladin-session/gtk-4.0/assets/paladin-close-inactive@2.png"); }

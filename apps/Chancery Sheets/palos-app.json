@@ -1,0 +1,11 @@
+{
+ "name": "Chancery Sheets",
+ "id": "chancery-sheets",
+ "command": "chancery-sheets",
+ "icon": "chancery-sheets",
+ "version": "1.0",
+ "folder": "",
+ "kind": "shared",
+ "runtime": "kibble",
+ "fallback": "electron-44"
+}

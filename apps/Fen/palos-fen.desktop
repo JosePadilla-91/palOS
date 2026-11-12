@@ -1,0 +1,19 @@
+[Desktop Entry]
+X-AppImage-Name=Fen
+Type=Application
+Name=Fen
+GenericName=Photo and PDF Viewer
+GenericName[fr]=Visionneuse de photos et de PDF
+GenericName[fr_CA]=Visionneuse de photos et de PDF
+Comment=View photos, PDFs and fonts
+Comment[fr]=Afficher des photos, des PDF et des polices
+Comment[fr_CA]=Afficher des photos, des PDF et des polices
+Keywords=image;picture;photo;viewer;pdf;document;font;preview;slideshow;
+Exec=AppRun %F
+Icon=palos-fen
+Terminal=false
+StartupNotify=true
+StartupWMClass=Fen
+Categories=Graphics;Viewer;Office;2DGraphics;RasterGraphics;
+MimeType=image/jpeg;image/png;image/apng;image/gif;image/webp;image/avif;image/bmp;image/x-bmp;image/x-ms-bmp;image/vnd.microsoft.icon;image/x-icon;image/svg+xml;image/svg+xml-compressed;image/tiff;image/heic;image/heif;image/x-tga;image/x-portable-anymap;image/x-portable-bitmap;image/x-portable-graymap;image/x-portable-pixmap;image/x-xpixmap;image/x-xbitmap;image/x-icns;image/jxl;image/x-adobe-dng;image/x-canon-cr2;image/x-canon-cr3;image/x-canon-crw;image/x-nikon-nef;image/x-nikon-nrw;image/x-sony-arw;image/x-sony-srf;image/x-sony-sr2;image/x-fuji-raf;image/x-olympus-orf;image/x-panasonic-rw2;image/x-panasonic-raw2;image/x-pentax-pef;image/x-samsung-srw;image/x-sigma-x3f;image/x-minolta-mrw;image/x-kodak-dcr;image/x-kodak-kdc;image/x-hasselblad-3fr;image/x-epson-erf;image/x-dcraw;application/pdf;application/x-pdf;font/ttf;font/otf;font/collection;font/woff;font/woff2;application/x-font-ttf;application/x-font-otf;application/vnd.ms-opentype;
+X-AppImage-Version=1.0.0

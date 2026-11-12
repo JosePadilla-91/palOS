@@ -1,0 +1,11 @@
+{
+ "name": "Duet",
+ "id": "palos-duet",
+ "command": "duet",
+ "icon": "palos-duet",
+ "version": "1.0.0",
+ "folder": "Utilities",
+ "kind": "shared",
+ "runtime": "kibble",
+ "fallback": "electron-44"
+}

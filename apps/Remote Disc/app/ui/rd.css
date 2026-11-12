@@ -1,0 +1,13 @@
+html, body { overflow-y: auto; }
+#rd { max-width: 680px; margin: 0 auto; padding: 22px 26px 36px; }
+#rd header { display: flex; gap: 16px; align-items: center; margin-bottom: 8px; }
+#rd header img { width: 72px; height: 72px; }
+#rd header h1 { margin: 0 0 4px; font-size: 21px; }
+#rd header p { margin: 0; color: var(--dim); font-size: 13px; }
+#rd h2 { display: flex; align-items: center; justify-content: space-between; }
+#rd .row img { width: 34px; height: 34px; }
+#rd a { color: var(--accent); }
+.scan { display: flex; align-items: center; gap: 10px; color: var(--dim); font-size: 13px; padding: 14px 16px; }
+.spinner { width: 16px; height: 16px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.inuse { color: var(--ok); font-size: 12px; font-weight: 600; }

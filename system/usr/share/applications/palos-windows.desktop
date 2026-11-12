@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Windows Program
+Comment=Run a Windows installer or program
+Exec=palos-windows-run %f
+Icon=palos-windows
+NoDisplay=true
+Terminal=false
+MimeType=application/x-ms-dos-executable;application/vnd.microsoft.portable-executable;application/x-msdownload;application/x-msi;application/x-ms-installer;application/x-ms-shortcut;application/x-bat;application/x-msdos-program;

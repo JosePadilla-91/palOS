@@ -1,0 +1,464 @@
+#!/usr/bin/python3
+"""Puts every installed Windows program into the Applications folder, like any other app.
+
+Windows installers put a shortcut (.lnk) for each program in the Start Menu. This reads those shortcuts
+straight from the Windows environment, makes an Applications entry for each (with the program's own icon,
+taken from its .exe, with a small Windows badge), and removes the entry again when the program is uninstalled.
+
+Some installers don't leave an ordinary shortcut: MSI installers make "advertised" shortcuts (no path in
+them; Windows Installer finds the program), others only put one on the Desktop, or none at all (the EA app,
+for one). Those are found too: advertised shortcuts are started through Windows itself, Desktop shortcuts
+count like Start Menu ones, and a program listed in Windows' "installed programs" (the Uninstall list in
+the registry) whose .exe is known gets its entry even without a shortcut."""
+import glob
+import hashlib
+import os
+import re
+import shutil
+import struct
+import subprocess
+import sys
+import tempfile
+
+HOME = os.path.expanduser('~')
+PREFIX = os.environ.get('WINEPREFIX') or os.path.join(HOME, '.local/share/palos-windows/prefix')
+APPS = os.path.join(HOME, '.local/share/applications')
+ICONS = os.path.join(HOME, '.local/share/icons/hicolor')
+MARK = 'X-Palos-Windows'
+# a Windows program whose icon can't be found: palOS's blue program box, with the Windows badge
+GENERIC = 'palos-windows-program'
+BADGE_VERSION = '3'                      # bump to redraw every Windows app's icon (e.g. a new badge)
+STAMP = os.path.join(ICONS, '.palos-windows-badge')
+SKIP = re.compile(r'^(uninstall|remove|deinstall|readme|read me|license|licence|help|manual|documentation|website|web site|release notes|changelog|what\'s new|support|visit|register|online)\b|\b(uninstall|uninstaller)\b', re.I)
+SKIP_TARGET = re.compile(r'(unins\d*|uninstall\w*|uninst)\.exe$|\.(txt|pdf|chm|hlp|html?|url|rtf|md|log|ini|xml)$', re.I)
+# runtimes and helpers that Windows programs install for themselves: never opened by anyone, so never shown
+RUNTIME = re.compile(r'redistributable|redist\b|vc_?redist|\bruntime\b|run[- ]time|\.net\b|dotnet|directx|webview2|visual c\+\+|'
+                     r'windows sdk|\bmsxml|\bxna\b|openal|physx|vulkan|steamworks|prerequisite|bootstrapper|\bdriver\b|'
+                     r'\bupdate(r)?\b|\bsetup\b|\binstaller\b|crash ?report|helper\b|service\b|\bwine\b', re.I)
+RUNTIME_TARGET = re.compile(r'[\\/](package cache|installer|installshield installation information|windows|'
+                            r'microsoft\.net|common files)[\\/]|(setup|install|vc_?redist[^/]*|dxsetup|dotnet[^/]*)\.exe$', re.I)
+
+
+def is_runtime(name, exe):
+    return bool(RUNTIME.search(name or '') or (exe and RUNTIME_TARGET.search(exe)))
+
+
+def start_menus():
+    users = glob.glob(os.path.join(PREFIX, 'drive_c/users/*/AppData/Roaming/Microsoft/Windows/Start Menu/Programs'))
+    return [os.path.join(PREFIX, 'drive_c/ProgramData/Microsoft/Windows/Start Menu/Programs')] + users
+
+
+def desktops():
+    """Windows Desktop folders (some installers only put their shortcut there)."""
+    return [d for d in glob.glob(os.path.join(PREFIX, 'drive_c/users/*/Desktop')) if os.path.isdir(d)]
+
+
+def win_to_unix(p):
+    """C:\\Program Files\\x.exe -> the file inside the Windows environment."""
+    if not p:
+        return None
+    p = p.strip().strip('"')
+    p = re.sub(r'%([A-Za-z0-9_]+)%', lambda m: {'programfiles': 'C:\\Program Files', 'programfiles(x86)': 'C:\\Program Files (x86)',
+                                                    'systemroot': 'C:\\windows', 'windir': 'C:\\windows'}.get(m.group(1).lower(), m.group(0)), p)
+    m = re.match(r'^([A-Za-z]):\\(.*)$', p)
+    if not m:
+        return None
+    drive = os.path.realpath(os.path.join(PREFIX, 'dosdevices', m.group(1).lower() + ':'))
+    cur = drive
+    for part in m.group(2).split('\\'):
+        if not part:
+            continue
+        try:
+            names = os.listdir(cur)
+        except OSError:
+            return os.path.join(cur, part)
+        hit = next((n for n in names if n.lower() == part.lower()), part)    # Windows paths ignore case
+        cur = os.path.join(cur, hit)
+    return cur
+
+
+def utf16z(d, off):
+    end = off
+    while end + 1 < len(d) and d[end:end + 2] != b'\x00\x00':
+        end += 2
+    return d[off:end].decode('utf-16le', 'replace')
+
+
+def cstr(d, off):
+    end = d.index(b'\x00', off)
+    return d[off:end].decode('cp1252', 'replace')
+
+
+def parse_lnk(path):
+    """Target, arguments, working folder and icon of a Windows shortcut (the Shell Link format)."""
+    try:
+        d = open(path, 'rb').read()
+    except OSError:
+        return None
+    if len(d) < 0x4C or d[:4] != b'\x4c\x00\x00\x00':
+        return None
+    flags = struct.unpack_from('<I', d, 0x14)[0]
+    unicode = bool(flags & 0x80)
+    pos = 0x4C
+    if flags & 0x01:                                  # HasLinkTargetIDList
+        pos += 2 + struct.unpack_from('<H', d, pos)[0]
+    target = None
+    if flags & 0x02:                                  # HasLinkInfo
+        li = pos
+        size = struct.unpack_from('<I', d, li)[0]
+        hsize, liflags, _, lbp, _, cps = struct.unpack_from('<IIIIII', d, li + 4)
+        if liflags & 1:
+            off = struct.unpack_from('<I', d, li + 28)[0] if hsize >= 0x24 else 0
+            if off:
+                target = utf16z(d, li + off)
+            else:
+                target = cstr(d, li + lbp)
+                suffix = cstr(d, li + cps) if cps else ''
+                if suffix:
+                    target = target.rstrip('\\') + '\\' + suffix
+        pos = li + size
+    strings = {}
+    for bit, key in ((0x04, 'name'), (0x08, 'rel'), (0x10, 'workdir'), (0x20, 'args'), (0x40, 'icon')):
+        if flags & bit:
+            n = struct.unpack_from('<H', d, pos)[0]; pos += 2
+            if unicode:
+                strings[key] = d[pos:pos + n * 2].decode('utf-16le', 'replace'); pos += n * 2
+            else:
+                strings[key] = d[pos:pos + n].decode('latin-1', 'replace'); pos += n
+    # extra data blocks: a path written with %ProgramFiles% and the like, and MSI's "advertised" shortcuts
+    advertised = False
+    try:
+        while pos + 8 <= len(d):
+            bsize, sig = struct.unpack_from('<II', d, pos)
+            if bsize < 8:
+                break
+            if sig == 0xA0000001 and not target:              # EnvironmentVariableDataBlock
+                t = d[pos + 268:pos + 268 + 520].decode('utf-16le', 'replace').split('\x00')[0].strip()
+                if not t:
+                    t = d[pos + 8:pos + 268].split(b'\x00')[0].decode('cp1252', 'replace').strip()
+                target = t or target
+            elif sig == 0xA0000006:                              # DarwinDataBlock: Windows Installer finds it
+                advertised = True
+            pos += bsize
+    except struct.error:
+        pass
+    strings['advertised'] = advertised
+    if not target and strings.get('rel'):
+        target = os.path.normpath(os.path.join(os.path.dirname(path), strings['rel'].replace('\\', '/')))
+        return {'unix': target, **strings}
+    return {'target': target, 'unix': win_to_unix(target), **strings}
+
+
+def badge(png_path):
+    """The program's icon at 256 px with a small Windows-flag badge in the lower right corner."""
+    try:
+        from PIL import Image, ImageDraw, ImageFilter
+    except ImportError:
+        return
+    try:
+        im = Image.open(png_path).convert('RGBA')
+    except OSError:
+        return
+    S = 256
+    if im.size != (S, S):
+        im.thumbnail((S, S), Image.LANCZOS) if max(im.size) > S else None
+        scale = S / max(im.size)
+        if scale > 1:
+            im = im.resize((round(im.size[0] * scale), round(im.size[1] * scale)), Image.LANCZOS if min(im.size) >= 48 else Image.NEAREST)
+        canvas = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+        canvas.paste(im, ((S - im.size[0]) // 2, (S - im.size[1]) // 2), im)
+        im = canvas
+    # the badge: a white rounded plate with a soft shadow, four blue panes on it
+    B = 84; x0, y0 = S - B - 2, S - B - 2
+    shadow = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+    ImageDraw.Draw(shadow).rounded_rectangle((x0 + 2, y0 + 4, x0 + B + 2, y0 + B + 4), radius=20, fill=(0, 0, 0, 110))
+    im = Image.alpha_composite(im, shadow.filter(ImageFilter.GaussianBlur(4)))
+    d = ImageDraw.Draw(im)
+    d.rounded_rectangle((x0, y0, x0 + B, y0 + B), radius=20, fill=(250, 251, 252, 255), outline=(176, 186, 198, 255), width=2)
+    pad, gap = 18, 5
+    pane = (B - 2 * pad - gap) / 2
+    for i in range(2):
+        for j in range(2):
+            px, py = x0 + pad + i * (pane + gap), y0 + pad + j * (pane + gap)
+            d.rectangle((round(px), round(py), round(px + pane), round(py + pane)), fill=(0, 120, 212, 255))
+    im.save(png_path)
+
+
+def first_icon_group(exe, tmp, index=0):
+    """The program's own icon: the icon group Windows itself shows for the .exe. That's the first group
+    (named groups in alphabetical order, then numbered ones from the lowest), or the one a shortcut names:
+    "file,N" is the Nth group, "file,-N" the group numbered N. The biggest group is often a document icon."""
+    try:
+        listing = subprocess.run(['wrestool', '-l', '-t', '14', exe], capture_output=True, text=True, timeout=30).stdout
+    except (OSError, subprocess.SubprocessError):
+        return None
+    groups = []
+    for line in listing.splitlines():
+        m = re.search(r'--name=(\S+)', line)
+        if m:
+            n = m.group(1).strip("'\"")
+            groups.append(n)
+    if not groups:
+        return None
+    named = sorted([g for g in groups if not g.isdigit()], key=str.upper)
+    numbered = sorted([g for g in groups if g.isdigit()], key=int)
+    order = named + numbered
+    if index < 0 and str(-index) in groups:
+        pick = str(-index)
+    else:
+        pick = order[index] if 0 <= index < len(order) else order[0]
+    subprocess.run(['wrestool', '-x', '-t', '14', '-n', pick, '-o', tmp, exe], capture_output=True, timeout=30)
+    icos = glob.glob(os.path.join(tmp, '*.ico'))
+    return icos[0] if icos else None
+
+
+def icon_for(exe, slug, icon_loc=None):
+    """The program's own icon, from its .exe (or the icon file the shortcut names)."""
+    out = os.path.join(ICONS, '256x256/apps', f'palos-win-{slug}.png')
+    src, index = exe, 0
+    if icon_loc:
+        f = win_to_unix(icon_loc.split(',')[0])
+        if f and os.path.isfile(f):
+            src = f
+            try:
+                index = int(icon_loc.split(',')[1])
+            except (IndexError, ValueError):
+                index = 0
+    if not src or not os.path.isfile(src):
+        return GENERIC
+    try:
+        if FRESH and os.path.exists(out) and os.path.getmtime(out) >= os.path.getmtime(src):
+            return f'palos-win-{slug}'
+    except OSError:
+        pass
+    tmp = tempfile.mkdtemp(prefix='palos-win-icon-')
+    try:
+        if src.lower().endswith('.ico'):
+            ico = src
+        else:
+            ico = first_icon_group(src, tmp, index)
+            if not ico:
+                return GENERIC
+        subprocess.run(['icotool', '-x', '-o', tmp, ico], capture_output=True, timeout=30)
+        pngs = glob.glob(os.path.join(tmp, '*.png'))
+        if not pngs:
+            return GENERIC
+
+        def size(p):
+            m = re.search(r'_(\d+)x(\d+)x(\d+)\.png$', p)
+            return (int(m.group(1)), int(m.group(3))) if m else (0, 0)
+        best = max(pngs, key=size)
+        os.makedirs(os.path.dirname(out), exist_ok=True)
+        shutil.copyfile(best, out)
+        badge(out)
+        return f'palos-win-{slug}'
+    except (OSError, subprocess.SubprocessError):
+        return GENERIC
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def registry_programs():
+    """Programs in Windows' installed-programs list: (name, exe) for those whose .exe is known.
+    Read straight from the Windows environment's registry files (system.reg and user.reg)."""
+    out = []
+    for reg in (os.path.join(PREFIX, 'system.reg'), os.path.join(PREFIX, 'user.reg')):
+        try:
+            text = open(reg, encoding='utf-8', errors='replace').read()
+        except OSError:
+            continue
+        for block in re.split(r'\n(?=\[)', text):
+            head = block.split('\n', 1)[0]
+            if not re.search(r'\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Uninstall\\\\', head, re.I):
+                continue
+            vals = {}
+            # strings: "Name"="value", or "Name"=str(2):"value" (REG_EXPAND_SZ, %ProgramFiles% and the like)
+            for m in re.finditer(r'^"([^"]+)"=(?:str\(2\):)?"((?:[^"\\]|\\.)*)"', block, re.M):
+                vals[m.group(1)] = m.group(2).replace('\\\\', '\\').replace('\\"', '"')
+            if vals.get('SystemComponent') or vals.get('ParentKeyName'):
+                continue
+            name = vals.get('DisplayName', '').strip()
+            exe = None
+            for k in ('DisplayIcon', 'MainExecutable'):
+                v = vals.get(k, '').split(',')[0].strip().strip('"')
+                if v.lower().endswith('.exe'):
+                    cand = win_to_unix(v)
+                    # an installer's own copy (Package Cache, C:\Windows\Installer, setup.exe…) isn't the program:
+                    # look for the program itself below (the EA app's installer bundle names only itself)
+                    if cand and not RUNTIME_TARGET.search(cand) and not SKIP_TARGET.search(cand) and os.path.isfile(cand):
+                        exe = cand
+                        break
+            if not exe and vals.get('InstallLocation'):
+                # MSI installs (the EA app, for one) often name no program: find the main one in its folder
+                exe = main_exe(win_to_unix(vals['InstallLocation']), name)
+            if not exe and name:
+                # no folder named either (the EA app's MSI, whose icon lives in C:\Windows\Installer): look in
+                # Program Files for a folder named after the program or its publisher
+                for base in ('C:\\Program Files', 'C:\\Program Files (x86)'):
+                    for sub in (name, vals.get('Publisher', ''), re.sub(r'\s+(app|launcher|client)$', '', name, flags=re.I)):
+                        sub = (sub or '').strip()
+                        if not sub:
+                            continue
+                        d = win_to_unix(base + '\\' + sub)
+                        if d and os.path.isdir(d):
+                            exe = main_exe(d, name)
+                            if exe:
+                                break
+                    if exe:
+                        break
+            if vals.get('NoDisplay') or vals.get('ReleaseType') or vals.get('IsMinorUpgrade'):
+                continue
+            if name and exe and os.path.isfile(exe) and not SKIP_TARGET.search(exe) and not SKIP.search(name) and not is_runtime(name, exe):
+                out.append((name, exe))
+    return out
+
+
+def main_exe(folder, name):
+    """The program a person opens, in an install folder: an .exe (up to three folders down) that isn't an
+    uninstaller, updater, helper or runtime, preferring one whose name matches the program's name, then the
+    biggest (the app itself is usually the largest .exe it ships)."""
+    if not folder or not os.path.isdir(folder):
+        return None
+    words = [w for w in re.findall(r'[a-z0-9]+', (name or '').lower()) if w not in ('app', 'the', 'for', 'and')]
+    best, best_score = None, None
+    base_depth = folder.rstrip('/').count('/')
+    for root, dirs, files in os.walk(folder):
+        if root.count('/') - base_depth >= 3:
+            dirs[:] = []
+        dirs[:] = [d for d in dirs if not re.search(r'^(redist|redistributables?|_commonredist|installer|support|crashpad|locales?|resources)$', d, re.I)]
+        for f in files:
+            if not f.lower().endswith('.exe'):
+                continue
+            p = os.path.join(root, f)
+            if SKIP_TARGET.search(p) or RUNTIME_TARGET.search(p) or re.search(r'(crash|report|helper|update|updater|service|launcherhelper|errorreporter|setup|install|cleanup|elevat)', f, re.I):
+                continue
+            stem = re.sub(r'\.exe$', '', f.lower())
+            match = sum(1 for w in words if w in stem)
+            try:
+                size = os.path.getsize(p)
+            except OSError:
+                continue
+            score = (match, -(root.count('/') - base_depth), size)
+            if best_score is None or score > best_score:
+                best, best_score = p, score
+    return best
+
+
+def esc(s):
+    return s.replace('\\', '\\\\').replace('"', '\\"').replace('`', '\\`').replace('$', '\\$')
+
+
+def resolve(lnk):
+    """For palos-windows-run: the program a shortcut points at, its folder and arguments (one per line)."""
+    info = parse_lnk(lnk) or {}
+    exe = info.get('unix') or ''
+    wd = win_to_unix(info.get('workdir', '').strip(' \t\r\n\x00')) if info.get('workdir') else ''
+    print(exe if exe and os.path.exists(exe) else '')
+    print(wd if wd and os.path.isdir(wd) else (os.path.dirname(exe) if exe else ''))
+    print(info.get('args', '').strip(' \t\r\n\x00'))
+
+
+FRESH = True
+
+
+def main():
+    global FRESH
+    try:
+        FRESH = open(STAMP).read().strip() == BADGE_VERSION
+    except OSError:
+        FRESH = False
+    wanted = {}
+    targets = set()
+    for menu in start_menus() + desktops():
+        for lnk in glob.glob(os.path.join(menu, '**', '*.lnk'), recursive=True):
+            name = os.path.splitext(os.path.basename(lnk))[0].strip()
+            if not name or SKIP.search(name):
+                continue
+            info = parse_lnk(lnk)
+            if not info or is_runtime(name, info.get('unix')):
+                continue
+            exe = info.get('unix')
+            if info.get('advertised') and not (exe and os.path.exists(exe)):
+                # an MSI shortcut: no path in it; Windows Installer starts the program (palos-windows-run
+                # hands the shortcut itself to Windows), and its icon is the one the shortcut names
+                icon_file = win_to_unix((info.get('icon') or '').split(',')[0]) if info.get('icon') else None
+                exe = icon_file if icon_file and os.path.isfile(icon_file) else None
+                if not exe:
+                    continue
+            elif not exe or SKIP_TARGET.search(exe) or not os.path.exists(exe):
+                continue
+            slug = re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-') or hashlib.md5(lnk.encode()).hexdigest()[:8]
+            out = os.path.join(APPS, f'palos-win-{slug}.desktop')
+            if out in wanted:
+                continue
+            icon = icon_for(exe, slug, info.get('icon'))
+            args = info.get('args', '').strip(' \t\r\n\x00')
+            comment = info.get('name', '').strip(' \t\r\n\x00')
+            exec_line = 'palos-windows-run "%s"' % esc(lnk)
+            rel = os.path.relpath(os.path.dirname(lnk), menu)
+            text = ('[Desktop Entry]\nType=Application\nName=%s\nExec=%s\nIcon=%s\nTerminal=false\nStartupNotify=true\n'
+                    'Categories=Wine;\n%s=true\nX-Palos-Source=%s\nX-Palos-Target=%s\n') % (name, exec_line, icon, MARK, lnk, exe)
+            if args:
+                text += 'X-Palos-Arguments=%s\n' % args
+            if rel and rel != '.':
+                text += 'X-Palos-Group=%s\n' % rel.replace('/', ' > ')
+            if comment:
+                text += 'Comment=%s\n' % comment.replace('\n', ' ')
+            wm = os.path.basename(exe)
+            text += 'StartupWMClass=%s\n' % wm
+            wanted[out] = text
+            targets.add(os.path.realpath(exe).lower())
+    # installed programs with no shortcut anywhere (the EA app, launchers, portable installs)
+    for name, exe in registry_programs():
+        if os.path.realpath(exe).lower() in targets:
+            continue
+        slug = re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-') or hashlib.md5(exe.encode()).hexdigest()[:8]
+        out = os.path.join(APPS, f'palos-win-{slug}.desktop')
+        if out in wanted:
+            continue
+        icon = icon_for(exe, slug)
+        text = ('[Desktop Entry]\nType=Application\nName=%s\nExec=palos-windows-run "%s"\nIcon=%s\nTerminal=false\nStartupNotify=true\n'
+                'Categories=Wine;\n%s=true\nX-Palos-Target=%s\nStartupWMClass=%s\n') % (name, esc(exe), icon, MARK, exe, os.path.basename(exe))
+        wanted[out] = text
+        targets.add(os.path.realpath(exe).lower())
+    os.makedirs(APPS, exist_ok=True)
+    changed = False
+    for out, text in wanted.items():
+        try:
+            if open(out).read() == text:
+                continue
+        except OSError:
+            pass
+        with open(out, 'w') as f:
+            f.write(text)
+        os.chmod(out, 0o755)
+        changed = True
+    for f in glob.glob(os.path.join(APPS, 'palos-win-*.desktop')):
+        if f not in wanted:
+            try:
+                if MARK in open(f).read():
+                    os.remove(f)
+                    changed = True
+                    slug = os.path.basename(f)[len('palos-win-'):-len('.desktop')]
+                    for ic in glob.glob(os.path.join(ICONS, '*/apps', f'palos-win-{slug}.png')):
+                        os.remove(ic)
+            except OSError:
+                pass
+    if not FRESH:
+        os.makedirs(ICONS, exist_ok=True)
+        with open(STAMP, 'w') as f:
+            f.write(BADGE_VERSION)
+        changed = True
+    if changed:
+        for cmd in (['update-desktop-database', '-q', APPS], ['gtk-update-icon-cache', '-q', '-t', '-f', ICONS]):
+            try:
+                subprocess.run(cmd, capture_output=True, timeout=60)
+            except (OSError, subprocess.SubprocessError):
+                pass
+
+
+if __name__ == '__main__':
+    if len(sys.argv) == 3 and sys.argv[1] == '--resolve':
+        resolve(sys.argv[2])
+    else:
+        main()

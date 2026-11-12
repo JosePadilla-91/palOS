@@ -1,0 +1,11 @@
+#!/bin/sh
+# palOS .app: Firefox. palOS registers it (Applications, Dock, web links) by itself.
+# Firefox itself lives at /usr/lib/palos-firefox, outside this .app, on purpose: an AppImage runs from a
+# mount whose path changes every launch and which goes away as soon as the app's main process ends. Run from
+# there, Firefox saw a new install (so a brand-new profile) at every launch, and its helper processes, still
+# shutting down when the mount vanished, crashed: "Firefox quit unexpectedly" after a normal close.
+if [ ! -x /usr/lib/palos-firefox/palos-firefox ]; then
+  notify-send -i dialog-warning "Firefox" "Firefox isn't installed on this computer." 2>/dev/null
+  echo "Firefox.app: /usr/lib/palos-firefox is missing" >&2; exit 1
+fi
+exec /usr/lib/palos-firefox/palos-firefox "$@"

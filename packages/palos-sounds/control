@@ -1,0 +1,12 @@
+Package: palos-sounds
+Status: install ok installed
+Priority: optional
+Section: sound
+Installed-Size: 88
+Maintainer: palOS <joe.lucas0413@gmail.com>
+Architecture: all
+Version: 27.8.0
+Depends: paladin-session
+Description: palOS interface sounds
+ The Empty and Error sounds (emptying the Trash, error messages), and the
+ palOS sound theme that gives the same sounds to other apps.

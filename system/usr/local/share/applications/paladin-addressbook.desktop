@@ -1,0 +1,23 @@
+[Desktop Entry]
+TryExec=/Applications/Address Book.app
+X-Palos-App=/Applications/Address Book.app
+X-AppImage-Name=Address Book
+Name=Address Book
+Name[fr]=Carnet d’adresses
+Name[fr_CA]=Carnet d’adresses
+Exec="/Applications/Address Book.app" %U
+Terminal=false
+Type=Application
+Icon=paladin-addressbook
+StartupWMClass=paladin-addressbook
+GenericName=Contacts
+GenericName[fr]=Contacts
+GenericName[fr_CA]=Contacts
+MimeType=text/vcard;text/x-vcard;
+Keywords=contacts;address;people;vcard;
+X-GNOME-UsesNotifications=true
+Comment=Keep track of people and their details
+Comment[fr]=Gardez une trace des personnes et de leurs coordonnées
+Comment[fr_CA]=Gardez une trace des personnes et de leurs coordonnées
+Categories=Office;ContactManagement;
+X-AppImage-Version=1.0

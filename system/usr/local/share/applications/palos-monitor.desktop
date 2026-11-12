@@ -1,0 +1,23 @@
+[Desktop Entry]
+TryExec=/Applications/Utilities/Activity Monitor.app
+X-Palos-App=/Applications/Utilities/Activity Monitor.app
+X-Palos-Folder=Utilities
+X-AppImage-Name=Activity Monitor
+Type=Application
+Name=Activity Monitor
+Name[fr]=Moniteur d’activité
+Name[fr_CA]=Moniteur d’activité
+GenericName=Activity Monitor
+GenericName[fr]=Moniteur d’activité
+GenericName[fr_CA]=Moniteur d’activité
+Comment=Processor, memory, disks, network, graphics and running programs
+Comment[fr]=Processeur, mémoire, disques, réseau, graphisme et programmes en cours
+Comment[fr_CA]=Processeur, mémoire, disques, réseau, graphisme et programmes en cours
+Keywords=cpu;memory;process;task;activity;performance;task;process;cpu;memory;activity;system monitor;
+Exec="/Applications/Utilities/Activity Monitor.app"
+Icon=palos-monitor
+Terminal=false
+StartupNotify=true
+StartupWMClass=Activity Monitor
+Categories=System;Monitor;
+X-AppImage-Version=1.0.0

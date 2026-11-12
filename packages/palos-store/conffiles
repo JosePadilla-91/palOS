@@ -1,0 +1,3 @@
+/etc/apt/apt.conf.d/60palos-store
+/etc/xdg/autostart/palos-update-notifier.desktop
+/etc/apparmor.d/palos-store

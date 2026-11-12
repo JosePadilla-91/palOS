@@ -1,0 +1,12 @@
+#!/bin/sh
+set -e
+if [ "$1" = remove ] || [ "$1" = purge ]; then
+  rm -f /etc/lightdm/lightdm.conf.d/90-palos-firstboot.conf /var/lib/palos/firstboot
+  rm -rf /opt/palos-firstboot/runtime; rmdir /opt/palos-firstboot 2>/dev/null || true
+  systemctl disable palos-firstboot-helper.service >/dev/null 2>&1 || true
+fi
+if [ "$1" = purge ]; then
+  deluser --system palos-setup >/dev/null 2>&1 || true
+  rm -rf /var/lib/palos-setup /var/lib/AccountsService/users/palos-setup
+fi
+exit 0

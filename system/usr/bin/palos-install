@@ -1,0 +1,14 @@
+#!/bin/sh
+# Install palOS (from the USB stick): the palOS Installer window. The work itself is done by
+# /usr/lib/palos-installer/install-engine as root (the live account may use sudo without a password).
+RT=/usr/lib/kibble/kibble     # Kibble, palOS's app runtime
+export PALOS_APP_DIR=/opt/palos-installer/app PALOS_APP_RESOURCES=/opt/palos-installer/app
+if [ ! -x "$RT" ]; then
+  echo "palOS Installer: Kibble, palOS's app runtime, is missing" >&2
+  command -v notify-send >/dev/null 2>&1 && notify-send -i palos-installer "palOS Installer" "The installer couldn't start (its runtime is missing)."
+  exit 1
+fi
+if command -v wmctrl >/dev/null 2>&1 && wmctrl -l 2>/dev/null | grep -q "palOS Installer\|Programme d’installation de palOS"; then
+  exec wmctrl -a "palOS Installer"
+fi
+exec "$RT" "$@"

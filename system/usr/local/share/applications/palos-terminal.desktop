@@ -1,0 +1,18 @@
+[Desktop Entry]
+TryExec=/Applications/Utilities/Terminal.app
+X-Palos-App=/Applications/Utilities/Terminal.app
+X-Palos-Folder=Utilities
+Type=Application
+Name=Terminal
+Name[fr]=Terminal
+Comment=Use the command line
+Comment[fr]=Utiliser la ligne de commande
+Keywords=shell;prompt;command;commandline;bash;console;terminal;
+Exec="/Applications/Utilities/Terminal.app" %F
+Icon=palos-terminal
+Terminal=false
+StartupNotify=true
+StartupWMClass=Terminal
+Categories=System;TerminalEmulator;Utility;
+X-ExecArg=--
+X-AppImage-Version=1.0.0

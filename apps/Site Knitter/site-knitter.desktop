@@ -1,0 +1,15 @@
+[Desktop Entry]
+X-AppImage-Name=Site Knitter
+Name=Site Knitter
+Exec=AppRun %U
+Terminal=false
+Type=Application
+Icon=site-knitter
+StartupWMClass=site-knitter
+Comment=Site Knitter is an easy drag-and-drop website builder. Choose a theme, add pages, photos, galleries, blogs, movies and maps, then export clean HTML, CSS and JavaScript or publish over FTP.
+Comment[fr]=Site Knitter est un outil de création de sites Web par glisser-déposer. Choisissez un thème, ajoutez des pages, des photos, des galeries, des blogues, des films et des cartes, puis exportez du HTML, du CSS et du JavaScript propres ou publiez par FTP.
+Comment[fr_CA]=Site Knitter est un outil de création de sites Web par glisser-déposer. Choisissez un thème, ajoutez des pages, des photos, des galeries, des blogues, des films et des cartes, puis exportez du HTML, du CSS et du JavaScript propres ou publiez par FTP.
+Keywords=website;html;web;design;iweb;
+MimeType=application/x-site-knitter;
+Categories=Development;
+X-AppImage-Version=1.0

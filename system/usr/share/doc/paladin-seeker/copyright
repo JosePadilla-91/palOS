@@ -1,0 +1,2 @@
+Seeker for Paladin. Electron is downloaded at install time under its own MIT license.
+dbus-next (MIT) and its dependencies are bundled under /opt/paladin-seeker/app/node_modules.

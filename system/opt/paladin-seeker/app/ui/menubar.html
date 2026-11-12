@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' seeker: file: data:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+<link rel="stylesheet" href="common.css">
+<style>
+  html, body { background: transparent; overflow: hidden; height: 100%; }
+  #bar { position: fixed; left: 0; top: 0; right: 0; height: 22px; display: flex; align-items: stretch; font-size: 14px; z-index: 5;
+    background: linear-gradient(rgba(250,250,250,.86), rgba(230,230,230,.84)); box-shadow: 0 1px 0 rgba(0,0,0,.30), 0 2px 4px rgba(0,0,0,.18); }
+  body.no-composite #bar { background: linear-gradient(#f7f7f7, #e1e1e1); box-shadow: inset 0 -1px 0 #a4a4a4; }
+  #left, #right { display: flex; align-items: stretch; }
+  #left { flex: 1; min-width: 0; overflow: hidden; }
+  .t { display: flex; align-items: center; padding: 0 10px; white-space: nowrap; color: #000; text-shadow: 0 1px 0 rgba(255,255,255,.35); }
+  .t.bold { font-weight: bold; }
+  .t.open { background: linear-gradient(var(--sel-top), var(--sel-bot)); color: #fff; text-shadow: none; }
+  #shield { padding: 0 12px 0 14px; }
+  #shield i { display: block; width: 18px; height: 15px; background: #111; -webkit-mask: url(seeker://asset/shield-64.png) center / contain no-repeat; }
+  #shield.open i { background: #fff; }
+  .x { display: flex; align-items: center; justify-content: center; padding: 0 7px; min-width: 22px; }
+  .scr-grid { display: grid; gap: 1px; }
+  .scr-box { background: rgba(0,0,0,.14); box-shadow: inset 0 0 0 1px rgba(0,0,0,.55); border-radius: 1px; }
+  .scr-box.on { background: rgba(0,0,0,.62); }
+  .x.open .scr-box { background: rgba(255,255,255,.3); box-shadow: inset 0 0 0 1px #fff; }
+  .x.open { background: linear-gradient(var(--sel-top), var(--sel-bot)); }
+  .x.open.wdg rect { stroke: #fff; } .x.open.wdg rect[fill="#111"] { fill: #fff; }
+  .x.open svg { fill: #fff; stroke: #fff; }
+  .x.open .clock { color: #fff; }
+  .x img.tray { width: 16px; height: 16px; object-fit: contain; }
+  .x svg { width: 18px; height: 16px; fill: #111; }
+  .clock { font-size: 14px; padding: 0 2px; }
+  #catch { position: fixed; inset: 0; display: none; z-index: 1; }
+  body.tracking #catch { display: block; }
+  .vol-pop { position: fixed; z-index: 10000; width: 38px; height: 150px; padding: 10px 0; background: var(--menu-bg); border-radius: 0 0 5px 5px;
+    box-shadow: 0 6px 18px rgba(0,0,0,.42), 0 0 0 1px rgba(0,0,0,.18); display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  body.no-composite .vol-pop { border-radius: 0; box-shadow: none; border: 1px solid #a0a0a0; }
+  .vol-pop .track { position: relative; width: 6px; flex: 1; border-radius: 3px; background: linear-gradient(90deg, #8b8b8b, #c8c8c8); box-shadow: inset 0 1px 2px rgba(0,0,0,.5); cursor: pointer; }
+  .vol-pop .fill { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 3px; background: linear-gradient(90deg, #3d6fd8, #8ab0f2); }
+  .vol-pop .knob { position: absolute; left: -5px; width: 16px; height: 16px; margin-bottom: -8px; border-radius: 50%; background: radial-gradient(circle at 50% 35%, #fff, #d7d7d7 60%, #a9a9a9); box-shadow: 0 1px 2px rgba(0,0,0,.5); }
+  .vol-pop svg { width: 14px; height: 12px; fill: #444; }
+</style>
+<link rel="stylesheet" href="paladin.css">
+</head>
+<body>
+  <div id="catch"></div>
+  <div id="bar">
+    <div id="left"><div class="t" id="shield"><i></i></div></div>
+    <div id="right"></div>
+  </div>
+  <script src="common.js"></script>
+  <script src="menubar.js"></script>
+</body>
+</html>

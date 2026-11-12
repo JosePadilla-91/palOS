@@ -1,0 +1,44 @@
+#!/bin/sh
+# palOS installer: sfdisk, with one fix for the live USB stick only (installed in sfdisk's place by
+# palos-installer, and gone again once palOS is installed).
+#
+# On a blank disk the installer asks for its last partition to reach the very end of the disk, but
+# GPT keeps the last 33 sectors for its backup copy, so sfdisk refuses ("The last usable GPT sector
+# is ..., but ... is requested"). When a new partition (--append) would run past the last usable
+# sector, it's trimmed to end there, on a 1 MiB boundary. Every other use of sfdisk is untouched.
+REAL=/usr/sbin/sfdisk.palos-real
+PATH=/usr/sbin:/usr/bin:/sbin:/bin; export PATH   # the partitioning helper runs commands with an empty environment
+case " $* " in
+  *" --append "*) ;;
+  *) exec "$REAL" "$@" ;;
+esac
+
+# the disk is the last argument that names a block device
+DEV=""
+for a in "$@"; do case "$a" in /dev/*) DEV="$a" ;; esac; done
+IN=$(cat)
+if [ -n "$DEV" ]; then
+  LAST=$("$REAL" --json "$DEV" 2>/dev/null | python3 -c 'import json,sys
+try: print(json.load(sys.stdin)["partitiontable"].get("lastlba", ""))
+except Exception: print("")' 2>/dev/null)
+  if [ -n "$LAST" ]; then
+    IN=$(printf '%s\n' "$IN" | LAST="$LAST" python3 -c '
+import os, re, sys
+last = int(os.environ["LAST"])
+out = []
+for line in sys.stdin.read().split("\n"):
+    m = re.search(r"start=\s*(\d+)", line); n = re.search(r"size=\s*(\d+)", line)
+    if m and n:
+        start, size = int(m.group(1)), int(n.group(1))
+        if start + size - 1 > last:
+            new = ((last + 1) // 2048) * 2048 - start      # end on a 1 MiB boundary
+            if new <= 0:
+                new = last - start + 1
+            line = line[:n.start(1)] + str(new) + line[n.end(1):]
+            print("palos-installer: trimmed the new partition to the last usable sector (%d -> %d sectors)" % (size, new), file=sys.stderr)
+    out.append(line)
+sys.stdout.write("\n".join(out))
+')
+  fi
+fi
+printf '%s\n' "$IN" | exec "$REAL" "$@"

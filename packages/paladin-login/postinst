@@ -1,0 +1,19 @@
+#!/bin/sh
+set -e
+if [ "$1" = "configure" ]; then
+  # Remember what was the login manager, so removing this package can put it back.
+  if [ -f /etc/X11/default-display-manager ] && ! grep -q lightdm /etc/X11/default-display-manager; then
+    cp /etc/X11/default-display-manager /var/lib/paladin-login.previous-dm 2>/dev/null || true
+  fi
+  echo /usr/sbin/lightdm > /etc/X11/default-display-manager
+  echo "lightdm shared/default-x-display-manager select lightdm" | debconf-set-selections 2>/dev/null || true
+  if command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ]; then
+    systemctl -q enable lightdm.service --force 2>/dev/null || ln -sf /lib/systemd/system/lightdm.service /etc/systemd/system/display-manager.service
+  else
+    ln -sf /lib/systemd/system/lightdm.service /etc/systemd/system/display-manager.service
+  fi
+  # LightDM's per-user folders the login screen reads (Dark Mode, desktop picture).
+  mkdir -p /var/lib/lightdm-data
+  echo "paladin-login: the Paladin login screen appears after the next restart." >&2
+fi
+exit 0

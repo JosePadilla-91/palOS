@@ -1,0 +1,20 @@
+[Desktop Entry]
+X-AppImage-Name=Textpad
+Type=Application
+Name=Textpad
+GenericName=Text Editor
+GenericName[fr]=Éditeur de texte
+GenericName[fr_CA]=Éditeur de texte
+Comment=Write and edit plain text files
+Comment[fr]=Écrire et modifier des fichiers texte
+Comment[fr_CA]=Écrire et modifier des fichiers texte
+Keywords=text;editor;plain;txt;notepad;code;config;
+Exec=AppRun %F
+Icon=palos-textpad
+Terminal=false
+StartupNotify=true
+StartupWMClass=Textpad
+Categories=Utility;TextEditor;
+MimeType=text/plain;text/x-log;text/markdown;text/x-markdown;text/csv;text/x-csrc;text/x-chdr;text/x-c++src;text/x-python;text/x-shellscript;application/x-shellscript;text/x-script.python;text/css;text/javascript;application/javascript;application/json;application/xml;text/xml;application/x-yaml;text/x-yaml;text/x-ini;application/x-desktop;text/x-makefile;text/x-tex;application/toml;text/x-java;text/x-rust;text/x-go;text/x-php;text/x-sql;text/x-patch;text/x-diff;
+X-Palos-Textpad=true
+X-AppImage-Version=1.0.0

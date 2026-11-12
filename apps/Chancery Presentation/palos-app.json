@@ -1,0 +1,11 @@
+{
+ "name": "Chancery Presentation",
+ "id": "chancery-presentation",
+ "command": "chancery-presentation",
+ "icon": "chancery-presentation",
+ "version": "1.0",
+ "folder": "",
+ "kind": "shared",
+ "runtime": "kibble",
+ "fallback": "electron-44"
+}

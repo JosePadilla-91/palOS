@@ -1,0 +1,15 @@
+Package: palos-snap-booth
+Status: install ok installed
+Priority: optional
+Section: utils
+Maintainer: palOS <joe.lucas0413@gmail.com>
+Architecture: all
+Version: 1.1.0
+Replaces: palos-studio
+Provides: palos-studio
+Depends: paladin-seeker (>= 1.8.0)
+Conflicts: palos-studio
+Description: Camera app with effects, photo strips and movies
+ Live camera with fun effects. Take a photo, a four-photo strip or a movie. Everything
+ is kept in Pictures/Snap Booth.
+ Runs on Seeker's Electron runtime.

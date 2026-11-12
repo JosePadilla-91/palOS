@@ -1,0 +1,8 @@
+#!/bin/sh
+# Never let an optional step stop the installation.
+if [ "$1" = "configure" ]; then
+  update-alternatives --install /usr/share/icons/default/index.theme x-cursor-theme \
+    /usr/share/icons/Paladin/cursor.theme 100 >/dev/null 2>&1 || true
+  command -v gtk-update-icon-cache >/dev/null 2>&1 && gtk-update-icon-cache -q -f /usr/share/icons/Paladin >/dev/null 2>&1 || true
+fi
+exit 0

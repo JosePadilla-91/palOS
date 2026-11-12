@@ -1,0 +1,505 @@
+#!/usr/bin/python3
+"""Helpers for the Paladin session.
+
+  setup          first-login defaults
+  xsettings      run xsettingsd with values from gsettings, following changes live; also keeps
+                 the light/dark look in step (GTK theme, title bars, GTK 4 colors)
+  appearance     apply the light/dark look once (used by Paladin Settings)
+  numlock        set Num Lock the way the user chose (on by default)
+  snap-cursors   give snap apps (Firefox...) a copy of the cursor theme they can read
+  wait-wm SECS   wait until a window manager is running
+  autostart      start ~/.config/autostart and /etc/xdg/autostart entries (except Seeker and the dock)
+  key ACTION     volume/brightness/media keys (used by xbindkeys)
+"""
+import os
+import shlex
+import shutil
+import signal
+import subprocess
+import sys
+import time
+
+HOME = os.path.expanduser('~')
+CONF = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.join(HOME, '.config')), 'paladin-session')
+CACHE = os.path.join(os.environ.get('XDG_CACHE_HOME', os.path.join(HOME, '.cache')), 'paladin-session')
+SETUP_VERSION = '5'
+DESKTOP = 'Paladin'
+SKIP_AUTOSTART = {'paladin-seeker.desktop', 'paladin-dock.desktop',
+                  # paladin-wm is the compositor and the session runs its own key bindings / notifications
+                  'picom.desktop', 'compton.desktop', 'xcompmgr.desktop', 'xbindkeys.desktop',
+                  'plank.desktop', 'cairo-dock.desktop'}
+SKIP_EXEC = {'picom', 'compton', 'xcompmgr', 'fastcompmgr', 'plank', 'cairo-dock', 'tint2', 'xfce4-panel', 'lxpanel'}
+LIGHT, DARK = 'Paladin', 'Paladin-Dark'
+GTK4_DIR = '/usr/share/paladin-session/gtk-4.0'
+GTK4_MARK = '/* Paladin session: managed file. Delete this line to keep your own GTK 4 styles. */'
+
+
+def log(*a):
+    print(time.strftime('%F %T'), 'helper:', *a, flush=True)
+
+
+def gs(schema, key, default=None):
+    try:
+        out = subprocess.run(['gsettings', 'get', schema, key], capture_output=True, text=True, timeout=5).stdout.strip()
+    except Exception:  # noqa: BLE001
+        return default
+    if not out:
+        return default
+    if out.startswith("'") and out.endswith("'"):
+        return out[1:-1]
+    if out.startswith('uint32 '):
+        out = out[7:]
+    if out in ('true', 'false'):
+        return out == 'true'
+    try:
+        return float(out) if '.' in out else int(out)
+    except ValueError:
+        return out
+
+
+def gset(schema, key, value):
+    subprocess.run(['gsettings', 'set', schema, key, value], capture_output=True, timeout=5)
+
+
+# ------------------------------------------------------------------------------------------- setup
+def setup():
+    os.makedirs(CONF, exist_ok=True)
+    marker = os.path.join(CONF, 'setup-done')
+    done = open(marker).read().strip() if os.path.exists(marker) else ''
+    if done != SETUP_VERSION:
+        log('first-login defaults')
+        wm = 'org.gnome.desktop.wm.preferences'
+        gset(wm, 'button-layout', "'close,minimize,maximize:'")
+        gset(wm, 'action-double-click-titlebar', "'toggle-maximize'")   # version 5: fill the screen (menu bar and Dock stay)
+        gset(wm, 'theme', "'Paladin'")
+        font = gs('org.gnome.desktop.interface', 'font-name', 'Noto Sans 11') or 'Noto Sans 11'
+        regular = ' '.join(w for w in font.split() if w.lower() not in ('bold', 'semi-bold', 'medium', 'heavy'))
+        gset(wm, 'titlebar-font', "'%s'" % regular)
+        gset(wm, 'titlebar-uses-system-font', 'false')      # the system font path renders titles bold
+        gset('org.gnome.desktop.interface', 'cursor-theme', "'Paladin'")
+        # version 2: the Paladin GTK theme (light/dark follows the Dark Mode switch)
+        gset('org.gnome.desktop.interface', 'gtk-theme', "'%s'" % (DARK if is_dark() else LIGHT))
+        if done in ('', '1', '2', '3'):
+            # version 4 (palOS 1.0): the palOS icon theme (folders, drives, trash), unless the user chose another
+            if os.path.isdir('/usr/share/icons/palOS') and gs('org.gnome.desktop.interface', 'icon-theme', 'Yaru') in ('Yaru', 'Adwaita', 'Humanity', ''):
+                gset('org.gnome.desktop.interface', 'icon-theme', "'palOS'")
+            elif not os.path.isdir('/usr/share/icons/palOS'):
+                gset('org.gnome.desktop.interface', 'icon-theme', "'Adwaita'")
+        if done in ('', '1', '2'):
+            gset('org.gnome.desktop.peripherals.keyboard', 'numlock-state', 'true')   # version 3: Num Lock on
+        open(marker, 'w').write(SETUP_VERSION + '\n')
+    apply_appearance(start_decorator=False)
+
+
+def is_dark():
+    return gs('org.gnome.desktop.interface', 'color-scheme', 'default') == 'prefer-dark'
+
+
+def paladin_theme_in_use():
+    return gs('org.gnome.desktop.interface', 'gtk-theme', LIGHT) in (LIGHT, DARK)
+
+
+def apply_appearance(start_decorator=True):
+    """Keep everything on the same light/dark look as the Dark Mode switch (the color-scheme key):
+    the toolkit themes apps read and the title bars."""
+    dark = is_dark()
+    name = DARK if dark else LIGHT
+    greeter_data()
+    if paladin_theme_in_use() and gs('org.gnome.desktop.interface', 'gtk-theme') != name:
+        gset('org.gnome.desktop.interface', 'gtk-theme', "'%s'" % name)
+    wm = 'org.gnome.desktop.wm.preferences'
+    if gs(wm, 'theme', LIGHT) in (LIGHT, DARK) and gs(wm, 'theme') != name:
+        gset(wm, 'theme', "'%s'" % name)
+    # GTK 4: libadwaita only reads ~/.config/gtk-4.0/gtk.css. Leave it alone if the user wrote their own.
+    try:
+        d = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.join(HOME, '.config')), 'gtk-4.0')
+        f = os.path.join(d, 'gtk.css')
+        mine = not os.path.exists(f) or GTK4_MARK in open(f, errors='replace').read()
+        if mine and os.path.isdir(GTK4_DIR):
+            os.makedirs(d, exist_ok=True)
+            text = '%s\n@import url("file://%s/paladin-%s.css");\n' % (GTK4_MARK, GTK4_DIR, 'dark' if dark else 'light')
+            if not os.path.exists(f) or open(f).read() != text:
+                open(f, 'w').write(text)
+    except OSError as e:
+        log('GTK 4 colors not written:', e)
+    return name
+
+
+SHEET_MATCH = '(type=Dialog | type=ModalDialog) & !(type=Normal)'
+
+
+def greeter_data():
+    """Tell the Paladin login screen how this person likes it: Dark Mode and desktop picture, in the
+    folder LightDM shares between each user and the login screen (/var/lib/lightdm-data/USER)."""
+    import json
+    d = os.path.join('/var/lib/lightdm-data', os.environ.get('USER') or os.path.basename(HOME))
+    if not os.path.isdir(d) or not os.access(d, os.W_OK):
+        return
+    try:
+        data = {'dark': bool(is_dark())}
+        f = os.path.join(d, 'paladin.json')
+        old = open(f).read() if os.path.exists(f) else ''
+        new = json.dumps(data) + '\n'
+        if old != new:
+            open(f, 'w').write(new)
+        seeker = {}
+        try:
+            seeker = json.load(open(os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.join(HOME, '.config')), 'paladin-seeker', 'config.json')))
+        except (OSError, ValueError):
+            pass
+        wp = seeker.get('wallpaper') if seeker.get('wallpaperMode') != 'color' else None
+        dst = os.path.join(d, 'wallpaper')
+        if wp and os.path.isfile(wp) and os.path.getsize(wp) < 25 * 1024 * 1024:
+            st = os.stat(wp)
+            if not os.path.exists(dst) or os.path.getsize(dst) != st.st_size or os.path.getmtime(dst) < st.st_mtime:
+                shutil.copyfile(wp, dst + '.tmp')
+                os.chmod(dst + '.tmp', 0o644)
+                os.replace(dst + '.tmp', dst)
+        elif os.path.exists(dst):
+            os.unlink(dst)
+    except OSError as e:
+        log('login screen settings not saved:', e)
+
+
+# ------------------------------------------------------------------------------------------- num lock
+def numlock():
+    """Num Lock at login: org.gnome.desktop.peripherals.keyboard numlock-state, on unless the user
+    turned it off in Paladin Settings (the session sets it on the first time)."""
+    on = gs('org.gnome.desktop.peripherals.keyboard', 'numlock-state', True)
+    if shutil.which('numlockx'):
+        subprocess.run(['numlockx', 'on' if on else 'off'], capture_output=True, timeout=5)
+    else:
+        log('numlockx missing; Num Lock left as is')
+
+
+# ------------------------------------------------------------------------------------------- snap cursors
+def snap_cursors():
+    """Snap apps (Firefox, Thunderbird...) can't read /usr/share/icons, so they fall back to the
+    plain white cursor. Each snap looks in its own ~/snap/NAME/current/.icons, so put a copy there."""
+    theme = gs('org.gnome.desktop.interface', 'cursor-theme', 'Paladin') or 'Paladin'
+    src = None
+    for base in (os.path.join(HOME, '.icons'), os.path.join(HOME, '.local/share/icons'), '/usr/share/icons'):
+        if os.path.isdir(os.path.join(base, theme, 'cursors')):
+            src = os.path.join(base, theme)
+            break
+    snaps = os.path.join(HOME, 'snap')
+    if not src or not os.path.isdir(snaps):
+        return
+    stamp = str(int(os.path.getmtime(os.path.join(src, 'cursors'))))
+    for name in sorted(os.listdir(snaps)):
+        cur = os.path.join(snaps, name, 'current')
+        if not os.path.isdir(cur):
+            continue
+        for icons in (os.path.join(cur, '.icons'), os.path.join(cur, '.local', 'share', 'icons')):
+            dst = os.path.join(icons, theme)
+            mark = os.path.join(dst, '.paladin-copy')
+            try:
+                if os.path.exists(mark) and open(mark).read() == stamp:
+                    continue
+                if os.path.exists(dst) and not os.path.exists(mark):
+                    continue                     # the user put their own theme there
+                shutil.rmtree(dst, ignore_errors=True)
+                os.makedirs(icons, exist_ok=True)
+                shutil.copytree(src, dst, symlinks=True, ignore=shutil.ignore_patterns('*.cache'))
+                # "default" is what apps use when no theme is named
+                dflt = os.path.join(icons, 'default')
+                if not os.path.exists(dflt):
+                    os.makedirs(dflt)
+                    with open(os.path.join(dflt, 'index.theme'), 'w') as f:
+                        f.write('[Icon Theme]\nInherits=%s\n' % theme)
+                    open(os.path.join(dflt, '.paladin-copy'), 'w').write(stamp)
+                open(mark, 'w').write(stamp)
+                log('cursor theme copied for snap', name)
+            except OSError as e:
+                log('snap cursor copy failed for', name, e)
+
+
+# ------------------------------------------------------------------------------------------- xsettings
+def double_click_ms():
+    """Settings › Mouse: how quickly two clicks count as a double-click (milliseconds)"""
+    import json
+    try:
+        with open(os.path.join(os.environ.get('XDG_CONFIG_HOME') or os.path.join(HOME, '.config'), 'palos', 'mouse.json')) as f:
+            return max(150, min(1500, int(json.load(f).get('doubleClick', 400))))
+    except (OSError, ValueError, TypeError):
+        return 400
+
+
+def xsettings_conf():
+    i = 'org.gnome.desktop.interface'
+    scale = gs(i, 'text-scaling-factor', 1.0) or 1.0
+    try:
+        scale = float(scale)
+    except (TypeError, ValueError):
+        scale = 1.0
+    aa = gs(i, 'font-antialiasing', 'grayscale')
+    hint = gs(i, 'font-hinting', 'slight')
+    rgba = gs(i, 'font-rgba-order', 'rgb')
+    layout = gs('org.gnome.desktop.wm.preferences', 'button-layout', 'close,minimize,maximize:')
+    dark = gs(i, 'color-scheme', 'default') == 'prefer-dark'
+    vals = {
+        'Net/ThemeName': (DARK if dark else LIGHT) if paladin_theme_in_use() else gs(i, 'gtk-theme', LIGHT),
+        'Net/IconThemeName': gs(i, 'icon-theme', 'palOS' if os.path.isdir('/usr/share/icons/palOS') else 'Yaru'),
+        'Gtk/CursorThemeName': gs(i, 'cursor-theme', 'Paladin'),
+        'Gtk/CursorThemeSize': int(gs(i, 'cursor-size', 24) or 24),
+        'Gtk/FontName': gs(i, 'font-name', 'Noto Sans 11'),
+        'Gtk/MonospaceFontName': gs(i, 'monospace-font-name', 'Noto Sans Mono 13'),
+        'Gtk/DecorationLayout': layout,
+        # apps that draw their own title bar (GTK header bars) do what the window manager does on a double-click
+        'Gtk/TitlebarDoubleClick': gs('org.gnome.desktop.wm.preferences', 'action-double-click-titlebar', 'toggle-maximize'),
+        'Gtk/TitlebarMiddleClick': 'none',
+        'Net/DoubleClickTime': double_click_ms(),     # Settings › Mouse › Double-Click Speed
+        'Gtk/ShellShowsMenubar': 1,     # Seeker's menu bar shows GTK application menus
+        'Gtk/ShellShowsAppMenu': 1,
+        'Gtk/EnableAnimations': 1 if gs(i, 'enable-animations', True) else 0,
+        'Gtk/ApplicationPreferDarkTheme': 1 if dark else 0,
+        'Net/EnableEventSounds': 1 if gs('org.gnome.desktop.sound', 'event-sounds', True) else 0,
+        'Net/DoubleClickTime': int(gs('org.gnome.desktop.peripherals.mouse', 'double-click', 400) or 400),
+        'Xft/Antialias': 0 if aa == 'none' else 1,
+        'Xft/Hinting': 0 if hint == 'none' else 1,
+        'Xft/HintStyle': {'none': 'hintnone', 'slight': 'hintslight', 'medium': 'hintmedium', 'full': 'hintfull'}.get(hint, 'hintslight'),
+        'Xft/RGBA': rgba if aa == 'rgba' else 'none',
+        'Xft/DPI': int(96 * 1024 * scale),
+    }
+    lines = []
+    for k, v in vals.items():
+        lines.append('%s %s' % (k, v if isinstance(v, int) else '"%s"' % str(v).replace('"', '')))
+    return '\n'.join(lines) + '\n', vals
+
+
+def xrdb(vals):
+    data = ('Xft.dpi: %d\nXft.antialias: %d\nXft.hinting: %d\nXft.hintstyle: %s\nXft.rgba: %s\n'
+            'Xcursor.theme: %s\nXcursor.size: %d\n') % (
+        vals['Xft/DPI'] // 1024, vals['Xft/Antialias'], vals['Xft/Hinting'], vals['Xft/HintStyle'], vals['Xft/RGBA'],
+        vals['Gtk/CursorThemeName'], vals['Gtk/CursorThemeSize'])
+    if shutil.which('xrdb'):
+        subprocess.run(['xrdb', '-merge'], input=data, text=True, timeout=5)
+
+
+def xsettings():
+    if not shutil.which('xsettingsd'):
+        log('xsettingsd missing; apps use their own defaults')
+        return
+    os.makedirs(CACHE, exist_ok=True)
+    path = os.path.join(CACHE, 'xsettingsd.conf')
+
+    def write():
+        text, vals = xsettings_conf()
+        old = open(path).read() if os.path.exists(path) else ''
+        if text != old:
+            open(path, 'w').write(text)
+        xrdb(vals)
+        return text != old
+
+    apply_appearance()          # also corrects the title bars if they were left on the other look
+    write()
+    proc = subprocess.Popen(['xsettingsd', '-c', path], stderr=subprocess.DEVNULL)
+    try:
+        import gi
+        gi.require_version('Gio', '2.0')
+        from gi.repository import Gio, GLib
+    except Exception:  # noqa: BLE001
+        proc.wait()
+        return
+    loop = GLib.MainLoop()
+    keep = []
+
+    look = {'dark': is_dark()}
+
+    def changed(_settings=None, key=None):
+        if key in ('color-scheme', 'gtk-theme', 'theme') and is_dark() != look['dark']:
+            look['dark'] = is_dark()
+            log('switching to', apply_appearance())
+        if write():
+            proc.send_signal(signal.SIGHUP)
+    for schema in ('org.gnome.desktop.interface', 'org.gnome.desktop.wm.preferences'):
+        try:
+            s = Gio.Settings.new(schema)
+            s.connect('changed', changed)
+            for k in s.props.settings_schema.list_keys():     # GSettings only reports keys it has read
+                s.get_value(k)
+            keep.append(s)
+        except Exception:  # noqa: BLE001
+            pass
+
+    mouse = os.path.join(os.environ.get('XDG_CONFIG_HOME') or os.path.join(HOME, '.config'), 'palos', 'mouse.json')
+    stamp = {'m': None}
+
+    def check():
+        if proc.poll() is not None:
+            loop.quit()
+            return False
+        try:
+            m = os.stat(mouse).st_mtime
+        except OSError:
+            m = None
+        if stamp['m'] != m:            # Settings › Mouse › Double-Click Speed changed
+            if stamp['m'] is not None or m is not None:
+                changed()
+            stamp['m'] = m
+        return True
+    GLib.timeout_add_seconds(3, check)
+    loop.run()
+
+
+# ------------------------------------------------------------------------------------------- wait-wm
+def wait_wm(secs):
+    end = time.time() + float(secs)
+    while time.time() < end:
+        out = subprocess.run(['xprop', '-root', '_NET_SUPPORTING_WM_CHECK'], capture_output=True, text=True).stdout
+        if 'window id #' in out:
+            wid = out.split('#')[-1].strip().split(',')[0]
+            name = subprocess.run(['xprop', '-id', wid, '_NET_WM_NAME'], capture_output=True, text=True).stdout
+            if '"' in name:
+                log('window manager ready:', name.split('"')[1])
+                time.sleep(0.5)
+                return 0
+        time.sleep(0.25)
+    return 1
+
+
+# ------------------------------------------------------------------------------------------- autostart
+def parse_desktop(path):
+    entry = {}
+    section = None
+    try:
+        for line in open(path, encoding='utf-8', errors='replace'):
+            line = line.strip()
+            if line.startswith('['):
+                section = line
+                continue
+            if section != '[Desktop Entry]' or '=' not in line or line.startswith('#'):
+                continue
+            k, v = line.split('=', 1)
+            entry.setdefault(k.strip(), v.strip())
+    except OSError:
+        return None
+    return entry
+
+
+def autostart():
+    dirs = [os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.join(HOME, '.config')), 'autostart')]
+    dirs += [os.path.join(d, 'autostart') for d in os.environ.get('XDG_CONFIG_DIRS', '/etc/xdg').split(':') if d]
+    seen = set()
+    for d in dirs:
+        try:
+            names = sorted(os.listdir(d))
+        except OSError:
+            continue
+        for name in names:
+            if not name.endswith('.desktop') or name in seen:
+                continue
+            seen.add(name)                       # the user's copy hides the system one
+            if name in SKIP_AUTOSTART:
+                continue
+            e = parse_desktop(os.path.join(d, name))
+            if not e or e.get('Type', 'Application') != 'Application':
+                continue
+            if e.get('Hidden', '').lower() == 'true' or e.get('X-GNOME-Autostart-enabled', '').lower() == 'false':
+                continue
+            only = [x for x in e.get('OnlyShowIn', '').split(';') if x]
+            nots = [x for x in e.get('NotShowIn', '').split(';') if x]
+            if only and DESKTOP not in only:
+                continue
+            if DESKTOP in nots:
+                continue
+            if e.get('TryExec') and not shutil.which(e['TryExec']):
+                continue
+            exec_line = e.get('Exec', '')
+            try:
+                argv = [a for a in shlex.split(exec_line) if not (len(a) == 2 and a.startswith('%'))]
+            except ValueError:
+                continue
+            if not argv or not shutil.which(argv[0]) or os.path.basename(argv[0]) in SKIP_EXEC:
+                continue
+            log('autostart:', name)
+            try:
+                subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                 start_new_session=True, cwd=HOME)
+            except OSError as err:
+                log('autostart failed:', name, err)
+
+
+# ------------------------------------------------------------------------------------------- keys
+def run(*argv):
+    if shutil.which(argv[0]):
+        subprocess.run(argv, capture_output=True, timeout=5)
+        return True
+    return False
+
+
+def person_set_volume():
+    """Mark a volume change as the person's own (palos-volume-keeper keeps it; it undoes the computer's)."""
+    try:
+        with open(os.path.join(os.environ.get('XDG_RUNTIME_DIR') or '/tmp', 'palos-volume-user'), 'w') as f:
+            f.write(str(time.time()))
+    except OSError:
+        pass
+
+
+def key(action):
+    if action in ('volume-up', 'volume-down', 'mute', 'mic-mute'):
+        person_set_volume()
+        if shutil.which('wpctl'):
+            if action == 'volume-up':
+                run('wpctl', 'set-mute', '@DEFAULT_AUDIO_SINK@', '0')
+                run('wpctl', 'set-volume', '-l', '1.0', '@DEFAULT_AUDIO_SINK@', '6%+')
+            elif action == 'volume-down':
+                run('wpctl', 'set-volume', '@DEFAULT_AUDIO_SINK@', '6%-')
+            elif action == 'mute':
+                run('wpctl', 'set-mute', '@DEFAULT_AUDIO_SINK@', 'toggle')
+            else:
+                run('wpctl', 'set-mute', '@DEFAULT_AUDIO_SOURCE@', 'toggle')
+        else:
+            sink = '@DEFAULT_SINK@'
+            {'volume-up': lambda: run('pactl', 'set-sink-volume', sink, '+6%'),
+             'volume-down': lambda: run('pactl', 'set-sink-volume', sink, '-6%'),
+             'mute': lambda: run('pactl', 'set-sink-mute', sink, 'toggle'),
+             'mic-mute': lambda: run('pactl', 'set-source-mute', '@DEFAULT_SOURCE@', 'toggle')}[action]()
+        if action in ('volume-up', 'volume-down'):
+            subprocess.Popen(['palos-sound', 'volume'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    elif action in ('brightness-up', 'brightness-down'):
+        run('brightnessctl', '-q', 'set', '8%+' if action == 'brightness-up' else '8%-')
+    elif action in ('play', 'next', 'previous', 'stop'):
+        run('playerctl', {'play': 'play-pause'}.get(action, action))
+    elif action == 'lock':
+        subprocess.Popen(['/usr/lib/paladin-session/paladin-lock'], start_new_session=True)
+    elif action == 'terminal':
+        for t in ('x-terminal-emulator', 'gnome-terminal', 'xterm'):
+            if shutil.which(t):
+                subprocess.Popen([t], start_new_session=True, cwd=HOME)
+                break
+    elif action == 'screenshot':
+        subprocess.Popen(['palos-screenshot'], start_new_session=True)
+    return 0
+
+
+def main():
+    if len(sys.argv) < 2:
+        print(__doc__)
+        return 2
+    cmd = sys.argv[1]
+    if cmd == 'setup':
+        setup()
+    elif cmd == 'xsettings':
+        xsettings()
+    elif cmd == 'appearance':
+        print(apply_appearance())
+    elif cmd == 'numlock':
+        numlock()
+    elif cmd == 'snap-cursors':
+        snap_cursors()
+    elif cmd == 'wait-wm':
+        return wait_wm(sys.argv[2] if len(sys.argv) > 2 else 20)
+    elif cmd == 'autostart':
+        autostart()
+    elif cmd == 'key':
+        return key(sys.argv[2])
+    else:
+        print(__doc__)
+        return 2
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

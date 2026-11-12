@@ -1,0 +1,11 @@
+#!/bin/sh
+set -e
+if [ "$1" = install ] || [ "$1" = upgrade ]; then
+  dpkg-divert --package palos-branding --add --rename --divert /usr/lib/os-release.ubuntu /usr/lib/os-release >/dev/null
+  # Menu entries palOS doesn't show (duplicates of palOS features, or tools for the terminal): their
+  # .desktop files are moved aside, and come back if palos-branding is removed.
+  for n in mate-dictionary mate-screenshot mate-search-tool mate-system-log picom vim debian-xterm debian-uxterm display-im6.q16; do
+    dpkg-divert --package palos-branding --rename --quiet --divert /usr/share/applications/$n.desktop.palos-hidden --add /usr/share/applications/$n.desktop
+  done
+fi
+exit 0

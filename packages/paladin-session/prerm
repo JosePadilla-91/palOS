@@ -1,0 +1,5 @@
+#!/bin/sh
+if [ "$1" = "remove" ]; then
+  update-alternatives --remove x-cursor-theme /usr/share/icons/Paladin/cursor.theme >/dev/null 2>&1 || true
+fi
+exit 0

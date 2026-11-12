@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file: 'wasm-unsafe-eval'; worker-src 'self' file: blob:; img-src 'self' file: data: blob:; font-src 'self' file: data: blob:; style-src 'self' file: 'unsafe-inline'; connect-src 'self' file: data: blob:">
+<title>Fen</title>
+<link rel="stylesheet" href="vendor/pdfjs/pdf_viewer.css">
+<link rel="stylesheet" href="fen.css">
+</head>
+<body class="empty">
+<div id="toolbar">
+  <div class="grp left">
+    <button class="tb" id="b-side" title="Sidebar" data-for="pdf"></button>
+    <button class="tb" id="b-film" title="Filmstrip" data-for="image"></button>
+  </div>
+  <div class="grp mid">
+    <div class="seg" data-for="image pdf"><button class="tb" id="b-zoomout" title="Zoom Out"></button><button class="tb zl" id="b-zoom" title="Zoom"></button><button class="tb" id="b-zoomin" title="Zoom In"></button></div>
+    <div class="seg" data-for="pdf"><input id="page" type="text" inputmode="numeric" title="Page" spellcheck="false"><span id="pages"></span></div>
+    <div class="seg" data-for="image pdf"><button class="tb" id="b-rotl" title="Rotate Left"></button><button class="tb" id="b-rotr" title="Rotate Right"></button></div>
+    <div class="seg tools" data-for="pdf"><button class="tb" id="b-t-select" title="Select Text"></button><button class="tb" id="b-t-highlight" title="Highlight"></button><button class="tb" id="b-t-text" title="Add Text"></button><button class="tb" id="b-t-draw" title="Draw"></button><button class="tb" id="b-t-sign" title="Sign"></button></div>
+    <div class="seg" data-for="image"><button class="tb" id="b-crop" title="Crop"></button><button class="tb" id="b-adjust" title="Adjust Size"></button></div>
+    <button class="tb" id="b-slides" title="Slideshow" data-for="image pdf"></button>
+    <button class="tb" id="b-info" title="Info" data-for="image pdf font"></button>
+  </div>
+  <div class="grp right">
+    <button class="tb text" id="b-install" data-for="font">Install Font</button>
+    <button class="tb text primary hidden" id="b-save">Save</button>
+    <div class="search" data-for="pdf"><input id="find" type="search" placeholder="Find" spellcheck="false"><span id="findcount"></span></div>
+  </div>
+</div>
+
+<div id="body">
+  <aside id="side" class="hidden">
+    <div class="tabs"><button data-tab="thumbs" class="on">Pages</button><button data-tab="outline">Contents</button></div>
+    <div id="thumbs" class="pane"></div>
+    <div id="outline" class="pane hidden"></div>
+  </aside>
+  <main id="stage">
+    <div id="welcome">
+      <div class="glass"></div>
+      <h1>Fen</h1>
+      <p>Photos, PDFs and fonts. Drop one here, or</p>
+      <button class="btn primary" id="w-open">Open…</button>
+    </div>
+    <div id="img-stage" class="hidden" tabindex="0"><img id="pic" alt="" draggable="false"><div id="crop" class="hidden"><div class="sel"></div></div></div>
+    <div id="sigbar" class="sigbar hidden"></div>
+    <div id="pdf-wrap" class="hidden" tabindex="0"><div id="viewer" class="pdfViewer"></div></div>
+    <div id="font-stage" class="hidden"></div>
+    <div id="busy" class="hidden"><div class="spin"></div><span id="busy-text"></span></div>
+    <div id="cropbar" class="floatbar hidden"><span id="crop-size"></span><button class="btn" id="crop-cancel">Cancel</button><button class="btn primary" id="crop-ok">Crop</button></div>
+  </main>
+  <aside id="info" class="hidden"><div id="info-body"></div></aside>
+</div>
+<div id="film" class="hidden"><div id="film-strip"></div></div>
+
+<div id="show" class="hidden">
+  <div id="show-a" class="slide"></div><div id="show-b" class="slide"></div>
+  <div id="show-ctl"><button id="s-prev" title="Previous"></button><button id="s-play" title="Pause"></button><button id="s-next" title="Next"></button><button id="s-exit" title="Exit (Esc)"></button></div>
+</div>
+<div id="modal" class="hidden"></div>
+<div id="print-area"></div>
+<script type="module" src="fen.js"></script>
+</body>
+</html>

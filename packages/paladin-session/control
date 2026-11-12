@@ -1,0 +1,23 @@
+Package: paladin-session
+Status: install ok installed
+Priority: optional
+Section: x11
+Maintainer: Paladin Maintainer <joe.lucas0413@gmail.com>
+Architecture: all
+Version: 1.6.1
+Depends: paladin-seeker (>= 1.8.0), paladin-dock, python3, python3-gi, x11-utils, x11-xserver-utils, dbus-user-session, xsettingsd, gnome-keyring, policykit-1-gnome | mate-polkit | lxpolkit, dunst, xbindkeys, xss-lock, xsecurelock, lightdm, util-linux, maim, slop, xclip, xdotool, numlockx, appmenu-gtk3-module, python3-xlib, python3-pil, fonts-noto-core, palos-screenshot, paladin-save-sheets
+Recommends: paladin-settings, paladin-login, paladin-boot, xdg-desktop-portal-gtk, palos-icons, openbox, brightnessctl, playerctl, pipewire-bin | pulseaudio-utils, libnotify-bin
+Conffiles:
+ /etc/paladin-session/xbindkeysrc 96c2be75eeaf8361b213f9f7358c5e50
+ /etc/paladin-session/dunstrc 06fb870ba9b1c01e30034bcd762778f7
+Description: Paladin desktop session: steel title bars, GTK theme, cursor and tools
+ A login session that replaces GNOME Shell: Compiz with Paladin title bars,
+ Seeker (desktop, menu bar, file browser) and Paladin Dock, plus the helpers a
+ desktop needs (keyring, admin prompts, notifications, media keys, screen lock,
+ screenshots, Num Lock, app settings). GNOME stays installed and selectable at
+ the login screen.
+ .
+ Includes the Paladin look in light and dark (slate) versions: title bars with
+ steel-blue window buttons, a GTK 3 theme, colors for GTK 4 / libadwaita apps,
+ and the Paladin cursor. The Dark Mode switch in Paladin Settings changes all
+ of them at once.

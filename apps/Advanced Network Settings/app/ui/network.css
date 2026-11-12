@@ -1,0 +1,29 @@
+#side { width: 250px; display: flex; flex-direction: column; }
+#side button.nav { height: auto; min-height: 40px; padding: 5px 10px; }
+#side button.nav .n { display: flex; flex-direction: column; line-height: 1.2; flex: 1; min-width: 0; }
+#side button.nav .n b { font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#side button.nav .n small { font-size: 11px; opacity: .72; }
+#side button.nav .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex: none; }
+#side .foot { display: flex; gap: 6px; }
+#side .foot .btn { min-width: 32px; padding: 0 8px; }
+.pview { padding: 18px 26px 26px; display: flex; flex-direction: column; }
+.ehead { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.ehead img { width: 54px; height: 54px; }
+.ehead .tx { flex: 1; min-width: 0; }
+.ehead h1 { margin: 0; font-size: 19px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ehead .s { color: var(--dim); font-size: 12.5px; }
+.tabs { margin-bottom: 14px; align-self: flex-start; }
+.form .row { min-height: 46px; }
+.form .row .ctl input[type=text], .form .row .ctl input[type=password], .form .row .ctl select { width: 300px; max-width: 300px; }
+.form .row .ctl textarea { width: 300px; min-height: 90px; border-radius: 7px; border: 1px solid var(--border); background: var(--field); padding: 6px 10px; font: 12.5px "Noto Sans Mono", monospace; user-select: text; resize: vertical; }
+.form .row.changed .lbl .t::after { content: ' •'; color: var(--accent); }
+.form .row .lbl .s { white-space: normal; }
+.form .pw { display: flex; gap: 6px; align-items: center; }
+.form .pw input { width: 240px !important; }
+.details td { padding: 4px 0; }
+.bar { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; align-items: center; }
+.bar .grow { flex: 1; color: var(--dim); font-size: 12.5px; }
+.menu-pop { position: fixed; z-index: 40; background: var(--card); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 10px 28px rgba(0,0,0,.25); padding: 4px; min-width: 210px; }
+.menu-pop button { all: unset; display: block; width: 100%; box-sizing: border-box; padding: 6px 12px; border-radius: 5px; font-size: 13.5px; cursor: pointer; }
+.menu-pop button:hover { background: var(--accent); color: var(--on-accent); }
+.menu-pop hr { border: none; border-top: 1px solid var(--line); margin: 4px 0; }

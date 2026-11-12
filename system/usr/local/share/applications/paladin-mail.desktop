@@ -1,0 +1,21 @@
+[Desktop Entry]
+TryExec=/Applications/Mail.app
+X-Palos-App=/Applications/Mail.app
+X-AppImage-Name=Mail
+Name=Mail
+Exec="/Applications/Mail.app" %U
+Terminal=false
+Type=Application
+Icon=paladin-mail
+StartupWMClass=paladin-mail
+GenericName=Email Client
+GenericName[fr]=Client de courriel
+GenericName[fr_CA]=Client de courriel
+MimeType=x-scheme-handler/mailto;message/rfc822;
+Keywords=email;mail;imap;smtp;
+X-GNOME-UsesNotifications=true
+Comment=Read and send email
+Comment[fr]=Lire et envoyer des courriels
+Comment[fr_CA]=Lire et envoyer des courriels
+Categories=Network;Email;
+X-AppImage-Version=1.0

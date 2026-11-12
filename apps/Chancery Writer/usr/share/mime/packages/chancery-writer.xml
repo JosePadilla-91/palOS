@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/vnd.chancery.writer">
+    <comment>Chancery Writer document</comment>
+    <comment xml:lang="fr">Document Chancery Writer</comment>
+    <sub-class-of type="application/zip"/>
+    <generic-icon name="x-office-document"/>
+    <icon name="application-vnd.chancery.writer"/>
+    <magic priority="70">
+      <match type="string" offset="30" value="mimetypeapplication/vnd.chancery.writer"/>
+    </magic>
+    <glob pattern="*.uwr" weight="60"/>
+  </mime-type>
+</mime-info>

@@ -1,0 +1,21 @@
+[Desktop Entry]
+X-AppImage-Name=Fonts
+Type=Application
+Name=Fonts
+Name[fr]=Polices
+Name[fr_CA]=Polices
+GenericName=Font Manager
+GenericName[fr]=Gestionnaire de polices
+Comment=See, install, remove and organize the fonts on this computer
+Comment[fr]=Voir, installer, retirer et organiser les polices de cet ordinateur
+Keywords=font;fonts;typeface;type;install;ttf;otf;
+Keywords[fr]=police;polices;caractères;typographie;installer;ttf;otf;
+Exec=AppRun %F
+Icon=palos-fonts
+Terminal=false
+StartupNotify=true
+StartupWMClass=Fonts
+Categories=Utility;
+MimeType=font/ttf;font/otf;font/collection;font/woff;font/woff2;application/x-font-ttf;application/x-font-otf;application/vnd.ms-opentype;
+X-Palos-Folder=Utilities
+X-AppImage-Version=27.0.0

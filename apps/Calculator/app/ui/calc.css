@@ -1,0 +1,33 @@
+html, body { margin: 0; height: 100%; user-select: none; font-family: system-ui, "Noto Sans", sans-serif; background: linear-gradient(#4a4e54, #2e3136); overflow: hidden; }
+#lcd { height: 92px; margin: 8px 8px 6px; border-radius: 8px; position: relative; padding: 8px 12px; box-sizing: border-box;
+  background: linear-gradient(#cfdcbf, #b8c9a6); box-shadow: inset 0 2px 6px rgba(0,0,0,.45), 0 1px rgba(255,255,255,.12); color: #253020; }
+#expr { font-size: 12px; height: 16px; opacity: .65; text-align: right; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+#out { font: 300 38px/48px "DejaVu Sans Mono", monospace; text-align: right; white-space: nowrap; overflow: hidden; letter-spacing: -1px; }
+#flags { position: absolute; left: 12px; bottom: 6px; font-size: 10px; display: flex; gap: 8px; opacity: .7; }
+body.basic #deg { display: none; }
+#keys { display: flex; gap: 6px; padding: 0 8px 8px; }
+#sci, #basic { display: grid; gap: 6px; grid-auto-rows: 46px; }
+#basic { grid-template-columns: repeat(4, 56px); }
+#sci { grid-template-columns: repeat(6, 44px); }
+body.basic #sci { display: none; }
+button { border: 1px solid #1c1d20; border-radius: 9px; font: 500 18px system-ui, sans-serif; color: #1f2023; cursor: default;
+  background: linear-gradient(#f4f5f7, #d5d8dd); box-shadow: inset 0 1px rgba(255,255,255,.9), 0 1px 2px rgba(0,0,0,.4); }
+button:active, button.down { background: linear-gradient(#c5c8cd, #e1e3e7); box-shadow: inset 0 1px 3px rgba(0,0,0,.35); }
+button.fn { background: linear-gradient(#b9bdc3, #9ca1a8); }
+button.op { color: #fff; background: linear-gradient(#ffad4a, #f08a16); text-shadow: 0 -1px rgba(0,0,0,.25); }
+button.op.on { background: linear-gradient(#fff, #f6e2c8); color: #e07b0c; }
+#sci button { font-size: 13px; background: linear-gradient(#7c8189, #5d6168); color: #f2f3f5; text-shadow: 0 -1px rgba(0,0,0,.4); box-shadow: inset 0 1px rgba(255,255,255,.25), 0 1px 2px rgba(0,0,0,.4); }
+#sci button.mod.on { background: linear-gradient(#a7acb3, #8a8f96); }
+.zero { grid-column: span 2; text-align: left; padding-left: 22px; }
+#tape { position: fixed; inset: 0; background: #fbfaf3; display: flex; flex-direction: column; }
+#tapehead { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; font-size: 12px; background: #e8e5d6; border-bottom: 1px solid #c9c4ad; }
+#tapehead button { width: 22px; height: 22px; font-size: 11px; border-radius: 11px; }
+#tapetext { flex: 1; margin: 0; padding: 10px 14px; overflow: auto; font: 13px/1.6 "DejaVu Sans Mono", monospace; color: #333; user-select: text; text-align: right;
+  background: repeating-linear-gradient(#fbfaf3 0 20px, #f1efe4 20px 21px); }
+[hidden] { display: none !important; }
+
+/* the mode switch: two small pills above the display */
+#modes { display: flex; justify-content: center; gap: 0; margin: 6px auto -2px; width: max-content; border-radius: 9px; overflow: hidden; box-shadow: 0 0 0 1px rgba(0,0,0,.35); }
+#modes button { font: 600 10.5px/1 inherit; font-family: inherit; padding: 4px 11px; border: 0; background: linear-gradient(#5d6066, #44474c); color: #d8dade; cursor: default; }
+#modes button + button { border-left: 1px solid rgba(0,0,0,.35); }
+body.basic #modes button[data-m=basic], body.sci #modes button[data-m=sci] { background: linear-gradient(#80addf, #0c76c3); color: #fff; }

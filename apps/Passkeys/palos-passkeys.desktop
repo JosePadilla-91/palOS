@@ -1,0 +1,21 @@
+[Desktop Entry]
+X-AppImage-Name=Passkeys
+Type=Application
+Name=Passkeys
+Name[fr]=Clés d’accès
+Name[fr_CA]=Clés d’accès
+GenericName=Passwords and Keys
+GenericName[fr]=Mots de passe et clés
+GenericName[fr_CA]=Mots de passe et clés
+Comment=See saved passwords, SSH keys, encryption keys and certificates
+Comment[fr]=Voir les mots de passe enregistrés, les clés SSH, les clés de chiffrement et les certificats
+Comment[fr_CA]=Voir les mots de passe enregistrés, les clés SSH, les clés de chiffrement et les certificats
+Keywords=password;keyring;keychain;ssh;gpg;pgp;key;certificate;secret;
+Exec=AppRun
+Icon=palos-passkeys
+Terminal=false
+StartupNotify=true
+StartupWMClass=Passkeys
+Categories=Utility;Security;
+X-Palos-Folder=Utilities
+X-AppImage-Version=1.0.0

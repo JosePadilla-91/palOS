@@ -1,0 +1,11 @@
+#!/bin/sh
+set -e
+# palOS 27 and earlier set aside some apps' own icons to install palOS's in their place. The renamed
+# apps (BrushBoard, the Chancery apps, ...) no longer ship icons of their own, so those diversions go.
+if [ "$1" = "install" ] || [ "$1" = "upgrade" ]; then
+  dpkg-divert --list 'palos-icons' 2>/dev/null | sed -n 's/^diversion of \(.*\) to .* by palos-icons$/\1/p' | while read -r f; do
+    dpkg-divert --package palos-icons --quiet --remove "$f" || true
+    [ -e "$f.palos-orig" ] && [ ! -e "$f" ] && mv "$f.palos-orig" "$f" || true
+  done
+fi
+exit 0

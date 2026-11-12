@@ -1,0 +1,11 @@
+{
+ "name": "Calendar",
+ "id": "paladin-calendar",
+ "command": "paladin-calendar",
+ "icon": "paladin-calendar",
+ "version": "1.0",
+ "folder": "",
+ "kind": "shared",
+ "runtime": "kibble",
+ "fallback": "electron-44"
+}

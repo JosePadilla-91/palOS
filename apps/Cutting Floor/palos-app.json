@@ -1,0 +1,10 @@
+{
+ "name": "Cutting Floor",
+ "id": "cutting-floor",
+ "command": "cutting-floor",
+ "icon": "cutting-floor",
+ "version": "1.0",
+ "folder": "",
+ "kind": "shared",
+ "runtime": "electron-44"
+}

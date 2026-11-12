@@ -1,0 +1,11 @@
+{
+ "name": "Settings",
+ "id": "paladin-settings",
+ "command": "paladin-settings",
+ "icon": "paladin-settings",
+ "version": "1.0.0",
+ "folder": "",
+ "kind": "shared",
+ "runtime": "kibble",
+ "fallback": "electron-44"
+}

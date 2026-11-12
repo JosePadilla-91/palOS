@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+<mime-type type="application/x-composer-project">
+  <glob pattern="*.composer"/>
+    <comment>Composer music project</comment>
+    <comment xml:lang="fr">Projet musical Composer</comment>
+  <icon name="application-x-composer-project"/>
+  <generic-icon name="audio-x-generic"/>
+</mime-type>
+</mime-info>

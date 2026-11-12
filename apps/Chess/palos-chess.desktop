@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Chess
+Name[fr]=Échecs
+Comment=3D chess against the machine
+Comment[fr]=Échecs en 3D contre la machine
+Exec=AppRun
+Icon=palos-chess
+Terminal=false
+Categories=Game;BoardGame;
+Keywords=chess;board;game;3D;échecs;
+StartupWMClass=Chess
+X-AppImage-Version=1.1.0

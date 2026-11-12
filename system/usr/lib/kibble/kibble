@@ -1,0 +1,6 @@
+#!/bin/sh
+# kibble APPDIR [args]: a palOS app on Kibble (WebKit, palOS windows; no Electron, no GTK)
+K=/usr/lib/kibble
+NODE="${KIBBLE_NODE:-$K/node/bin/node}"; [ -x "$NODE" ] || NODE=node
+export KIBBLE_ROOT="${KIBBLE_ROOT:-$K}"
+exec "$NODE" "$KIBBLE_ROOT/runtime/kibble.js" "$@"

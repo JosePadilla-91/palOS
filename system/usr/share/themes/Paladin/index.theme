@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=X-GNOME-Metatheme
+Name=Paladin
+Comment=Paladin, light: cool gray with steel-blue accents
+Encoding=UTF-8
+
+[X-GNOME-Metatheme]
+GtkTheme=Paladin
+MetacityTheme=Paladin
+IconTheme=palOS
+CursorTheme=Paladin

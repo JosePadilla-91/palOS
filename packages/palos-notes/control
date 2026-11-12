@@ -1,0 +1,15 @@
+Package: palos-notes
+Status: install ok installed
+Priority: optional
+Section: utils
+Maintainer: palOS <joe.lucas0413@gmail.com>
+Architecture: all
+Version: 1.1.0
+Replaces: palos-notebook
+Provides: palos-notebook
+Depends: paladin-seeker (>= 1.8.0)
+Conflicts: palos-notebook
+Description: Notes app
+ Quick notes on a legal pad, in notess, with bold, lists, checklists, search and pinning.
+ Notes are saved as you type.
+ Runs on Seeker's Electron runtime.

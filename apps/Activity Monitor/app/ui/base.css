@@ -1,0 +1,13 @@
+/* palOS app look: light and dark */
+:root { color-scheme: light dark; --bg:#f2f3f5; --panel:#e6e8ec; --fg:#1b1e22; --dim:#6a727c; --line:rgba(0,0,0,.14); --accent:#4c6278; --accent2:#3d5164; --on:#fff; --card:#fff; --good:#2f9e6a; --warn:#d9a13b; --bad:#d4584c; --field:rgba(0,0,0,.05); }
+@media (prefers-color-scheme: dark) { :root { --bg:#22272d; --panel:#2b3138; --fg:#eef1f4; --dim:#a3acb6; --line:rgba(255,255,255,.14); --accent:#56708a; --accent2:#6a85a1; --card:#343a41; --field:rgba(255,255,255,.07); } }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 13px/1.4 "Noto Sans", "DejaVu Sans", sans-serif; overflow: hidden; user-select: none; }
+button { font: inherit; color: var(--fg); background: var(--field); border: 1px solid var(--line); border-radius: 6px; padding: 4px 12px; cursor: default; }
+button:hover { background: var(--line); }
+button.primary { background: var(--accent); color: var(--on); border-color: transparent; }
+button.primary:hover { background: var(--accent2); }
+button:disabled { opacity: .45; pointer-events: none; }
+input, select { font: inherit; color: var(--fg); background: var(--field); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; outline: none; }
+input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
+::-webkit-scrollbar { width: 10px; height: 10px; } ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 5px; border: 2px solid transparent; background-clip: content-box; }

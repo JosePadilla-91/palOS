@@ -1,0 +1,147 @@
+#!/bin/sh
+# Time Turner: whole-system restore.
+# Runs inside the initramfs after the root filesystem is mounted and before
+# palOS starts, so no system file is in use while it is replaced.
+# Installed as /usr/share/initramfs-tools/scripts/local-bottom/time-turner
+#
+# It acts only when the service left instructions in
+#   /var/lib/time-turner/pending-restore.env
+# (written by "Restore System" or the setup wizard's "Restore from Time Turner Backup").
+PREREQ=""
+prereqs() { echo "$PREREQ"; }
+case "$1" in prereqs) prereqs; exit 0 ;; esac
+
+LIB="${rootmnt}/var/lib/time-turner"
+PENDING="$LIB/pending-restore.env"
+[ -f "$PENDING" ] || exit 0
+
+W=/run/time-turner-restore
+MOUNT=/bin/tt-mount;   [ -x "$MOUNT" ] || MOUNT=mount
+UMOUNT=/bin/tt-umount; [ -x "$UMOUNT" ] || UMOUNT=umount
+mkdir -p "$W"
+: > "$W/mounted"
+
+say() {
+  echo "Time Turner: $*" > /dev/console 2>/dev/null || echo "Time Turner: $*"
+}
+
+finish() {   # finish ok|failed "message"
+  printf "TT_RESULT='%s'\nTT_MESSAGE='%s'\nTT_LABEL='%s'\nTT_TIME='%s'\n" \
+    "$1" "$(printf '%s' "$2" | tr -d "'")" "$(printf '%s' "$TT_LABEL" | tr -d "'")" "$(date +%s)" \
+    > "$LIB/last-restore.env" 2>/dev/null
+}
+
+cleanup() {
+  # unmount in reverse order
+  awk '{ a[NR] = $0 } END { for (i = NR; i > 0; i--) print a[i] }' "$W/mounted" | while read -r m; do
+    $UMOUNT "$m" 2>/dev/null || $UMOUNT -l "$m" 2>/dev/null
+  done
+  : > "$W/mounted"
+  $UMOUNT "$W/dest" 2>/dev/null
+}
+
+fail() {
+  say "the restore did not finish: $*"
+  finish failed "$*"
+  cleanup
+  if [ "${TT_ATTEMPTS:-0}" -ge 3 ]; then
+    mv -f "$PENDING" "$LIB/pending-restore.failed" 2>/dev/null
+    say "giving up after 3 attempts; starting palOS normally."
+  else
+    say "it will be tried again the next time the computer starts."
+  fi
+  sync
+  sleep 15
+  exit 0
+}
+
+wait_for() {   # wait_for /dev/path seconds
+  i=0
+  while [ ! -e "$1" ] && [ "$i" -lt "$2" ]; do sleep 1; i=$((i + 1)); done
+  [ -e "$1" ]
+}
+
+# ---- read the instructions ----
+$MOUNT -o remount,rw "$rootmnt" || { say "could not write to the system disk; skipping the restore."; exit 0; }
+cp "$PENDING" "$W/pending.env" || fail "could not read the restore instructions"
+. "$W/pending.env"
+TT_ATTEMPTS=$(( ${TT_ATTEMPTS:-0} + 1 ))
+sed -i "s/^TT_ATTEMPTS=.*/TT_ATTEMPTS='$TT_ATTEMPTS'/" "$PENDING"
+
+if command -v plymouth >/dev/null 2>&1; then plymouth hide-splash 2>/dev/null || true; fi
+say "restoring this computer to ${TT_LABEL:-the chosen backup}."
+say "This can take a while. Keep the computer plugged in and don't turn it off."
+
+# ---- mount the rest of the system (separate /home, /boot, /boot/efi, …) ----
+if [ -f "$rootmnt/etc/fstab" ]; then
+  awk '!/^[[:space:]]*#/ && NF >= 3 { n = gsub("/", "/", $2); print n, $1, $2, $3, ($4 == "" ? "defaults" : $4) }' "$rootmnt/etc/fstab" \
+    | sort -n | while read -r depth spec mp type opts; do
+      case "$mp" in /boot|/boot/*|/home|/home/*|/var|/var/*|/usr|/opt|/srv) ;; *) continue ;; esac
+      case "$type" in ext2|ext3|ext4|btrfs|xfs|vfat|f2fs) ;; *) continue ;; esac
+      case "$spec" in
+        UUID=*) dev="/dev/disk/by-uuid/${spec#UUID=}" ;;
+        PARTUUID=*) dev="/dev/disk/by-partuuid/${spec#PARTUUID=}" ;;
+        LABEL=*) dev="/dev/disk/by-label/${spec#LABEL=}" ;;
+        /dev/*) dev="$spec" ;;
+        *) continue ;;
+      esac
+      o=$(echo "$opts" | tr ',' '\n' | grep -v -e '^noauto$' -e '^nofail$' -e '^x-' -e '^user' -e '^owner$' -e '^comment=' -e '^_netdev$' | tr '\n' ',' | sed 's/,$//')
+      wait_for "$dev" 10 || { say "warning: $mp ($spec) not found"; continue; }
+      mkdir -p "$rootmnt$mp"
+      if $MOUNT -t "$type" -o "${o:-defaults}" "$dev" "$rootmnt$mp"; then
+        echo "$rootmnt$mp" >> "$W/mounted"
+      else
+        say "warning: could not mount $mp"
+      fi
+    done
+fi
+
+# ---- open the backup drive (read-only) ----
+dev="/dev/disk/by-uuid/$TT_DEST_UUID"
+if [ ! -e "$dev" ]; then
+  say "waiting for the backup drive. If it is not connected, plug it in now."
+  wait_for "$dev" 120 || fail "the backup drive was not found"
+fi
+fstype="$TT_DEST_FSTYPE"
+case "$fstype" in ntfs) fstype=ntfs3 ;; "") fstype=auto ;; esac
+modprobe "$fstype" 2>/dev/null
+mkdir -p "$W/dest"
+$MOUNT -t "$fstype" -o ro "$dev" "$W/dest" 2>/dev/null || $MOUNT -o ro "$dev" "$W/dest" || fail "could not open the backup drive"
+
+# ---- copy what we need off the disk before it gets replaced ----
+cp "$rootmnt$TT_RESTIC" "$W/restic" && chmod 700 "$W/restic" || fail "restic is missing ($TT_RESTIC)"
+cp "$rootmnt$TT_KEY_FILE" "$W/key" || fail "the backup key is missing"
+cp "$rootmnt$TT_EXCLUDES" "$W/excludes" || fail "the list of protected files is missing"
+if [ -f "$LIB/pending-restore.key" ]; then cp "$LIB/pending-restore.key" "$W/key"; fi
+
+# ---- restore ----
+# --delete removes files that did not exist at that point in time, except the
+# paths in the exclude file (Time Turner's own state, swap, caches, …).
+# --overwrite if-changed skips files whose size and date already match.
+HOME="$W" TMPDIR="$W" "$W/restic" --no-lock --no-cache \
+  --repo "$W/dest/$TT_REPO_DIR" --password-file "$W/key" \
+  restore "$TT_SNAPSHOT" --target "$rootmnt" --delete --overwrite if-changed --sparse \
+  --exclude-file "$W/excludes" > /dev/console 2>&1 \
+  || fail "restic reported an error while restoring"
+
+# ---- moving to a different computer: rebuild its boot files ----
+if [ "$TT_MACHINE" = "1" ]; then
+  say "adapting the restored system to this computer."
+  for d in dev proc sys run; do
+    $MOUNT --bind "/$d" "$rootmnt/$d" && echo "$rootmnt/$d" >> "$W/mounted"
+  done
+  chroot "$rootmnt" update-initramfs -u -k all > /dev/console 2>&1 || say "warning: could not rebuild the boot images"
+  # palOS starts from its own start-up file (kernel + initramfs in one); a Duet (dual-boot) disk has no fallback copy
+  fb=--fallback; grep -q '^FALLBACK=0' "$rootmnt/etc/palos/boot.conf" 2>/dev/null && fb=
+  if [ -x "$rootmnt/usr/lib/palos-boot/palos-efistub" ]; then chroot "$rootmnt" /usr/lib/palos-boot/palos-efistub update $fb > /dev/console 2>&1 || say "warning: could not update the start-up file"; fi
+fi
+
+rm -f "$PENDING" "$LIB/pending-restore.key"
+finish ok "Restored ${TT_LABEL:-the backup}"
+cleanup
+sync
+say "restore complete. Restarting into the restored system."
+sleep 3
+# The running kernel may no longer exist on disk, so start fresh.
+reboot -f 2>/dev/null || { echo 1 > /proc/sys/kernel/sysrq; echo s > /proc/sysrq-trigger; sleep 2; echo b > /proc/sysrq-trigger; }
+exit 0

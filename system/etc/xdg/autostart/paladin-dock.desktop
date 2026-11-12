@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Paladin Dock
+Comment=The palOS application dock
+Exec=paladin-dock
+Icon=paladin-dock
+NoDisplay=true
+X-GNOME-Autostart-enabled=true

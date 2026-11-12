@@ -1,0 +1,8 @@
+#!/bin/sh
+# Winetricks on palOS's Wine, for this account's Windows environment (the same one Windows apps use).
+# Winetricks.app (Utilities) is the window for it; this is the command-line way: `winetricks vcrun2022 corefonts`.
+export WINEPREFIX="${WINEPREFIX:-$HOME/.local/share/palos-windows/prefix}"
+export WINE=/opt/palos-windows/wine/bin/wine WINESERVER=/opt/palos-windows/wine/bin/wineserver
+export PATH="/opt/palos-windows/wine/bin:$PATH" WINETRICKS_LATEST_VERSION_CHECK=disabled
+[ -e "$WINEPREFIX/.palos-ready" ] || /usr/lib/palos-windows/setup || exit 1
+exec /usr/lib/palos-winetricks/winetricks "$@"

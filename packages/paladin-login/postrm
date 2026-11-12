@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+  prev=/var/lib/paladin-login.previous-dm
+  if [ -f "$prev" ] && grep -q gdm "$prev"; then
+    cp "$prev" /etc/X11/default-display-manager
+    echo "gdm3 shared/default-x-display-manager select gdm3" | debconf-set-selections 2>/dev/null || true
+    ln -sf /lib/systemd/system/gdm3.service /etc/systemd/system/display-manager.service 2>/dev/null || ln -sf /lib/systemd/system/gdm.service /etc/systemd/system/display-manager.service 2>/dev/null || true
+    echo "paladin-login: The standard login screen (GDM) is back after the next restart." >&2
+  fi
+  [ "$1" = "purge" ] && rm -f "$prev"
+fi
+exit 0

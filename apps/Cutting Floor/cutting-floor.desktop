@@ -1,0 +1,14 @@
+[Desktop Entry]
+X-AppImage-Name=Cutting Floor
+Name=Cutting Floor
+Exec=AppRun %U
+Terminal=false
+Type=Application
+Icon=cutting-floor
+StartupWMClass=cuttingfloor
+Keywords=video;editor;compositor;chroma;nvenc;
+Comment=Cutting Floor is a GPU-accelerated video editor and compositor with multitrack editing, 60+ GPU effects, 40+ transitions, adjustment layers, track mattes, time remapping, motion tracking, stabilisation, audio effects, loudness normalisation and NVENC export.
+Comment[fr]=Cutting Floor est un logiciel de montage et de composition vidéo accéléré par le processeur graphique : montage multipiste, plus de 60 effets, plus de 40 transitions, calques de réglage, caches de piste, remappage temporel, suivi de mouvement, stabilisation, effets audio, normalisation de la sonie et exportation NVENC.
+Comment[fr_CA]=Cutting Floor est un logiciel de montage et de composition vidéo accéléré par le processeur graphique : montage multipiste, plus de 60 effets, plus de 40 transitions, calques de réglage, caches de piste, remappage temporel, suivi de mouvement, stabilisation, effets audio, normalisation de la sonie et exportation NVENC.
+Categories=AudioVideo;
+X-AppImage-Version=1.0

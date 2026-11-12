@@ -1,0 +1,11 @@
+{
+ "name": "Advanced Network Settings",
+ "id": "palos-network",
+ "command": "palos-network",
+ "icon": "palos-network",
+ "version": "1.0.0",
+ "folder": "Utilities",
+ "kind": "shared",
+ "runtime": "kibble",
+ "fallback": "electron-44"
+}

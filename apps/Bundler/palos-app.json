@@ -1,0 +1,11 @@
+{
+ "name": "Bundler",
+ "id": "io.github.Bundler",
+ "command": "bundler",
+ "icon": "io.github.Bundler",
+ "version": "1.0",
+ "folder": "Utilities",
+ "kind": "electron-own",
+ "fallback": "own",
+ "runtime": "kibble"
+}

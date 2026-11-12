@@ -1,0 +1,18 @@
+[Desktop Entry]
+Name=Chancery Sheets
+GenericName=Spreadsheet
+Comment=Create and edit spreadsheets
+Exec="/opt/Chancery Sheets/chancery-sheets" %U
+Icon=chancery-sheets
+Terminal=false
+Type=Application
+Categories=Office;Spreadsheet;
+Keywords=spreadsheet;excel;calc;xlsx;ods;csv;chancery;
+MimeType=application/x-chancery-spst;application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;application/vnd.ms-excel.sheet.macroEnabled.12;application/vnd.ms-excel;application/vnd.oasis.opendocument.spreadsheet;text/csv;text/tab-separated-values;
+StartupWMClass=chancery-sheets
+StartupNotify=true
+Actions=new-window;
+
+[Desktop Action new-window]
+Name=New Window
+Exec="/opt/Chancery Sheets/chancery-sheets"

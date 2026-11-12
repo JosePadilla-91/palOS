@@ -1,0 +1,17 @@
+#!/bin/sh
+set -e
+if [ "$1" = remove ] || [ "$1" = purge ] || [ "$1" = abort-install ]; then
+  rm -f /etc/apt/preferences.d/palos.pref
+  for n in mate-dictionary mate-screenshot mate-search-tool mate-system-log picom vim debian-xterm debian-uxterm display-im6.q16; do
+    dpkg-divert --package palos-branding --rename --quiet --divert /usr/share/applications/$n.desktop.palos-hidden --remove /usr/share/applications/$n.desktop || true
+  done
+  dpkg-divert --package palos-branding --remove --rename --divert /usr/lib/os-release.ubuntu /usr/lib/os-release >/dev/null || true
+  for f in /etc/update-motd.d/*; do dpkg-statoverride --list "$f" >/dev/null 2>&1 && dpkg-statoverride --remove "$f" >/dev/null 2>&1 && chmod 0755 "$f"; done || true
+  if [ -e /usr/share/plymouth/themes/palos-text/palos-text.plymouth ]; then
+    update-alternatives --remove text.plymouth /usr/share/plymouth/themes/palos-text/palos-text.plymouth >/dev/null 2>&1 || true
+    rm -rf /usr/share/plymouth/themes/palos-text
+  fi
+  command -v systemctl >/dev/null 2>&1 && { systemctl unmask --quiet motd-news.timer motd-news.service 2>/dev/null; systemctl daemon-reload 2>/dev/null; } || true
+  command -v glib-compile-schemas >/dev/null 2>&1 && glib-compile-schemas /usr/share/glib-2.0/schemas || true
+fi
+exit 0

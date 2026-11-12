@@ -1,0 +1,178 @@
+#!/usr/bin/python3
+"""palOS Bluetooth helper: answers Bluetooth's pairing questions while Bluetooth Manager isn't open.
+
+A phone or computer that pairs with this one asks for a number to be confirmed, or a PIN; BlueZ passes the
+question to an "agent". This is that agent, for the whole session: it asks in a small palOS window.
+(Bluetooth Manager takes over while it's open, and gives the job back when it closes.) It also keeps the
+person's last Bluetooth on/off choice across restarts, which BlueZ leaves to the desktop."""
+import os
+import sys
+
+import dbus
+import dbus.mainloop.glib
+import dbus.service
+import gi
+gi.require_version('Gtk', '3.0')
+from gi.repository import GLib, Gtk  # noqa: E402
+
+try:
+    import palos_l10n
+    _ = palos_l10n.tr
+    palos_l10n.install_gtk()
+except Exception:  # noqa: BLE001
+    def _(s):
+        return s
+
+BUS = 'org.bluez'
+AGENT = '/org/palos/bluetooth/helper'
+bus = None
+
+
+def name_of(device):
+    try:
+        p = dbus.Interface(bus.get_object(BUS, device), 'org.freedesktop.DBus.Properties')
+        return str(p.Get('org.bluez.Device1', 'Alias'))
+    except dbus.DBusException:
+        return _('A device')
+
+
+def trusted(device):
+    try:
+        p = dbus.Interface(bus.get_object(BUS, device), 'org.freedesktop.DBus.Properties')
+        return bool(p.Get('org.bluez.Device1', 'Paired')) or bool(p.Get('org.bluez.Device1', 'Trusted'))
+    except dbus.DBusException:
+        return False
+
+
+def set_trusted(device):
+    try:
+        p = dbus.Interface(bus.get_object(BUS, device), 'org.freedesktop.DBus.Properties')
+        p.Set('org.bluez.Device1', 'Trusted', dbus.Boolean(True))
+    except dbus.DBusException:
+        pass
+
+
+def dialog(title, text, ok, entry=None):
+    """A small palOS question window; returns True/False, or the text typed (None when cancelled)."""
+    d = Gtk.MessageDialog(modal=True, message_type=Gtk.MessageType.QUESTION, buttons=Gtk.ButtonsType.NONE, text=title)
+    d.format_secondary_text(text)
+    d.set_title(_('Bluetooth'))
+    d.set_icon_name('palos-bluetooth')
+    d.set_keep_above(True)
+    d.add_button(_('Cancel'), Gtk.ResponseType.CANCEL)
+    b = d.add_button(ok, Gtk.ResponseType.OK)
+    b.get_style_context().add_class('suggested-action')
+    d.set_default_response(Gtk.ResponseType.OK)
+    e = None
+    if entry is not None:
+        e = Gtk.Entry(text=entry, activates_default=True)
+        d.get_message_area().pack_start(e, False, False, 0)
+        e.show()
+    d.present()
+    r = d.run()
+    val = e.get_text() if e else None
+    d.destroy()
+    if r != Gtk.ResponseType.OK:
+        return None if entry is not None else False
+    return val if entry is not None else True
+
+
+def tell(title, text):
+    d = Gtk.MessageDialog(modal=False, message_type=Gtk.MessageType.INFO, buttons=Gtk.ButtonsType.OK, text=title)
+    d.format_secondary_text(text)
+    d.set_title(_('Bluetooth'))
+    d.set_keep_above(True)
+    d.connect('response', lambda w, r: w.destroy())
+    d.show()
+
+
+class Rejected(dbus.DBusException):
+    _dbus_error_name = 'org.bluez.Error.Rejected'
+
+
+class Agent(dbus.service.Object):
+    @dbus.service.method('org.bluez.Agent1', in_signature='', out_signature='')
+    def Release(self):
+        pass
+
+    @dbus.service.method('org.bluez.Agent1', in_signature='os', out_signature='')
+    def AuthorizeService(self, device, uuid):
+        if trusted(device):
+            return
+        if not dialog(_('Allow “%s” to connect?') % name_of(device), '', _('Allow')):
+            raise Rejected('Rejected')
+
+    @dbus.service.method('org.bluez.Agent1', in_signature='o', out_signature='s')
+    def RequestPinCode(self, device):
+        v = dialog(_('Type the PIN for “%s”') % name_of(device), _('Many devices use 0000 or 1234. The device’s instructions say which.'), _('Pair'), entry='0000')
+        if not v:
+            raise Rejected('Rejected')
+        set_trusted(device)
+        return v[:16]
+
+    @dbus.service.method('org.bluez.Agent1', in_signature='o', out_signature='u')
+    def RequestPasskey(self, device):
+        v = dialog(_('Type the number shown on “%s”') % name_of(device), '', _('Pair'), entry='')
+        if not v or not v.strip().isdigit():
+            raise Rejected('Rejected')
+        set_trusted(device)
+        return dbus.UInt32(int(v.strip()))
+
+    @dbus.service.method('org.bluez.Agent1', in_signature='ouq', out_signature='')
+    def DisplayPasskey(self, device, passkey, entered):
+        if int(entered) == 0:
+            tell(_('Type %06d on “%s”') % (int(passkey), name_of(device)), _('Then press Enter on it.'))
+
+    @dbus.service.method('org.bluez.Agent1', in_signature='os', out_signature='')
+    def DisplayPinCode(self, device, pin):
+        tell(_('Type %s on “%s”') % (pin, name_of(device)), _('Then press Enter on it.'))
+
+    @dbus.service.method('org.bluez.Agent1', in_signature='ou', out_signature='')
+    def RequestConfirmation(self, device, passkey):
+        if not dialog(_('Pair with “%s”?') % name_of(device), _('Check that it shows this number: %06d') % int(passkey), _('Pair')):
+            raise Rejected('Rejected')
+        set_trusted(device)
+
+    @dbus.service.method('org.bluez.Agent1', in_signature='o', out_signature='')
+    def RequestAuthorization(self, device):
+        if not dialog(_('Pair with “%s”?') % name_of(device), '', _('Pair')):
+            raise Rejected('Rejected')
+
+    @dbus.service.method('org.bluez.Agent1', in_signature='', out_signature='')
+    def Cancel(self):
+        pass
+
+
+def register():
+    """(Re)register with BlueZ; called at start and whenever bluetoothd (re)appears."""
+    try:
+        am = dbus.Interface(bus.get_object(BUS, '/org/bluez'), 'org.bluez.AgentManager1')
+        try:
+            am.UnregisterAgent(AGENT)
+        except dbus.DBusException:
+            pass
+        am.RegisterAgent(AGENT, 'KeyboardDisplay')
+        am.RequestDefaultAgent(AGENT)
+    except dbus.DBusException as e:
+        print('palos-bluetooth-agent: not registered yet:', e.get_dbus_message(), file=sys.stderr)
+    return False
+
+
+def main():
+    global bus
+    GLib.set_prgname('palos-bluetooth')
+    GLib.set_application_name(_('Bluetooth'))
+    dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+    bus = dbus.SystemBus()
+    Agent(bus, AGENT)
+    register()
+    # bluetoothd restarted (or started late): register again
+    bus.watch_name_owner(BUS, lambda owner: owner and GLib.timeout_add(500, register))
+    # (while Bluetooth Manager is open it answers instead; when it closes, BlueZ comes back to this one)
+    Gtk.main()
+
+
+if __name__ == '__main__':
+    if os.environ.get('XDG_SESSION_TYPE') == 'tty':
+        sys.exit(0)
+    main()

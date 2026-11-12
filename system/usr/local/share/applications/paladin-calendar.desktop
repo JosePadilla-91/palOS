@@ -1,0 +1,23 @@
+[Desktop Entry]
+TryExec=/Applications/Calendar.app
+X-Palos-App=/Applications/Calendar.app
+X-AppImage-Name=Calendar
+Name=Calendar
+Name[fr]=Calendrier
+Name[fr_CA]=Calendrier
+Exec="/Applications/Calendar.app" %U
+Terminal=false
+Type=Application
+Icon=paladin-calendar
+StartupWMClass=paladin-calendar
+GenericName=Calendar
+GenericName[fr]=Calendrier
+GenericName[fr_CA]=Calendrier
+MimeType=text/calendar;
+Keywords=calendar;events;meetings;ical;
+X-GNOME-UsesNotifications=true
+Comment=Plan your days, meetings and birthdays
+Comment[fr]=Planifiez vos journées, vos réunions et les anniversaires
+Comment[fr_CA]=Planifiez vos journées, vos réunions et les anniversaires
+Categories=Office;Calendar;
+X-AppImage-Version=1.0

@@ -1,0 +1,4 @@
+#!/bin/sh
+set -e
+[ "$1" = configure ] && command -v glib-compile-schemas >/dev/null 2>&1 && glib-compile-schemas /usr/share/glib-2.0/schemas || true
+exit 0

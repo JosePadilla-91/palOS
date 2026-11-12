@@ -1,0 +1,11 @@
+{
+ "name": "Chess",
+ "id": "palos-chess",
+ "command": "chess",
+ "icon": "palos-chess",
+ "version": "1.1.0",
+ "folder": "",
+ "kind": "shared",
+ "runtime": "kibble",
+ "fallback": "electron-44"
+}

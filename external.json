@@ -1,0 +1,539 @@
+[
+ {
+  "path": "/Applications/Address Book.app/resources/app.asar.paladin-orig",
+  "size": 4326266,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/Applications/Address Book.app/resources/paladin-online-accounts",
+  "size": 14480,
+  "sha256": "43440c6f80d778b0d5e8cfb38166c4ccb7c5dac3c741a2949465b5b462997472",
+  "kind": "program"
+ },
+ {
+  "path": "/Applications/BrushBoard.app/LICENSE.electron.txt",
+  "size": 1096,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/Applications/BrushBoard.app/LICENSES.chromium.html",
+  "size": 15168645,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/Applications/BrushBoard.app/brushboard",
+  "size": 201456856,
+  "sha256": "1ddc392c64e401f3e8e3682a12af14da5b23c8ff91349d33eea4642ef620f982",
+  "kind": "program"
+ },
+ {
+  "path": "/Applications/BrushBoard.app/chrome-sandbox",
+  "size": 15328,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/Applications/BrushBoard.app/chrome_100_percent.pak",
+  "size": 167701,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/Applications/BrushBoard.app/chrome_200_percent.pak",
+  "size": 259856,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/Applications/BrushBoard.app/chrome_crashpad_handler",
+  "size": 1549896,
+  "sha256": "6a22d6001b0cdc0026a0833c8a84f646d23cf1d662d5b5382a9b705de7e51f53",
+  "kind": "program"
+ },
+ {
+  "path": "/Applications/BrushBoard.app/icudtl.dat",
+  "size": 10467680,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/Applications/BrushBoard.app/libEGL.so",
+  "size": 253688,
+  "sha256": "aa9a65cbea0df9a2fcf5337620288984e6ecdafc7818c2f0c50c50365d2292b8",
+  "kind": "program"
+ },
+ {
+  "path": "/Applications/BrushBoard.app/libGLESv2.so",
+  "size": 6378568,
+  "sha256": "35dc7726655f256f95aa45d59b3046593449d9d494ac16e137412050632465e3",
+  "kind": "program"
+ },
+ {
+  "path": "/Applications/BrushBoard.app/libffmpeg.so",
+  "size": 2703664,
+  "sha256": "1156b12eeb17b772499a1b8cfe2edded44ac042523a46a1474ebbb59917642f2",
+  "kind": "program"
+ },
+ {
+  "path": "/Applications/BrushBoard.app/libvk_swiftshader.so",
+  "size": 4795488,
+  "sha256": "2dc164e264a0811b9ef15fba8b45ceef7f13f1e9b74905ee1a91a82681aa96c9",
+  "kind": "program"
+ },
+ {
+  "path": "/Applications/BrushBoard.app/libvulkan.so.1",
+  "size": 2375744,
+  "sha256": "d54f957ab4fd382a35e9ec9e411b4e29cc437c9b5d5ad82280fc54a55d44a386",
+  "kind": "program"
+ },
+ {
+  "path": "/Applications/BrushBoard.app/locales",
+  "size": 1717846,
+  "files": 3,
+  "kind": "third-party folder"
+ },
+ {
+  "path": "/Applications/BrushBoard.app/resources.pak",
+  "size": 6341846,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/Applications/BrushBoard.app/resources/models/lama.onnx",
+  "size": 92591623,
+  "sha256": "7df918ac3921d3daf0aae1d219776cf0dc4e4935f035af81841b40adcf74fdf2",
+  "kind": "large file"
+ },
+ {
+  "path": "/Applications/BrushBoard.app/resources/models/u2net_human_seg.onnx",
+  "size": 175997641,
+  "sha256": "01eb6a29a5c4d8edb30b56adad9bb3a2a0535338e480724a213e0acfd2d1c73c",
+  "kind": "large file"
+ },
+ {
+  "path": "/Applications/BrushBoard.app/resources/python-runtime",
+  "size": 542949591,
+  "files": 3835,
+  "kind": "third-party folder"
+ },
+ {
+  "path": "/Applications/BrushBoard.app/snapshot_blob.bin",
+  "size": 337714,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/Applications/BrushBoard.app/source/node_modules",
+  "size": 656629,
+  "files": 13,
+  "kind": "third-party folder"
+ },
+ {
+  "path": "/Applications/BrushBoard.app/v8_context_snapshot.bin",
+  "size": 712173,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/Applications/BrushBoard.app/vk_swiftshader_icd.json",
+  "size": 107,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/Applications/Calendar.app/resources/app.asar.paladin-orig",
+  "size": 4446764,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/Applications/Calendar.app/resources/paladin-online-accounts",
+  "size": 14480,
+  "sha256": "43440c6f80d778b0d5e8cfb38166c4ccb7c5dac3c741a2949465b5b462997472",
+  "kind": "program"
+ },
+ {
+  "path": "/Applications/Chancery DataBase.app/source/node_modules",
+  "size": 31115642,
+  "files": 33,
+  "kind": "third-party folder"
+ },
+ {
+  "path": "/Applications/Chancery Press.app/source/node_modules",
+  "size": 20041498,
+  "files": 1065,
+  "kind": "third-party folder"
+ },
+ {
+  "path": "/Applications/Chancery Sheets.app/source/node_modules",
+  "size": 37626120,
+  "files": 5345,
+  "kind": "third-party folder"
+ },
+ {
+  "path": "/Applications/Composer.app/source/node_modules",
+  "size": 41358595,
+  "files": 5300,
+  "kind": "third-party folder"
+ },
+ {
+  "path": "/Applications/Cutting Floor.app/source/node_modules",
+  "size": 44897100,
+  "files": 1165,
+  "kind": "third-party folder"
+ },
+ {
+  "path": "/Applications/Discette.app/source/node_modules",
+  "size": 94330936,
+  "files": 769,
+  "kind": "third-party folder"
+ },
+ {
+  "path": "/Applications/Mail.app/resources/app.asar.paladin-orig",
+  "size": 13123109,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/Applications/Mail.app/resources/paladin-online-accounts",
+  "size": 14480,
+  "sha256": "43440c6f80d778b0d5e8cfb38166c4ccb7c5dac3c741a2949465b5b462997472",
+  "kind": "program"
+ },
+ {
+  "path": "/Applications/Mail.app/source/out/main/index.js",
+  "size": 6213647,
+  "sha256": "3b481da7ea2b2c33b62cf405ef4ca4f5dc624ddf4a3a84599ef37477386b70f6",
+  "kind": "large file"
+ },
+ {
+  "path": "/Applications/Site Knitter.app/source/node_modules",
+  "size": 1454077,
+  "files": 149,
+  "kind": "third-party folder"
+ },
+ {
+  "path": "/Applications/Time Turner.app/resources/app/node_modules",
+  "size": 673278,
+  "files": 128,
+  "kind": "third-party folder"
+ },
+ {
+  "path": "/Applications/Time Turner.app/resources/app/src/assets/icon.png.paladin-orig",
+  "size": 34587,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/Applications/Time Turner.app/resources/app/src/main/main.js.paladin-orig",
+  "size": 6439,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/Applications/Time Turner.app/resources/app/src/main/wallpaper.js.paladin-orig",
+  "size": 1907,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/Applications/Time Turner.app/resources/app/src/renderer/app.js.paladin-orig",
+  "size": 54015,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/Applications/Time Turner.app/resources/app/src/renderer/index.html.paladin-orig",
+  "size": 19433,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/Applications/Time Turner.app/resources/app/src/renderer/styles.css.paladin-orig",
+  "size": 23927,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/Applications/Time Turner.app/resources/bin/restic",
+  "size": 30941346,
+  "sha256": "20d4142678d0d95ec11a4759def1b73fd9190abc9ca19e4b62d067c0b387e639",
+  "kind": "program"
+ },
+ {
+  "path": "/Applications/Utilities/Bluetooth Manager.app/app/node_modules",
+  "size": 901526,
+  "files": 206,
+  "kind": "third-party folder"
+ },
+ {
+  "path": "/Applications/Utilities/Bundler.app/bundler",
+  "size": 186312608,
+  "sha256": "ee99780b5878638df40bf577cfcdbc3c157b0b3581ada099a13db446f1af84d8",
+  "kind": "program"
+ },
+ {
+  "path": "/Applications/Utilities/Bundler.app/chrome-sandbox",
+  "size": 38448,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/Applications/Utilities/Bundler.app/chrome_100_percent.pak",
+  "size": 151994,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/Applications/Utilities/Bundler.app/chrome_200_percent.pak",
+  "size": 230172,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/Applications/Utilities/Bundler.app/chrome_crashpad_handler",
+  "size": 2630640,
+  "sha256": "4f4ca930b3d32dbee08b5c5ae390a48163de84e707ceff05e63ebb30d9de9cfd",
+  "kind": "program"
+ },
+ {
+  "path": "/Applications/Utilities/Bundler.app/icudtl.dat",
+  "size": 10468208,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/Applications/Utilities/Bundler.app/libEGL.so",
+  "size": 259856,
+  "sha256": "ba1a2792d5e5f2ace61e8d00223deaf93352a72d9a121f92405c61592defc6d9",
+  "kind": "program"
+ },
+ {
+  "path": "/Applications/Utilities/Bundler.app/libGLESv2.so",
+  "size": 6921120,
+  "sha256": "666f9e633da57273a695789873f2e7db4a6ad0521064772f01c9323d95c776d5",
+  "kind": "program"
+ },
+ {
+  "path": "/Applications/Utilities/Bundler.app/libffmpeg.so",
+  "size": 2691856,
+  "sha256": "8d9224c9dd1fb1fdcc8e6c3323c40f78f895258258e18e0f059f394695da95fb",
+  "kind": "program"
+ },
+ {
+  "path": "/Applications/Utilities/Bundler.app/libvk_swiftshader.so",
+  "size": 4772328,
+  "sha256": "e964b96fe2f9338728d44dbe5928bab7f891d61bdb7065da4add4e3718f406de",
+  "kind": "program"
+ },
+ {
+  "path": "/Applications/Utilities/Bundler.app/libvulkan.so.1",
+  "size": 2238408,
+  "sha256": "bbef03a65ca36bc51aae2a73700ab987524fa8cd040ce972f24e8a9c928b94cb",
+  "kind": "program"
+ },
+ {
+  "path": "/Applications/Utilities/Bundler.app/locales",
+  "size": 963654,
+  "files": 2,
+  "kind": "third-party folder"
+ },
+ {
+  "path": "/Applications/Utilities/Bundler.app/resources.pak",
+  "size": 5954613,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/Applications/Utilities/Bundler.app/resources/app/node_modules",
+  "size": 221273,
+  "files": 31,
+  "kind": "third-party folder"
+ },
+ {
+  "path": "/Applications/Utilities/Bundler.app/snapshot_blob.bin",
+  "size": 316538,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/Applications/Utilities/Bundler.app/v8_context_snapshot.bin",
+  "size": 687473,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/Applications/Utilities/Bundler.app/vk_swiftshader_icd.json",
+  "size": 107,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/Applications/Vid-View.app/resources/ffmpeg/bin/ffmpeg",
+  "size": 510168,
+  "sha256": "1231a2510d69ae93c9f6a75249c9d8fe3061c33428dbe6d340147d80eb2143ab",
+  "kind": "program"
+ },
+ {
+  "path": "/Applications/Vid-View.app/resources/ffmpeg/bin/ffprobe",
+  "size": 219280,
+  "sha256": "8ac7abb6783149e83c9a22754ce9613c41881a66113a4f38ca5aaaa216912c0a",
+  "kind": "program"
+ },
+ {
+  "path": "/Applications/Vid-View.app/resources/ffmpeg/lib/libavcodec.so.62",
+  "size": 119772336,
+  "sha256": "0263e57983d6ec36681cc91bd5e58e84d6334ed8255364cabd0ccf745bb6f034",
+  "kind": "program"
+ },
+ {
+  "path": "/Applications/Vid-View.app/resources/ffmpeg/lib/libavdevice.so.62",
+  "size": 5688608,
+  "sha256": "ec553b9eb91651795077390e33e41ed38c49df5aa38edc6c50aec0922d630f82",
+  "kind": "program"
+ },
+ {
+  "path": "/Applications/Vid-View.app/resources/ffmpeg/lib/libavfilter.so.11",
+  "size": 38492960,
+  "sha256": "20cd6a240208b3ab6d90d174cdca8b44b7033e4368dea70117341e4f071c737c",
+  "kind": "program"
+ },
+ {
+  "path": "/Applications/Vid-View.app/resources/ffmpeg/lib/libavformat.so.62",
+  "size": 26221976,
+  "sha256": "98f942b95f2cf71051b830060658a1f43f528347ff0db08804c8ed575540c8fc",
+  "kind": "program"
+ },
+ {
+  "path": "/Applications/Vid-View.app/resources/ffmpeg/lib/libavutil.so.60",
+  "size": 8613544,
+  "sha256": "d78d6563312352f1097563cf9cdd1d04add6776234a2b8b183ce99baafc2b437",
+  "kind": "program"
+ },
+ {
+  "path": "/Applications/Vid-View.app/resources/ffmpeg/lib/libswresample.so.6",
+  "size": 502728,
+  "sha256": "5d457540a58527248c7e472d73cdeeec4f30974be0746b58c7b841a96bd7f54a",
+  "kind": "program"
+ },
+ {
+  "path": "/Applications/Vid-View.app/resources/ffmpeg/lib/libswscale.so.9",
+  "size": 13397960,
+  "sha256": "dc3cc2541ef36b53bada370b43e172fda7e13691a76d9690fe4e9b1ba098e931",
+  "kind": "program"
+ },
+ {
+  "path": "/opt/paladin-seeker/app/node_modules",
+  "size": 700796,
+  "files": 149,
+  "kind": "third-party folder"
+ },
+ {
+  "path": "/opt/palos-windows/dxvk/x32/d3d11.dll",
+  "size": 8192014,
+  "sha256": "f44543cbe5c40202915a02ed6e9ac8140c3524e846ae67b01f6faa79485d1fd3",
+  "kind": "large file"
+ },
+ {
+  "path": "/opt/palos-windows/dxvk/x32/d3d9.dll",
+  "size": 7856142,
+  "sha256": "265888c31ca78dffa290c39cb7e50bfb02762590e41927906e46fb32f01497fa",
+  "kind": "large file"
+ },
+ {
+  "path": "/opt/palos-windows/dxvk/x32/dxgi.dll",
+  "size": 5877774,
+  "sha256": "abd1449dc28d536a4289c256ae7f4b6bbd15fa552792b7170c2ddece473c8bda",
+  "kind": "large file"
+ },
+ {
+  "path": "/opt/palos-windows/dxvk/x64/d3d11.dll",
+  "size": 7483406,
+  "sha256": "0a203b6255c893430f0a8461c618962df04e62aa41538d5a875b21868317cf9f",
+  "kind": "large file"
+ },
+ {
+  "path": "/opt/palos-windows/dxvk/x64/d3d9.dll",
+  "size": 7286798,
+  "sha256": "c126316f7478eaff1ad8087702eda5930f2400187b9c8b3592219c34f6632780",
+  "kind": "large file"
+ },
+ {
+  "path": "/opt/palos-windows/dxvk/x64/dxgi.dll",
+  "size": 5414926,
+  "sha256": "e3c1178eb7f0dd59f91bcfcc257549e5b9cfdb5e8508719293de7f8704f53160",
+  "kind": "large file"
+ },
+ {
+  "path": "/opt/palos-windows/prefix-template",
+  "size": 1025334974,
+  "files": 4845,
+  "kind": "third-party folder"
+ },
+ {
+  "path": "/opt/palos-windows/vkd3d/x64/d3d12core.dll",
+  "size": 5963790,
+  "sha256": "68b8bc7b32f9b1b1b0526e9e2e769731dd8da9af0f2b40f76012385b9d5721df",
+  "kind": "large file"
+ },
+ {
+  "path": "/opt/palos-windows/vkd3d/x86/d3d12core.dll",
+  "size": 6471694,
+  "sha256": "741a46b80cf538ef5133b2c35f0f2833677815ef37a6188a6b5c1db02d03fbc4",
+  "kind": "large file"
+ },
+ {
+  "path": "/opt/palos-windows/wine",
+  "size": 856045397,
+  "files": 2588,
+  "kind": "third-party folder"
+ },
+ {
+  "path": "/usr/bin/paladin-wm",
+  "size": 92904,
+  "sha256": "1e52e974a4dd7dc732b6aad8961ae12e46dd1c962b8d4787bf179fc8fb0a35fd",
+  "kind": "program"
+ },
+ {
+  "path": "/usr/lib/kibble/runtime/node_modules",
+  "size": 1261489,
+  "files": 291,
+  "kind": "third-party folder"
+ },
+ {
+  "path": "/usr/lib/paladin-appd/runtime-x86_64",
+  "size": 944632,
+  "sha256": "5e2e984a3342196b94df5ae38568677bb26e56ae13b5b9de1a2a875bb5677b0f",
+  "kind": "program"
+ },
+ {
+  "path": "/usr/lib/time-turner/bin/restic",
+  "size": 30941346,
+  "sha256": "20d4142678d0d95ec11a4759def1b73fd9190abc9ca19e4b62d067c0b387e639",
+  "kind": "program"
+ },
+ {
+  "path": "/usr/lib/time-turner/engine/node_modules",
+  "size": 673278,
+  "files": 128,
+  "kind": "third-party folder"
+ },
+ {
+  "path": "/usr/lib/time-turner/engine/src/assets/icon.png.paladin-orig",
+  "size": 34587,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/usr/lib/time-turner/engine/src/main/main.js.paladin-orig",
+  "size": 6439,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/usr/lib/time-turner/engine/src/main/wallpaper.js.paladin-orig",
+  "size": 1907,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/usr/lib/time-turner/engine/src/renderer/app.js.paladin-orig",
+  "size": 54015,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/usr/lib/time-turner/engine/src/renderer/index.html.paladin-orig",
+  "size": 19433,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/usr/lib/time-turner/engine/src/renderer/styles.css.paladin-orig",
+  "size": 23927,
+  "kind": "Electron runtime file (goes with Electron)"
+ },
+ {
+  "path": "/usr/lib/x86_64-linux-gnu/gtk-3.0/modules/libpaladin-save-sheet.so",
+  "size": 23168,
+  "sha256": "6dee8771126316a06edb9799769424beee8be9faf3749f4f717caa7902874b7a",
+  "kind": "program"
+ },
+ {
+  "path": "/usr/share/palos/welcome.mkv",
+  "size": 16491261,
+  "sha256": "43a7e40bbd48169c96c287ebc792ca97a2b128a3850c85927a2db2af1b48719c",
+  "kind": "large file"
+ }
+]

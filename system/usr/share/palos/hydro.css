@@ -1,0 +1,138 @@
+/* palOS Hydro: one look for every app's buttons and scrollbars. Added to each app page by main.js.
+   Default (the button Return presses): a blue pill. Destructive (Erase, Delete, Remove): a red pill. */
+:is(.btn.primary, .btn.suggested, .btn.default, button.primary, button.default, button.suggested, button.def:not(.danger), .sheet button.default):not(:disabled) {
+  -webkit-appearance: none !important; appearance: none !important; /* a user-origin background doesn't turn native button painting off: this does */
+  border-radius: 999px !important; color: #fff !important; border: 1px solid #0a5f9e !important;
+  background: linear-gradient(#80addf, #3f8fd6 50%, #1b7fcc 51%, #0c76c3) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 1px 2px rgba(0,0,0,.25) !important; text-shadow: 0 -1px 0 rgba(0,0,0,.25);
+}
+:is(.btn.danger, .btn.destructive, button.danger, button.destructive, button.def.danger):not(:disabled) {
+  -webkit-appearance: none !important; appearance: none !important;
+  border-radius: 999px !important; color: #fff !important; border: 1px solid #4a0000 !important;
+  background: linear-gradient(#a90000, #8c0000 50%, #7a0000 51%, #5b0000) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 1px 2px rgba(0,0,0,.3) !important; text-shadow: 0 -1px 0 rgba(0,0,0,.35);
+}
+:is(.btn.primary, .btn.suggested, .btn.default, button.primary, button.default, button.suggested, button.def):not(:disabled):hover { filter: brightness(1.06); }
+:is(.btn.primary, .btn.suggested, .btn.default, button.primary, button.default, button.suggested, button.def, .btn.danger, .btn.destructive, button.danger, button.destructive):not(:disabled):active { filter: brightness(.88); }
+:is(.btn.primary, .btn.suggested, .btn.default, button.primary, button.default, .btn.danger, button.danger):disabled { -webkit-appearance: none !important; appearance: none !important; border-radius: 999px !important; }
+
+/* scrollbars: a 10 px blue Hydro capsule in a 12 px light groove */
+::-webkit-scrollbar { width: 12px !important; height: 12px !important; background: transparent; }
+::-webkit-scrollbar-track { background: linear-gradient(90deg, rgba(0,0,0,.06), rgba(0,0,0,.02)); }
+::-webkit-scrollbar-thumb { border-radius: 6px !important; border: 1px solid transparent !important; min-height: 32px; min-width: 32px; background-clip: padding-box !important;
+  background-color: #2f86d0 !important; background-image: linear-gradient(90deg, #0c76c3, #80addf 45%, #3f8fd6 60%, #0c76c3) !important; }
+::-webkit-scrollbar-thumb:horizontal { background-image: linear-gradient(#0c76c3, #80addf 45%, #3f8fd6 60%, #0c76c3) !important; }
+::-webkit-scrollbar-thumb:hover { background-color: #1b7fcc !important; }
+::-webkit-scrollbar-corner { background: transparent; }
+.menu::-webkit-scrollbar, .kbm::-webkit-scrollbar { display: none; }
+
+/* ---------------------------------------------------------------- the rest of Hydro: every app's controls */
+:root { accent-color: #0c76c3; }
+::selection { background: #b5d5ff; color: inherit; }
+:focus-visible { outline: 3px solid rgba(91,155,213,.55); outline-offset: 1px; }
+
+/* checkboxes: a white rounded square that turns into a blue gel with a white tick */
+input[type=checkbox] { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; margin: 0 4px 0 0; vertical-align: -2px; flex: none;
+  border-radius: 3px; border: 1px solid #8e97a2; background: linear-gradient(#ffffff, #e9edf1); box-shadow: inset 0 1px 1px rgba(0,0,0,.08); position: relative; }
+input[type=checkbox]:checked, input[type=checkbox]:indeterminate { border-color: #0a5f9e; background: linear-gradient(#80addf, #3f8fd6 50%, #1b7fcc 51%, #0c76c3); }
+input[type=checkbox]:checked::after { content: ''; position: absolute; left: 4px; top: 1px; width: 4px; height: 8px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(42deg); }
+input[type=checkbox]:indeterminate::after { content: ''; position: absolute; left: 3px; right: 3px; top: 5.5px; height: 2px; background: #fff; border-radius: 1px; }
+
+/* radio buttons: a white dot in a blue gel bead */
+input[type=radio] { -webkit-appearance: none; appearance: none; width: 15px; height: 15px; margin: 0 4px 0 0; vertical-align: -3px; flex: none;
+  border-radius: 50%; border: 1px solid #8e97a2; background: linear-gradient(#ffffff, #e9edf1); box-shadow: inset 0 1px 1px rgba(0,0,0,.08); position: relative; }
+input[type=radio]:checked { border-color: #0a5f9e; background: linear-gradient(#80addf, #3f8fd6 50%, #1b7fcc 51%, #0c76c3); }
+input[type=radio]:checked::after { content: ''; position: absolute; left: 4px; top: 4px; width: 5px; height: 5px; border-radius: 50%; background: #fff; }
+input[type=checkbox]:disabled, input[type=radio]:disabled { opacity: .5; }
+
+/* sliders: a grooved track that fills blue up to a glassy round knob */
+input[type=range] { -webkit-appearance: none; appearance: none; height: 18px; background: transparent; }
+input[type=range]::-webkit-slider-runnable-track { height: 5px; border-radius: 3px; background: linear-gradient(#b9c0c8, #dfe3e7); box-shadow: inset 0 1px 2px rgba(0,0,0,.3); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 17px; height: 17px; margin-top: -6px; border-radius: 50%;
+  background: radial-gradient(circle at 50% 30%, #fff 0, #e4ecf5 45%, #aebfd2 100%); border: 1px solid rgba(0,0,0,.35); box-shadow: 0 1px 2px rgba(0,0,0,.35); }
+input[type=range]:active::-webkit-slider-thumb { background: radial-gradient(circle at 50% 30%, #d9ecff 0, #80addf 55%, #0c76c3 100%); }
+
+/* progress bars: the blue barber pole */
+progress { -webkit-appearance: none; appearance: none; height: 10px; border-radius: 5px; overflow: hidden; border: 1px solid #8e97a2; background: linear-gradient(#dfe3e7, #f7f8f9); }
+progress::-webkit-progress-bar { background: transparent; }
+progress::-webkit-progress-value { border-radius: 5px; background: repeating-linear-gradient(-45deg, rgba(255,255,255,.22) 0 6px, transparent 6px 12px), linear-gradient(#80addf, #3f8fd6 50%, #1b7fcc 51%, #0c76c3); }
+
+/* pop-up menus (select): a pill with the blue double arrow */
+select:not([multiple]):not([size]) { -webkit-appearance: none; appearance: none; border-radius: 6px; border: 1px solid #9aa3ad; padding: 2px 26px 2px 9px; min-height: 22px;
+  background: linear-gradient(#80addf, #0c76c3) right / 18px 100% no-repeat, linear-gradient(#ffffff, #e9edf1);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='22'%3E%3Cpath d='M5 9l4-4 4 4M5 13l4 4 4-4' fill='none' stroke='%23fff' stroke-width='1.6'/%3E%3C/svg%3E"), linear-gradient(#80addf, #0c76c3), linear-gradient(#ffffff, #e9edf1);
+  background-position: right center, right center, 0 0; background-size: 18px 100%, 18px 100%, 100% 100%; background-repeat: no-repeat; }
+select option:checked { background: #0c76c3; color: #fff; }
+
+/* text fields: the soft inset; search fields: an oval with a thin blue line */
+input[type=search] { border-radius: 999px !important; border: 1px solid #6aa3d8 !important; padding-left: 10px !important; padding-right: 10px !important; }
+
+/* the other buttons in a dialog, sheet or a window's button row: a white gel pill */
+:is(.sheet, .ask, .acts, .actions, .buttons, .foot, #foot, footer, dialog, .kbs) :is(button, .btn):not(.primary):not(.suggested):not(.default):not(.def):not(.danger):not(.destructive):not(.icon):not(.flat):not(.link):not(.disc):not(:disabled) {
+  -webkit-appearance: none !important; appearance: none !important; border-radius: 999px !important; border: 1px solid #9aa3ad !important; color: #1f2328 !important;
+  background: linear-gradient(#ffffff, #f1f3f5 50%, #e6e9ed 51%, #f4f6f8) !important; box-shadow: inset 0 1px 0 #fff, 0 1px 1.5px rgba(0,0,0,.18) !important;
+}
+:is(.sheet, .ask, .acts, .actions, .buttons, .foot, #foot, footer, dialog, .kbs) :is(button, .btn):not(.primary):not(.suggested):not(.default):not(.def):not(.danger):not(.destructive):not(.icon):not(.flat):not(.link):not(.disc):not(:disabled):active { background: linear-gradient(#d4dbe3, #e6eaee) !important; }
+
+/* ---------------------------------------------------------------- Dark Mode: gunmetal
+   The same brushed metal as the light look, stained dark: blued steel chrome, deep blue-gray surfaces,
+   Hydro blue for what's selected. One palette for every app (kit apps, Seeker and the rest). */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* palOS kit apps */
+    --bg: #262e36 !important; --side: #222930 !important; --card: #2c343c !important; --field: #1b2127 !important;
+    --text: #e4e9ee !important; --dim: #9eaab6 !important; --faint: #6f7b87 !important;
+    --line: #36404a !important; --border: #414c57 !important; --hover: rgba(160, 190, 220, .07) !important;
+    --accent: #2f7fc1 !important; --accent-hover: #4b93cf !important; --accent-soft: rgba(47, 127, 193, .24) !important; --ring: rgba(91, 155, 213, .55) !important;
+    --track: #3a4550 !important; --knob: #dfe6ec !important;
+    /* Seeker */
+    --pl-accent: #2f7fc1 !important; --pl-accent-hover: #4b93cf !important; --pl-accent-soft: rgba(47, 127, 193, .24) !important; --pl-ring: rgba(91, 155, 213, .55) !important;
+    --pl-bg: #262e36 !important; --pl-view: #1e252c !important; --pl-side: #222930 !important; --pl-side-in: #252c33 !important; --pl-stripe: #222930 !important;
+    --pl-text: #e4e9ee !important; --pl-dim: #9eaab6 !important; --pl-faint: #6f7b87 !important;
+    --pl-border: #3a4550 !important; --pl-border-soft: #303942 !important;
+    --pl-chrome-top: #46525d !important; --pl-chrome-bot: #333d47 !important; --pl-chrome-line: #12181d !important;
+    --pl-chrome-in-top: #353e47 !important; --pl-chrome-in-bot: #2e363e !important; --pl-chrome-in-line: #161c21 !important;
+    --pl-btn: #3a4550 !important; --pl-btn-border: #161c21 !important; --pl-field: #1b2127 !important;
+    --pl-menu: rgba(40, 48, 56, .97) !important; --pl-bar: rgba(30, 38, 46, .76) !important; --pl-bar-solid: #232b33 !important;
+    --pl-sel-inactive: #3d4853 !important; --pl-sel-inactive-text: #e4e9ee !important;
+    --pl-scroll: #55616d !important; --pl-scroll-hover: #4b93cf !important;
+  }
+  ::selection { background: #2f6aa0; color: #fff; }
+  ::-webkit-scrollbar-track { background: linear-gradient(90deg, rgba(0,0,0,.25), rgba(0,0,0,.12)); }
+  input[type=checkbox], input[type=radio] { border-color: #11161b; background: linear-gradient(#56626e, #3c4651); box-shadow: inset 0 1px 0 rgba(255,255,255,.12); }
+  input[type=checkbox]:checked, input[type=radio]:checked, input[type=checkbox]:indeterminate { border-color: #0a4d80; background: linear-gradient(#6d9fd6, #2f7fc1 50%, #1a6db0 51%, #0c5f9f); }
+  input[type=range]::-webkit-slider-runnable-track { background: linear-gradient(#141a1f, #2a333c); }
+  input[type=range]::-webkit-slider-thumb { background: radial-gradient(circle at 50% 30%, #e9eef3 0, #a9b6c2 55%, #6c7a87 100%); border-color: #0d1216; }
+  progress { border-color: #11161b; background: linear-gradient(#161c21, #2a333c); }
+  select:not([multiple]):not([size]) { border-color: #11161b; color: #e4e9ee;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='22'%3E%3Cpath d='M5 9l4-4 4 4M5 13l4 4 4-4' fill='none' stroke='%23fff' stroke-width='1.6'/%3E%3C/svg%3E"), linear-gradient(#6d9fd6, #1a6db0), linear-gradient(#56626e, #3c4651); }
+  :is(.sheet, .ask, .acts, .actions, .buttons, .foot, #foot, footer, dialog, .kbs) :is(button, .btn):not(.primary):not(.suggested):not(.default):not(.def):not(.danger):not(.destructive):not(.icon):not(.flat):not(.link):not(.disc):not(:disabled) {
+    border-color: #11161b !important; color: #e9eef2 !important; background: linear-gradient(#66727e, #4b5661 50%, #414c57 51%, #4f5a65) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 1px 1.5px rgba(0,0,0,.4) !important; }
+  .kbs > div { background: #2c343c !important; color: #e4e9ee !important; }
+}
+
+/* ---------------------------------------------------------------- Hydro for every ordinary button
+   Text buttons anywhere (not only in a dialog's button row): the white gel pill (gunmetal in Dark Mode).
+   Left alone: buttons an app has styled as something else (icons, tabs, toolbar and sidebar items, links),
+   which give themselves a class or a role; and buttons that hold only a picture. */
+:is(button:not([class]), button.btn, .btn:not(button), input[type=button], input[type=submit], input[type=reset], button.secondary, button.small):not(.primary):not(.suggested):not(.default):not(.danger):not(.destructive):not(.icon):not(.flat):not(.link):not(.nav):not(.tb):not(.tab):not(.seg):not(:disabled):not([role=tab]):not([role=menuitem]):not([role=menuitemradio]):not([role=option]):not([role=radio]):not([role=switch]):not([aria-pressed]):not(:has(> svg:only-child)):not(:has(> img:only-child)) {
+  -webkit-appearance: none !important; appearance: none !important; border-radius: 999px !important; border: 1px solid #9aa3ad !important; color: #1f2328 !important;
+  background: linear-gradient(#ffffff, #f1f3f5 50%, #e6e9ed 51%, #f4f6f8) !important; box-shadow: inset 0 1px 0 #fff, 0 1px 1.5px rgba(0,0,0,.18) !important;
+}
+:is(button:not([class]), button.btn, .btn:not(button), input[type=button], input[type=submit], input[type=reset], button.secondary, button.small):not(.primary):not(.suggested):not(.default):not(.danger):not(.destructive):not(.icon):not(.flat):not(.link):not(.nav):not(.tb):not(.tab):not(.seg):not(:disabled):not([role=tab]):not([role=menuitem]):not([role=menuitemradio]):not([role=option]):not([role=radio]):not([role=switch]):not([aria-pressed]):not(:has(> svg:only-child)):not(:has(> img:only-child)):active { background: linear-gradient(#d4dbe3, #e6eaee) !important; }
+@media (prefers-color-scheme: dark) {
+  :is(button:not([class]), button.btn, .btn:not(button), input[type=button], input[type=submit], input[type=reset], button.secondary, button.small):not(.primary):not(.suggested):not(.default):not(.danger):not(.destructive):not(.icon):not(.flat):not(.link):not(.nav):not(.tb):not(.tab):not(.seg):not(:disabled):not([role=tab]):not([role=menuitem]):not([role=menuitemradio]):not([role=option]):not([role=radio]):not([role=switch]):not([aria-pressed]):not(:has(> svg:only-child)):not(:has(> img:only-child)) {
+    border-color: #11161b !important; color: #e9eef2 !important; background: linear-gradient(#66727e, #4b5661 50%, #414c57 51%, #4f5a65) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 1px 1.5px rgba(0,0,0,.4) !important; }
+  :is(button:not([class]), button.btn, .btn:not(button), input[type=button], input[type=submit], input[type=reset], button.secondary, button.small):not(.primary):not(.suggested):not(.default):not(.danger):not(.destructive):not(.icon):not(.flat):not(.link):not(.nav):not(.tb):not(.tab):not(.seg):not(:disabled):not([role=tab]):not([role=menuitem]):not([role=menuitemradio]):not([role=option]):not([role=radio]):not([role=switch]):not([aria-pressed]):not(:has(> svg:only-child)):not(:has(> img:only-child)):active { background: linear-gradient(#3e4852, #4b5661) !important; }
+}
+
+/* disabled buttons keep the Hydro pill: a pale gel with grey writing (not a flat grey slab) */
+:is(button:not([class]), button.btn, .btn:not(button), button.primary, button.default, button.suggested, button.danger, button.def, input[type=button], input[type=submit], input[type=reset], button.secondary, button.small):not(.icon):not(.flat):not(.link):not(.nav):not(.tb):not(.tab):not(.seg):not([role=tab]):not([role=menuitem]):not([role=option]):not([role=radio]):not([role=switch]):not(:has(> svg:only-child)):not(:has(> img:only-child)):disabled {
+  -webkit-appearance: none !important; appearance: none !important; border-radius: 999px !important; border: 1px solid #b8c0c8 !important; color: #8d959e !important;
+  background: linear-gradient(#fbfcfd, #f2f4f6 50%, #eaedf0 51%, #f3f5f7) !important; box-shadow: inset 0 1px 0 #fff, 0 1px 1px rgba(0,0,0,.08) !important;
+  text-shadow: none !important; opacity: 1 !important; filter: none !important;
+}
+:is(button:not([class]), button.btn, .btn:not(button), button.primary, button.default, button.suggested, button.danger, button.def, input[type=button], input[type=submit], input[type=reset], button.secondary, button.small):not(.icon):not(.flat):not(.link):not(.nav):not(.tb):not(.tab):not(.seg):not([role=tab]):not([role=menuitem]):not([role=option]):not([role=radio]):not([role=switch]):not(:has(> svg:only-child)):not(:has(> img:only-child)):disabled svg { opacity: .7; } :disabled svg :is(path, rect, circle) { stroke: #8d959e !important; }
+@media (prefers-color-scheme: dark) {
+  :is(button:not([class]), button.btn, .btn:not(button), button.primary, button.default, button.suggested, button.danger, button.def, input[type=button], input[type=submit], input[type=reset], button.secondary, button.small):not(.icon):not(.flat):not(.link):not(.nav):not(.tb):not(.tab):not(.seg):not([role=tab]):not([role=menuitem]):not([role=option]):not([role=radio]):not([role=switch]):not(:has(> svg:only-child)):not(:has(> img:only-child)):disabled { border-color: #1d2329 !important; color: #7b858f !important; background: linear-gradient(#4a545e, #3d464f 50%, #363e46 51%, #3f4851) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.08) !important; }
+}

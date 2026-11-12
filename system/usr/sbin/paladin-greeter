@@ -1,0 +1,34 @@
+#!/bin/sh
+# Paladin login screen (Kibble: WebKit, no GTK). If it can't start (or quits straight away), the
+# earlier login screen, then LightDM's standard greeter take over, so there is always a way to log in.
+export XCURSOR_THEME=Paladin XCURSOR_SIZE=24 NO_AT_BRIDGE=1 PALOS_NO_THEME=1
+export HOME="${HOME:-/var/lib/lightdm}" XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-/var/lib/lightdm/.config}"
+command -v numlockx >/dev/null 2>&1 && numlockx on
+# the display scale the last person chose (Settings → Displays) suits the login screen too
+export PALOS_SCALE=1   # the login screen is laid out for the screen as it is
+START=$(date +%s)
+# LightDM ends the login screen with SIGTERM once the session starts: pass it on, so the login screen's
+# window never stays on top of the desktop (that looked like a frozen login)
+/usr/lib/kibble/kibble /usr/share/paladin-greeter/app &
+PID=$!
+trap 'kill -TERM $PID 2>/dev/null; sleep 1; kill -KILL $PID 2>/dev/null; pkill -KILL -f "greeterd.py" 2>/dev/null; exit 0' TERM INT HUP
+wait $PID
+CODE=$?
+trap - TERM INT HUP
+[ "$CODE" -eq 0 ] && exit 0
+logger -t paladin-greeter "the login screen stopped (code $CODE)" 2>/dev/null || true
+if [ $(( $(date +%s) - START )) -lt 30 ]; then
+  # A computer that has no account yet can't use a plain login screen: run setup instead.
+  if [ -e /var/lib/palos/firstboot ] && ! awk -F: '$3 >= 1000 && $3 < 60000 { found = 1 } END { exit !found }' /etc/passwd; then
+    PALOS_SETUP_FROM="login screen launcher" /usr/lib/palos-firstboot/run-setup
+    [ -e /var/lib/palos/firstboot ] || exit 0
+  fi
+  if python3 -c 'import gi; gi.require_version("Gtk", "3.0")' 2>/dev/null && [ -f /usr/share/paladin-greeter/greeter.py ]; then
+    echo "paladin-greeter: falling back to the previous login screen" >&2
+    GTK_THEME=Paladin /usr/bin/python3 /usr/share/paladin-greeter/greeter.py && exit 0
+  fi
+  for g in /usr/sbin/lightdm-gtk-greeter /usr/sbin/slick-greeter; do
+    [ -x "$g" ] && exec "$g"
+  done
+fi
+exit "$CODE"

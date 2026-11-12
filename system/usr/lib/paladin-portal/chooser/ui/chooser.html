@@ -1,0 +1,13 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; img-src 'self' file: data:; style-src 'self' file: 'unsafe-inline'; script-src 'self' file:">
+<!-- Seeker's sheet, as every palOS app shows it -->
+<link rel="stylesheet" href="file:///opt/paladin-seeker/app/ui/sheet.css">
+<style>
+  /* the window is only as big as the sheet: no dimming, the shadow falls in the see-through margin */
+  #scrim, #scrim.on { background: transparent; }
+  #wrap { max-width: none; }
+</style></head>
+<body><div id="scrim"><div id="wrap"><div id="sheet"></div></div></div>
+<script src="file:///opt/paladin-seeker/app/ui/sheet.js"></script>
+<script src="fit.js"></script></body></html>

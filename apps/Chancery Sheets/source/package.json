@@ -1,0 +1,21 @@
+{
+  "name": "chancery-sheets",
+  "productName": "Chancery Sheets",
+  "version": "1.0.0",
+  "description": "Chancery Sheets, the spreadsheet application of the Chancery office suite, with XLSX, XLSM, XLS, ODS, CSV, TSV and SPST support",
+  "main": "src/main/main.js",
+  "author": {
+    "name": "Joe Lucas",
+    "email": "joe.lucas0413@gmail.com"
+  },
+  "homepage": "https://example.invalid/sheets",
+  "license": "GPL-3.0-or-later",
+  "dependencies": {
+    "chart.js": "4.5.1",
+    "exceljs": "4.4.0",
+    "hyperformula": "3.4.0",
+    "jszip": "3.10.2",
+    "xlsx": "0.18.5"
+  },
+  "desktopName": "chancery-sheets.desktop"
+}

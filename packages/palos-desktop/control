@@ -1,0 +1,16 @@
+Package: palos-desktop
+Status: install ok installed
+Priority: optional
+Section: metapackages
+Installed-Size: 24
+Maintainer: palOS <joe.lucas0413@gmail.com>
+Architecture: all
+Version: 27.9.0
+Depends: paladin-session (>= 1.6.0), paladin-seeker (>= 1.8.0), paladin-dock (>= 2.6.0), paladin-settings (>= 1.4.0), paladin-login (>= 1.3.1), paladin-boot (>= 1.1.1), palos-icons (>= 1.3.0), palos-file-icons (>= 27.8.0), palos-branding (>= 27.1.0), palos-store (>= 1.2.2), palos-firstboot (>= 1.4.0), palos-windows (>= 27.1.0), palos-fen (>= 1.0.2), palos-notes (>= 1.1.0), palos-snap-booth (>= 1.1.0), palos-monitor (>= 1.0.2), palos-screenshot (>= 27.0.0), paladin-save-sheets (>= 1.0.0), palos-app-sandbox (>= 27.9.0), palos-scanner (>= 1.0.0), palos-bluetooth (>= 1.0.0), palos-network (>= 1.0.0), palos-sounds (>= 27.8.0), plocate, libarchive-tools, unar
+Recommends: palos-windows, system-config-printer
+Description: palOS desktop (everything palOS is made of)
+ Installs the whole palOS desktop: the session, Seeker, the Dock, Settings,
+ the login and boot screens, the palOS Store, first-boot setup, the palOS
+ icons and the palOS name, the Nave browser, the Fen viewer, Bundler, plus the
+ palOS suite of apps (Chancery Writer, Sheets, Presentation, DataBase and Press
+ among them).

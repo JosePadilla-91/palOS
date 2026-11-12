@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=palOS Setup
+Comment=Set up palOS for the first time
+Exec=/usr/lib/palos-firstboot/session
+NoDisplay=true

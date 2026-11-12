@@ -1,0 +1,19 @@
+Package: paladin-login
+Status: install ok installed
+Priority: optional
+Section: x11
+Maintainer: Paladin Maintainer <joe.lucas0413@gmail.com>
+Architecture: all
+Version: 1.3.1
+Depends: lightdm, python3, python3-gi, python3-gi-cairo, gir1.2-gtk-3.0, gir1.2-lightdm-1, accountsservice
+Recommends: numlockx, paladin-session, fonts-noto-core
+Conffiles:
+ /etc/lightdm/lightdm.conf.d/50-paladin.conf 7a0fb373ec3743e7a04c458ed341ad08
+ /etc/paladin-greeter.conf 080ee7897c8fd2c9901c3b62299f3b7c
+Description: Paladin login screen
+ A LightDM greeter in the Paladin look: the white shield, everyone's picture,
+ a password box, session choice and Sleep / Restart / Shut Down. It follows
+ each person's Dark Mode choice and desktop picture. Makes LightDM the login
+ manager; GDM stays installed, and removing this package switches back to it.
+ If the Paladin greeter ever fails to start, LightDM's standard greeter is
+ shown instead, so there is always a way to log in.

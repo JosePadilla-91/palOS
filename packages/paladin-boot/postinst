@@ -1,0 +1,15 @@
+#!/bin/sh
+set -e
+T=/usr/share/plymouth/themes/paladin/paladin.plymouth
+if [ "$1" = "configure" ]; then
+  update-alternatives --install /usr/share/plymouth/themes/default.plymouth default.plymouth "$T" 200 >/dev/null
+  update-alternatives --set default.plymouth "$T" >/dev/null
+  if command -v update-initramfs >/dev/null 2>&1; then
+    echo "paladin-boot: updating the boot image (this takes a moment)…" >&2
+    update-initramfs -u >/dev/null 2>&1 || echo "paladin-boot: run 'sudo update-initramfs -u' to finish." >&2
+  fi
+  if [ -r /etc/default/grub ] && ! grep -q '^GRUB_CMDLINE_LINUX_DEFAULT=.*splash' /etc/default/grub; then
+    echo "paladin-boot: the boot screen needs 'splash' in GRUB_CMDLINE_LINUX_DEFAULT (/etc/default/grub), then 'sudo update-grub'." >&2
+  fi
+fi
+exit 0

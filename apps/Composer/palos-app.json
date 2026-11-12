@@ -1,0 +1,10 @@
+{
+ "name": "Composer",
+ "id": "composer",
+ "command": "composer",
+ "icon": "composer",
+ "version": "1.0.1",
+ "folder": "",
+ "kind": "shared",
+ "runtime": "electron-44"
+}

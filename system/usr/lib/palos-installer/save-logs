@@ -1,0 +1,10 @@
+#!/bin/sh
+# save-logs ROOT: keep the installer's log on the new system
+ROOT="$1"
+D="$ROOT/var/log/installer"
+mkdir -p "$D"
+[ -f /var/log/palos-installer.log ] && cp /var/log/palos-installer.log "$D/"
+cp /var/log/casper.log "$D/casper.log" 2>/dev/null
+cp /cdrom/.disk/info "$D/media-info" 2>/dev/null
+chmod 600 "$D"/* 2>/dev/null
+exit 0

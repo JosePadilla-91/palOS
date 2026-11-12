@@ -1,0 +1,11 @@
+{
+ "name": "Textpad",
+ "id": "palos-textpad",
+ "command": "textpad",
+ "icon": "palos-textpad",
+ "version": "1.0.0",
+ "folder": "",
+ "kind": "shared",
+ "runtime": "kibble",
+ "fallback": "electron-44"
+}

@@ -1,0 +1,7 @@
+#!/bin/sh
+set -e
+if [ "$1" = "upgrade" ] && command -v apparmor_parser >/dev/null 2>&1 && [ -f /etc/apparmor.d/paladin-dock ]; then
+  apparmor_parser -R /etc/apparmor.d/paladin-dock 2>/dev/null || true
+fi
+dpkg-maintscript-helper rm_conffile /etc/apparmor.d/paladin-dock 2.0.0~ -- "$@"
+exit 0

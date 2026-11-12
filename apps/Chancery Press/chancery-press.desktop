@@ -1,0 +1,19 @@
+[Desktop Entry]
+X-AppImage-Name=Chancery Press
+Name=Chancery Press
+GenericName=Desktop Publishing
+GenericName[fr]=Mise en page
+GenericName[fr_CA]=Mise en page
+Comment=Page layout for newspapers, pamphlets, flyers and posters
+Comment[fr]=Mise en page de journaux, de dépliants, de prospectus et d’affiches
+Comment[fr_CA]=Mise en page de journaux, de dépliants, de prospectus et d’affiches
+Keywords=publisher;newspaper;poster;layout;pamphlet;flyer;
+Keywords[fr]=publication;journal;affiche;mise en page;dépliant;prospectus;
+Exec=AppRun %U
+Terminal=false
+Type=Application
+Icon=chancery-press
+StartupWMClass=chancery-press
+MimeType=application/x-chancery-press;
+Categories=Office;Publishing;
+X-AppImage-Version=1.0

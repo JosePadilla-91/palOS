@@ -1,0 +1,68 @@
+#!/bin/sh
+# Paladin screen lock.
+#
+# Locking shows the same Paladin login screen you see when signing in (your picture, your name,
+# a password field), so locking and logging in look and behave alike. LightDM does the locking:
+# `dm-tool lock` puts the login screen on its own console and your session waits behind it.
+#
+# This script stays running until you are back in your session, because xss-lock treats "script
+# finished" as "unlocked". If the login screen can't be started (no LightDM seat, remote session,
+# greeter missing), it falls back to xsecurelock, a plain password prompt, so a lock request
+# is never silently ignored.
+
+LOG="${XDG_CACHE_HOME:-$HOME/.cache}/paladin-lock.log"
+mkdir -p "$(dirname "$LOG")" 2>/dev/null
+say() { printf '%s paladin-lock: %s\n' "$(date +%T)" "$*" >>"$LOG" 2>/dev/null; }
+
+# tell the session the screen was unlocked (the volume keeper puts back a volume the computer reset meanwhile)
+unlocked() { touch "${XDG_RUNTIME_DIR:-/tmp}/palos-unlocked" 2>/dev/null; }
+
+session_active() {
+  [ -n "$XDG_SESSION_ID" ] || return 1
+  [ "$(loginctl show-session "$XDG_SESSION_ID" -p Active --value 2>/dev/null)" = "yes" ]
+}
+
+lock_with_login_screen() {
+  [ -n "$XDG_SEAT_PATH" ] || return 1
+  command -v dm-tool >/dev/null 2>&1 || return 1
+  [ -x /usr/share/paladin-greeter/greeter.py ] || [ -e /usr/share/xgreeters/paladin-greeter.desktop ] || return 1
+  dm-tool lock >>"$LOG" 2>&1 || return 1
+  # give LightDM a moment to switch consoles; if we are still the active session, it didn't lock
+  i=0
+  while session_active && [ "$i" -lt 30 ]; do sleep 0.1; i=$((i + 1)); done
+  session_active && return 1
+  say "locked with the login screen"
+  # wait here until the session is active again (the password was entered)
+  while ! session_active; do sleep 1; done
+  say "unlocked"
+  unlocked
+  return 0
+}
+
+lock_with_prompt() {
+  say "using the password-prompt lock"
+  export XSECURELOCK_PASSWORD_PROMPT=asterisks
+  export XSECURELOCK_SHOW_HOSTNAME=0
+  export XSECURELOCK_SHOW_USERNAME=1
+  export XSECURELOCK_SHOW_DATETIME=1
+  export XSECURELOCK_DATETIME_FORMAT='%A %B %e  %l:%M %p'
+  export XSECURELOCK_FONT="${XSECURELOCK_FONT:-Noto Sans:size=13}"
+  export XSECURELOCK_AUTH_BACKGROUND_COLOR="#1d1f26"
+  export XSECURELOCK_BLANK_TIMEOUT=30
+  command -v xsecurelock >/dev/null 2>&1 || return 1
+  xsecurelock "$@" || return 1
+  unlocked
+}
+
+# Only one lock at a time (the screen-timeout and the Lock menu can both ask)
+exec 9>"${XDG_RUNTIME_DIR:-/tmp}/paladin-lock.lock"
+# a second request while locked just waits for the first lock to end
+flock -n 9 || { flock 9; exit 0; }
+
+lock_with_login_screen && exit 0
+lock_with_prompt "$@" && exit 0
+
+# Neither worked. Don't leave the computer open: end the session's screen by blanking it and say why.
+say "no lock available"
+command -v notify-send >/dev/null 2>&1 && notify-send -u critical "Screen couldn’t be locked" "Install xsecurelock or check the login screen, then try again."
+exit 1

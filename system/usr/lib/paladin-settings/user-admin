@@ -1,0 +1,146 @@
+#!/usr/bin/python3
+"""Paladin Settings: manage other user accounts. Run through pkexec (asks for an administrator password).
+
+  user-admin add NAME FULLNAME standard|admin      (password on standard input)
+  user-admin remove NAME keep|delete               (keep or delete the home folder)
+  user-admin set-admin NAME yes|no
+  user-admin computer-name "NAME"                  (what the computer is called: "Joey's pal")
+"""
+import grp
+import os
+import pwd
+import re
+import subprocess
+import sys
+import unicodedata
+
+NAME = re.compile(r'^[a-z_][a-z0-9_-]{0,31}$')
+ADMIN = ['sudo', 'adm', 'lpadmin']
+
+
+def fail(msg, code=1):
+    print(msg, file=sys.stderr)
+    sys.exit(code)
+
+
+def caller():
+    uid = os.environ.get('PKEXEC_UID')
+    try:
+        return pwd.getpwuid(int(uid)).pw_name if uid else None
+    except (KeyError, ValueError):
+        return None
+
+
+def regular(name):
+    try:
+        u = pwd.getpwnam(name)
+    except KeyError:
+        fail('There is no account called %s.' % name)
+    if u.pw_uid < 1000 or u.pw_uid >= 60000:
+        fail('%s is a system account and can\'t be changed here.' % name)
+    return u
+
+
+def admins():
+    try:
+        return set(grp.getgrnam('sudo').gr_mem)
+    except KeyError:
+        return set()
+
+
+def run(*argv, **kw):
+    r = subprocess.run(argv, capture_output=True, text=True, **kw)
+    if r.returncode != 0:
+        fail((r.stderr or r.stdout).strip().splitlines()[-1] if (r.stderr or r.stdout).strip() else 'That didn\'t work.')
+    return r
+
+
+def hostname_from(name):
+    """The network name for a computer name: "Joey's pal" -> "joeys-pal"."""
+    t = unicodedata.normalize('NFKD', name).encode('ascii', 'ignore').decode()
+    t = re.sub(r"['\u2019`]", '', t.lower())
+    return re.sub(r'[^a-z0-9]+', '-', t).strip('-')[:63].strip('-') or 'palos'
+
+
+def computer_name(pretty):
+    pretty = re.sub(r'\s+', ' ', pretty.replace('\x00', '')).strip()[:63]
+    if not re.search(r'\w', pretty):
+        fail('Use letters or numbers in the name.')
+    host = hostname_from(pretty)
+    run('hostnamectl', 'set-hostname', '--static', '--transient', host)
+    run('hostnamectl', 'set-hostname', '--pretty', pretty)
+    try:
+        lines = [ln for ln in open('/etc/hosts').read().splitlines() if not re.match(r'^127\.0\.1\.1\s', ln)]
+    except OSError:
+        lines = ['127.0.0.1\tlocalhost']
+    out, done = [], False
+    for ln in lines:
+        out.append(ln)
+        if not done and re.match(r'^127\.0\.0\.1\s', ln):
+            out.append('127.0.1.1\t' + host)
+            done = True
+    if not done:
+        out.insert(0, '127.0.1.1\t' + host)
+    with open('/etc/hosts.tmp', 'w') as f:
+        f.write('\n'.join(out) + '\n')
+    os.replace('/etc/hosts.tmp', '/etc/hosts')
+    print(host)
+
+
+def main():
+    if os.geteuid() != 0:
+        fail('This needs administrator rights.')
+    if len(sys.argv) < 3:
+        fail(__doc__, 2)
+    op, name = sys.argv[1], sys.argv[2]
+    if op == 'computer-name':
+        computer_name(name)
+        return
+    if not NAME.match(name):
+        fail('Account names use lowercase letters, numbers, - and _, and start with a letter.')
+    if op == 'add':
+        full = re.sub(r'[:,\n]', ' ', sys.argv[3] if len(sys.argv) > 3 else '').strip()[:80]
+        kind = sys.argv[4] if len(sys.argv) > 4 else 'standard'
+        password = sys.stdin.readline().rstrip('\n')
+        if not password:
+            fail('Choose a password for the new account.')
+        try:
+            pwd.getpwnam(name)
+            fail('There is already an account called %s.' % name)
+        except KeyError:
+            pass
+        run('adduser', '--disabled-password', '--comment', full or name, name)
+        run('chpasswd', input='%s:%s\n' % (name, password))
+        # the camera, sound and graphics, for every account
+        for g in ('video', 'audio', 'render'):
+            subprocess.run(['usermod', '-aG', g, name], capture_output=True)
+        if kind == 'admin':
+            for g in ADMIN:
+                subprocess.run(['usermod', '-aG', g, name], capture_output=True)
+    elif op == 'remove':
+        regular(name)
+        if name == caller():
+            fail('You can\'t remove the account you are signed in to.')
+        if name in admins() and len(admins() - {name}) == 0:
+            fail('This is the only administrator account.')
+        subprocess.run(['pkill', '-KILL', '-u', name], capture_output=True)
+        args = ['deluser', name]
+        if len(sys.argv) > 3 and sys.argv[3] == 'delete':
+            args.insert(1, '--remove-home')
+        run(*args)
+    elif op == 'set-admin':
+        regular(name)
+        make = len(sys.argv) > 3 and sys.argv[3] == 'yes'
+        if not make and name in admins() and len(admins() - {name}) == 0:
+            fail('At least one account has to stay an administrator.')
+        if make:
+            for g in ADMIN:
+                subprocess.run(['usermod', '-aG', g, name], capture_output=True)
+        else:
+            run('gpasswd', '-d', name, 'sudo')
+    else:
+        fail(__doc__, 2)
+
+
+if __name__ == '__main__':
+    main()

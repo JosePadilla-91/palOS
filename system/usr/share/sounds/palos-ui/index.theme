@@ -1,0 +1,8 @@
+[Sound Theme]
+Name=palOS
+Comment=palOS interface sounds
+Directories=stereo
+Inherits=freedesktop
+
+[stereo]
+OutputProfile=stereo

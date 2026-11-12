@@ -1,0 +1,24 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Winetricks</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+<link rel="stylesheet" href="kit.css"><link rel="stylesheet" href="wt.css"></head>
+<body>
+<div id="app">
+  <aside id="side">
+    <div class="search"><input id="q" type="search" placeholder="Search" spellcheck="false"></div>
+    <div id="nav"></div>
+    <button class="btn small" id="openc">Open C: Drive</button>
+  </aside>
+  <main id="main2">
+    <header id="head"><h1 id="title">Components</h1><p id="sub"></p></header>
+    <div id="listwrap"><div id="list"></div><div class="empty hidden" id="none"></div><div class="empty" id="loading">Loading Winetricks’ catalogue…</div></div>
+    <footer id="foot">
+      <div id="status"><span id="count"></span><span id="line" class="hidden"></span></div>
+      <button class="btn" id="showlog">Show Details</button>
+      <button class="btn hidden" id="cancel">Stop</button>
+      <button class="btn primary" id="install" disabled>Install</button>
+    </footer>
+    <pre id="log" class="hidden"></pre>
+  </main>
+</div>
+<div id="toast" class="hidden"></div>
+<script src="wt.js"></script></body></html>

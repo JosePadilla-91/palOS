@@ -1,0 +1,10 @@
+Package: palos-terminal-link
+Status: install ok installed
+Priority: optional
+Section: x11
+Maintainer: Joe Lucas <joe.lucas0413@gmail.com>
+Architecture: all
+Version: 1.0
+Provides: x-terminal-emulator
+Description: palOS Terminal as the system's terminal
+ Points x-terminal-emulator at palOS's Terminal.app.

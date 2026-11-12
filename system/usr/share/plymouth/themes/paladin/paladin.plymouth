@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Paladin
+Description=White Paladin shield on black with a spinning hoop
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/paladin
+ScriptFile=/usr/share/plymouth/themes/paladin/paladin.script

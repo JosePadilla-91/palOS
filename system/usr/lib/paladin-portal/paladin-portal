@@ -1,0 +1,319 @@
+#!/usr/bin/python3
+"""palOS's Open and Save sheets for apps that ask the desktop for them (xdg-desktop-portal).
+
+Firefox, Chromium, Flatpaks and other apps don't draw their own file dialogs: they ask the portal,
+and the portal asks this. Instead of GTK's file chooser (a separate program with its own Dock icon), the
+person gets palOS's sheet, the same one Seeker and every palOS app use, rolling out from under the title
+bar of the window that asked.
+
+  org.freedesktop.impl.portal.FileChooser  OpenFile, SaveFile, SaveFiles
+  (registered for the Paladin desktop in /usr/share/xdg-desktop-portal/paladin-portals.conf)
+
+The sheet itself is drawn by chooser/ (on Kibble, palOS's app runtime), kept running while there's work and
+for a minute after."""
+import json
+import mimetypes
+import os
+import re
+import subprocess
+import sys
+import threading
+import urllib.parse
+
+import dbus
+import dbus.service
+from dbus.mainloop.glib import DBusGMainLoop
+from gi.repository import GLib
+
+BUS_NAME = 'org.freedesktop.impl.portal.desktop.paladin'
+OBJ = '/org/freedesktop/portal/desktop'
+IFACE = 'org.freedesktop.impl.portal.FileChooser'
+REQUEST = 'org.freedesktop.impl.portal.Request'
+HERE = os.path.dirname(os.path.realpath(__file__))
+RUNTIME = '/usr/lib/kibble/kibble'          # Kibble, palOS's app runtime
+IDLE_QUIT = 60          # seconds without a request before the helper and this service go away
+
+SUCCESS, CANCELLED, FAILED = 0, 1, 2
+
+
+def log(*a):
+    print('paladin-portal:', *a, file=sys.stderr, flush=True)
+
+
+# ---------------------------------------------------------------- filters: portal -> sheet
+def _glob_ext(pattern):
+    """'*.png', '*.[pP][nN][gG]' (Chromium's case-insensitive form) -> 'png'; '*' -> '*'; else None."""
+    p = pattern.strip()
+    if p in ('*', '*.*'):
+        return '*'
+    p = re.sub(r'\[(.)(.)\]', lambda m: m.group(1).lower() if m.group(1).lower() == m.group(2).lower() else m.group(0), p)
+    m = re.fullmatch(r'\*\.([^*?\[\]/]+)', p)
+    return m.group(1).lower() if m else None
+
+
+def _mime_exts(mime):
+    mime = mime.lower()
+    if mime in ('*/*', 'application/octet-stream'):
+        return ['*']
+    if mime.endswith('/*'):
+        top = mime[:-1]
+        return sorted({e.lstrip('.') for e, t in mimetypes.types_map.items() if t.startswith(top)})
+    return [e.lstrip('.') for e in mimetypes.guess_all_extensions(mime)]
+
+
+def to_filters(portal_filters):
+    out = []
+    for name, rules in portal_filters or []:
+        exts = []
+        for kind, pat in rules:
+            got = [_glob_ext(str(pat))] if int(kind) == 0 else _mime_exts(str(pat))
+            for e in got:
+                if e and e not in exts:
+                    exts.append(e)
+        if exts:
+            out.append({'name': str(name), 'extensions': exts})
+    return out
+
+
+def _bytes_path(v):
+    """current_folder / current_file come as a NUL-terminated byte array."""
+    if v is None:
+        return ''
+    b = bytes(int(x) for x in v).rstrip(b'\0')
+    return b.decode('utf-8', 'surrogateescape')
+
+
+def _uri(p):
+    return 'file://' + urllib.parse.quote(p, safe='/')
+
+
+def parent_xid(parent_window):
+    """'x11:1a00003' -> 0x1a00003 (Wayland parents can't be used on Paladin's X11 session)."""
+    if parent_window and parent_window.startswith('x11:'):
+        try:
+            return int(parent_window[4:], 16)
+        except ValueError:
+            return 0
+    return 0
+
+
+# ---------------------------------------------------------------- X: hand the sheet to its window
+class X11:
+    def __init__(self):
+        self.d = None
+        try:
+            from Xlib import Xatom, display
+            self.Xatom = Xatom
+            self.d = display.Display()
+            self.d.set_error_handler(lambda *a, **k: None)
+        except Exception as e:  # noqa: BLE001
+            log('no X display:', e)
+
+    def belongs_to(self, xid, parent):
+        """WM_TRANSIENT_FOR: paladin-sheets then hangs the window under the parent's title bar."""
+        if not self.d or not xid or not parent:
+            return
+        try:
+            w = self.d.create_resource_object('window', xid)
+            w.change_property(self.Xatom.WM_TRANSIENT_FOR, self.Xatom.WINDOW, 32, [parent])
+            self.d.sync()
+        except Exception as e:  # noqa: BLE001
+            log('transient:', e)
+
+
+# ---------------------------------------------------------------- the sheet helper (Electron)
+class Helper:
+    def __init__(self, x11):
+        self.x11 = x11
+        self.proc = None
+        self.pending = {}        # id -> (parent xid, callback(result dict or None))
+        self.next_id = 1
+        self.lock = threading.Lock()
+
+    def _start(self):
+        if self.proc and self.proc.poll() is None:
+            return
+        env = dict(os.environ, PALOS_APP_DIR=os.path.join(HERE, 'chooser'), PALOS_APP_RESOURCES=os.path.join(HERE, 'chooser'))
+        args = [RUNTIME]
+        self.proc = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                     env=env, text=True, bufsize=1)
+        threading.Thread(target=self._read, args=(self.proc,), daemon=True).start()
+
+    def _send(self, msg):
+        try:
+            self.proc.stdin.write(json.dumps(msg) + '\n')
+            self.proc.stdin.flush()
+        except (OSError, ValueError, AttributeError) as e:
+            log('helper write:', e)
+
+    def _read(self, proc):
+        for line in proc.stdout:
+            try:
+                msg = json.loads(line)
+            except ValueError:
+                continue
+            GLib.idle_add(self._on_msg, msg)
+        GLib.idle_add(self._on_exit, proc)
+
+    def _on_msg(self, msg):
+        rid = msg.get('id')
+        if rid not in self.pending:
+            return False
+        parent, cb = self.pending[rid]
+        if 'xid' in msg:
+            self.x11.belongs_to(int(msg['xid']), parent)
+            self._send({'show': rid})
+        elif 'result' in msg:
+            del self.pending[rid]
+            cb(msg['result'])
+        return False
+
+    def _on_exit(self, proc):
+        if proc is self.proc:
+            for rid, (_, cb) in list(self.pending.items()):
+                cb(None)
+            self.pending.clear()
+            self.proc = None
+        return False
+
+    def ask(self, params, parent, cb):
+        self._start()
+        rid = self.next_id
+        self.next_id += 1
+        self.pending[rid] = (parent, cb)
+        self._send(dict(params, id=rid))
+        return rid
+
+    def cancel(self, rid):
+        if rid in self.pending:
+            self._send({'cancel': rid})
+
+    def busy(self):
+        return bool(self.pending)
+
+    def stop(self):
+        if self.proc and self.proc.poll() is None:
+            self._send({'quit': True})
+
+
+# ---------------------------------------------------------------- D-Bus
+class Request(dbus.service.Object):
+    """The portal's request handle: Close() takes the sheet away."""
+
+    def __init__(self, bus, path, on_close):
+        super().__init__(bus, path)
+        self.on_close = on_close
+
+    @dbus.service.method(REQUEST, in_signature='', out_signature='')
+    def Close(self):
+        self.on_close()
+
+
+class FileChooser(dbus.service.Object):
+    def __init__(self, bus, helper):
+        super().__init__(bus, OBJ)
+        self.bus = bus
+        self.helper = helper
+        self.idle = None
+        self._touch()
+
+    def _touch(self):
+        if self.idle:
+            GLib.source_remove(self.idle)
+        self.idle = GLib.timeout_add_seconds(IDLE_QUIT, self._maybe_quit)
+
+    def _maybe_quit(self):
+        if self.helper.busy():
+            return True
+        self.helper.stop()
+        loop.quit()
+        return False
+
+    def _run(self, handle, parent_window, params, finish, ok, err):
+        self._touch()
+        parent = parent_xid(str(parent_window))
+        params['top'] = 0
+        req = {'obj': None, 'rid': None}
+
+        def done(result):
+            try:
+                if req['obj']:
+                    req['obj'].remove_from_connection()
+            except Exception:  # noqa: BLE001
+                pass
+            self._touch()
+            if result is None:
+                ok(dbus.UInt32(FAILED), dbus.Dictionary({}, signature='sv'))
+            elif not result.get('path') and not result.get('paths'):
+                ok(dbus.UInt32(CANCELLED), dbus.Dictionary({}, signature='sv'))
+            else:
+                ok(dbus.UInt32(SUCCESS), finish(result))
+
+        req['rid'] = self.helper.ask(params, parent, done)
+        try:
+            req['obj'] = Request(self.bus, str(handle), lambda: self.helper.cancel(req['rid']))
+        except Exception as e:  # noqa: BLE001  (a handle already exported: still works without Close)
+            log('request handle:', e)
+
+    @staticmethod
+    def _uris(paths):
+        return dbus.Dictionary({'uris': dbus.Array([_uri(p) for p in paths], signature='s')}, signature='sv')
+
+    @dbus.service.method(IFACE, in_signature='osssa{sv}', out_signature='ua{sv}', async_callbacks=('ok', 'err'))
+    def OpenFile(self, handle, app_id, parent_window, title, options, ok, err):
+        directory = bool(options.get('directory', False))
+        params = {'kind': 'open', 'title': str(title) or ('Choose a Folder' if directory else 'Open'),
+                  'filters': to_filters(options.get('filters')), 'multi': bool(options.get('multiple', False)),
+                  'folder': directory, 'button': str(options.get('accept_label', '') or ('Choose' if directory else 'Open')).replace('_', ''),
+                  'dir': _bytes_path(options.get('current_folder')) or os.path.expanduser('~')}
+        self._run(handle, parent_window, params, lambda r: self._uris(r.get('paths') or []), ok, err)
+
+    @dbus.service.method(IFACE, in_signature='osssa{sv}', out_signature='ua{sv}', async_callbacks=('ok', 'err'))
+    def SaveFile(self, handle, app_id, parent_window, title, options, ok, err):
+        current_file = _bytes_path(options.get('current_file'))
+        folder = _bytes_path(options.get('current_folder')) or (os.path.dirname(current_file) if current_file else '')
+        name = str(options.get('current_name', '') or (os.path.basename(current_file) if current_file else ''))
+        params = {'kind': 'save', 'title': str(title) or 'Save', 'filters': to_filters(options.get('filters')),
+                  'button': str(options.get('accept_label', '') or 'Save').replace('_', ''),
+                  'dir': folder or default_save_dir(), 'name': name}
+        self._run(handle, parent_window, params, lambda r: self._uris([r['path']]), ok, err)
+
+    @dbus.service.method(IFACE, in_signature='osssa{sv}', out_signature='ua{sv}', async_callbacks=('ok', 'err'))
+    def SaveFiles(self, handle, app_id, parent_window, title, options, ok, err):
+        """Several files at once: the person picks the folder they go in."""
+        names = [_bytes_path(f) for f in options.get('files', [])]
+        params = {'kind': 'open', 'title': str(title) or 'Choose Where to Save', 'filters': [], 'multi': False, 'folder': True,
+                  'button': str(options.get('accept_label', '') or 'Save').replace('_', ''),
+                  'dir': _bytes_path(options.get('current_folder')) or default_save_dir()}
+
+        def finish(r):
+            folder = (r.get('paths') or [''])[0]
+            return self._uris([os.path.join(folder, n) for n in names])
+        self._run(handle, parent_window, params, finish, ok, err)
+
+
+def default_save_dir():
+    try:
+        out = subprocess.run(['xdg-user-dir', 'DOWNLOAD'], capture_output=True, text=True, timeout=2).stdout.strip()
+        if out and os.path.isdir(out):
+            return out
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    return os.path.expanduser('~')
+
+
+loop = None
+
+
+def main():
+    global loop
+    DBusGMainLoop(set_as_default=True)
+    bus = dbus.SessionBus()
+    name = dbus.service.BusName(BUS_NAME, bus, do_not_queue=True)  # noqa: F841  (keeps the name)
+    FileChooser(bus, Helper(X11()))
+    loop = GLib.MainLoop()
+    loop.run()
+
+
+if __name__ == '__main__':
+    main()

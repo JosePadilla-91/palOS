@@ -1,0 +1,18 @@
+[Desktop Entry]
+X-AppImage-Name=Chancery Writer
+Name=Chancery Writer
+Exec=AppRun %U
+Terminal=false
+Type=Application
+Icon=chancery-writer
+StartupWMClass=chancery-writer
+GenericName=Word Processor
+GenericName[fr]=Traitement de texte
+GenericName[fr_CA]=Traitement de texte
+Keywords=word;processor;document;text;writer;docx;odt;
+Categories=Office;WordProcessor;
+Comment=Create and edit documents
+Comment[fr]=Créer et modifier des documents
+Comment[fr_CA]=Créer et modifier des documents
+MimeType=application/vnd.openxmlformats-officedocument.wordprocessingml.document;application/vnd.oasis.opendocument.text;application/rtf;text/rtf;text/plain;text/markdown;text/html;application/vnd.chancery.writer;application/vnd.chancery.writer;
+X-AppImage-Version=1.0

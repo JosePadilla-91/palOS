@@ -1,0 +1,17 @@
+Package: palos-file-icons
+Status: install ok installed
+Priority: optional
+Section: x11
+Installed-Size: 5912
+Maintainer: palOS <joe.lucas0413@gmail.com>
+Architecture: all
+Version: 27.8.0
+Replaces: palos-icons
+Depends: palos-icons, python3, python3-pil, icoutils, dpkg
+Description: palOS file icons and program thumbnails
+ Document icons on palOS's parchment page, one emblem per kind of file
+ (documents, text, spreadsheets, presentations, databases, layouts, PDFs, code,
+ sound, video, fonts, paintings, pictures, TIFF), the blue zipper folder for
+ archives, and program boxes: blue for Windows programs, brown for .deb packages,
+ steel for AppImages. Windows programs and .deb packages that carry their own
+ icon show it (with a Windows badge, or on the package box).

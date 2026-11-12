@@ -1,0 +1,31 @@
+Package: palos-branding
+Status: install ok installed
+Priority: optional
+Section: misc
+Maintainer: palOS <joe.lucas0413@gmail.com>
+Architecture: all
+Version: 27.1.0
+Depends: fonts-noto-core, fonts-noto-mono, base-files, palos-icons, network-manager, util-linux, dpkg (>= 1.19), python-apt-common, distro-info-data
+Conffiles:
+ /etc/palos/issue a1d91a7e95024020247c81b3d8a60bcd
+ /etc/apt/apt.conf.d/10palos-periodic a634531bb86ebfe70e6663b8cb144d25
+ /etc/default/grub.d/50-palos.cfg bde5dcca88cf5d09a3edaeb309884e5a
+ /etc/systemd/system/getty@.service.d/palos-issue.conf 59a62738bbc73e54fe70ef6a68c0162a
+ /etc/systemd/system/serial-getty@.service.d/palos-issue.conf eb517db14157a5557f1ea38e86806f28
+ /etc/xdg/gtk-3.0/settings.ini 33db120f659ca15725dbce967be446db
+ /etc/update-motd.d/00-palos-header 703c26bd28a2b56ad04da8c95e5cb616
+ /etc/NetworkManager/conf.d/10-globally-managed-devices.conf 4de3f290f7dd0cd380b2ad16514665a0
+ /etc/netplan/01-network-manager-all.yaml cd853de4da3ab6892b77c582f24cccc2
+ /etc/xdg/paladin-mimeapps.list dc260aef9cc85566e659bd158dfb7a45
+ /etc/systemd/system/plocate-updatedb.timer.d/palos.conf 513beeba4ad816477a7076891f4d3853
+ /etc/systemd/system/plocate-updatedb.service.d/palos.conf dc58ff51f10a256991b74c01806cee8a
+ /etc/apt/preferences.d/palos.pref 1a2e7a223cfc76ed823340dd4acc181a obsolete
+Description: palOS system identity
+ Names the system palOS 27 everywhere it introduces itself: /etc/os-release
+ (About This Computer, hostnamectl, lsb_release), the boot menu, the
+ text-mode boot screen and the console login banner. palOS is made by
+ Joe Lucas. The .deb package format, apt, PPAs and drivers keep working
+ because the system's package-compatibility keys are left in place.
+ .
+ Also keeps the stock upgrade, subscription and crash-report tools off the
+ system (the palOS Store handles apps, snaps, updates and drivers).

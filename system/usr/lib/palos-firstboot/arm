@@ -1,0 +1,58 @@
+#!/bin/sh
+# Make the next start of the login screen run palOS first-boot setup (welcome film, Wi-Fi, create the
+# first account, light or dark). Run by the installer on the new system, and by palos-firstboot-rerun.
+# It checks everything setup needs and repairs what it can; if setup still couldn't start, it stops
+# with an error so the installer says so instead of leaving a computer nobody can log in to.
+set -e
+say() { echo "palos-firstboot: $*"; }
+fail() { echo "palos-firstboot: $*" >&2; exit 1; }
+
+# the setup account (a locked system account: nobody can log in to it with a password)
+if ! getent passwd palos-setup >/dev/null; then
+  say "creating the setup account"
+  adduser --system --group --home /var/lib/palos-setup --shell /bin/bash --gecos "palOS Setup" palos-setup >/dev/null
+fi
+passwd -l palos-setup >/dev/null 2>&1 || true
+for g in audio video render netdev plugdev; do getent group "$g" >/dev/null && adduser palos-setup "$g" >/dev/null 2>&1 || true; done
+mkdir -p /var/lib/palos-setup
+chown palos-setup:palos-setup /var/lib/palos-setup
+chmod 750 /var/lib/palos-setup
+# start from a clean setup home (a previous run may have left a half-finished state)
+find /var/lib/palos-setup -mindepth 1 -delete 2>/dev/null || true
+mkdir -p /var/lib/AccountsService/users
+printf '[User]\nSystemAccount=true\n' > /var/lib/AccountsService/users/palos-setup
+
+# the setup screen runs on Kibble, palOS's app runtime
+[ -x /usr/lib/kibble/kibble ] && [ -f /opt/palos-firstboot/app/package.json ] || say "WARNING: Kibble or the setup screen is missing; Basic Setup will be used"
+python3 -c 'import gi; gi.require_version("Gtk", "3.0"); from gi.repository import Gtk' 2>/dev/null \
+  || fail "GTK for Python is missing: neither setup screen could run"
+[ -x /usr/lib/palos-firstboot/run-setup ] || fail "run-setup is missing"
+[ -f /usr/lib/palos-firstboot/sessions/palos-firstboot.desktop ] || fail "the setup session file is missing"
+getent passwd lightdm >/dev/null || fail "LightDM's account is missing"
+
+# switch it on
+mkdir -p /var/lib/palos
+: > /var/lib/palos/firstboot
+rm -f /var/lib/palos/firstboot-safe
+mkdir -p /etc/lightdm/lightdm.conf.d
+cat > /etc/lightdm/lightdm.conf.d/90-palos-firstboot.conf <<'CONF'
+# palOS first-boot setup (removed automatically when setup finishes)
+[LightDM]
+sessions-directory=/usr/share/lightdm/sessions:/usr/share/xsessions:/usr/lib/palos-firstboot/sessions
+
+[Seat:*]
+autologin-user=palos-setup
+autologin-user-timeout=0
+autologin-session=palos-firstboot
+CONF
+# a login screen that only lists real people would otherwise be all there is: make sure the
+# login screen's own setup path is reachable (the greeter runs setup itself if the above fails)
+systemctl enable palos-firstboot-helper.service >/dev/null 2>&1 || \
+  ln -sf /usr/lib/systemd/system/palos-firstboot-helper.service /etc/systemd/system/graphical.target.wants/palos-firstboot-helper.service
+[ -e /etc/systemd/system/graphical.target.wants/palos-firstboot-helper.service ] || fail "couldn't switch on setup's helper"
+# the login screen itself must be switched on
+if [ ! -e /etc/systemd/system/display-manager.service ]; then
+  ln -sf /lib/systemd/system/lightdm.service /etc/systemd/system/display-manager.service
+fi
+say "first-boot setup is ready"
+exit 0

@@ -1,0 +1,8 @@
+id = "automation"
+name = "Automation"
+version = "1.0.0"
+author = "BrushBoard Project"
+description = "Batch helpers: export every layer as PNG, batch-resize a folder of images, and make a contact sheet."
+entry = "main.py"
+api = 1
+requirements = []

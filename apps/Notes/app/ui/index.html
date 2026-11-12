@@ -1,0 +1,10 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Notes</title><link rel="stylesheet" href="base.css"><link rel="stylesheet" href="notes.css"></head>
+<body>
+<aside id="side"><div id="books"></div><button id="newbook" class="link">+ New Notes</button></aside>
+<section id="listpane"><div id="listbar"><input id="search" placeholder="Search" spellcheck="false"><button id="new" title="New note (Ctrl+N)">＋</button></div><div id="list"></div></section>
+<section id="editpane"><div id="tools">
+  <button data-c="bold" title="Bold"><b>B</b></button><button data-c="italic" title="Italic"><i>I</i></button><button data-c="underline" title="Underline"><u>U</u></button><span class="sep"></span>
+  <button data-b="h2" title="Heading">H</button><button data-c="insertUnorderedList" title="Bullets">• List</button><button data-c="insertOrderedList" title="Numbers">1. List</button><button id="todo" title="Checklist">☑ To-do</button><span class="sep"></span>
+  <span class="grow"></span><button id="pin" title="Pin to top">Pin</button><button id="export">Export…</button><button id="del" title="Move to Trash">Delete</button></div>
+  <div id="pad"><div id="editor" contenteditable="true" spellcheck="true"></div><div id="none">No note selected</div></div></section>
+<script src="notes.js"></script></body></html>

@@ -1,0 +1,10 @@
+{
+ "name": "Site Knitter",
+ "id": "site-knitter",
+ "command": "site-knitter",
+ "icon": "site-knitter",
+ "version": "1.0",
+ "folder": "",
+ "kind": "kibble",
+ "runtime": "kibble"
+}
