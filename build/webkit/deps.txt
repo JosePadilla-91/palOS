@@ -2,5 +2,5 @@ build-essential cmake ninja-build ccache gperf ruby unifdef python3 perl pkg-con
 libglib2.0-dev libsoup-3.0-dev libicu-dev libjpeg-dev libpng-dev libwebp-dev libavif-dev libjxl-dev
 libharfbuzz-dev libfreetype-dev libfontconfig-dev libxml2-dev libxslt1-dev libsqlite3-dev zlib1g-dev
 libepoxy-dev libgbm-dev libdrm-dev libegl-dev libgles-dev libxkbcommon-dev liblcms2-dev libwoff-dev
-libtasn1-6-dev libgcrypt20-dev libhyphen-dev libexpat1-dev libatomic1
+libtasn1-6-dev libgcrypt20-dev libhyphen-dev libexpat1-dev libatomic1 libenchant-2-dev
 libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libgstreamer-plugins-bad1.0-dev
