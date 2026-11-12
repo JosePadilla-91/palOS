@@ -1,0 +1,45 @@
+# Builds Kibble's web engine (WPE WebKit with sound and video) and publishes it as a release download.
+name: Kibble web engine
+on:
+  workflow_dispatch:
+  push:
+    paths: ['build/webkit/**', '.github/workflows/kibble-webkit.yml']
+permissions:
+  contents: write
+jobs:
+  webkit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 355
+    steps:
+      - uses: actions/checkout@v4
+      - name: Room to build
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo mkdir -p /mnt/w && sudo chown $USER /mnt/w
+          df -h / /mnt
+      - name: Packages
+        run: sudo apt-get update -q && sudo apt-get install -qy --no-install-recommends $(cat build/webkit/deps.txt)
+      - name: Compiler cache (a run that ran out of time leaves its work here for the next one)
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-webkit-${{ hashFiles('build/webkit/version') }}-${{ github.run_id }}
+          restore-keys: ccache-webkit-${{ hashFiles('build/webkit/version') }}-
+      - name: Build
+        env: { CCACHE_MAXSIZE: 4G, CCACHE_COMPRESS: '1' }
+        run: |
+          . build/webkit/version
+          timeout 320m build/webkit/build.sh /mnt/w /mnt/w/kibble-webkit-$VERSION.tar.xz
+      - name: Save the compiler cache even if the build ran out of time
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-webkit-${{ hashFiles('build/webkit/version') }}-${{ github.run_id }}
+      - name: Publish
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          . build/webkit/version
+          T=kibble-webkit-$VERSION
+          gh release view $T >/dev/null 2>&1 || gh release create $T --title "Kibble web engine $VERSION" --notes "WPE WebKit $VERSION with sound and video, built for palOS by .github/workflows/kibble-webkit.yml."
+          gh release upload $T /mnt/w/$T.tar.xz --clobber
