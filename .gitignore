@@ -5,3 +5,4 @@ oauth.json
 src/paladin-wm/paladin-wm
 src/paladin-authenticate/paladin-authenticate
 src/kibble/host/kibble-host
+src/paladin-sessiond/paladin-sessiond

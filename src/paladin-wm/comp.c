@@ -202,6 +202,16 @@ bool comp_init(void)
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     make_shadow();
+    /* windows already on screen draw themselves again, so what we show is their current picture */
+    Window r, p, *kids = NULL; unsigned int nk = 0;
+    if (XQueryTree(dpy, root, &r, &p, &kids, &nk)) {
+        for (unsigned int i = 0; i < nk; i++) {
+            XWindowAttributes a;
+            if (kids[i] != overlay && XGetWindowAttributes(dpy, kids[i], &a) && a.map_state == IsViewable && a.class == InputOutput)
+                XClearArea(dpy, kids[i], 0, 0, 0, 0, True);
+        }
+        if (kids) XFree(kids);
+    }
     fprintf(stderr, "paladin-wm: compositing with %s\n", (const char *)glGetString(GL_RENDERER));
     return true;
 }
