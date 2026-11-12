@@ -1,0 +1,2 @@
+# palOS lock screen (paladin-locker): your own password
+@include common-auth

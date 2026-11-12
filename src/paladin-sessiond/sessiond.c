@@ -12,6 +12,8 @@
 #include <X11/Xutil.h>
 #include <X11/Xatom.h>
 #include <X11/XKBlib.h>
+#include <X11/extensions/scrnsaver.h>
+#include <gio/gunixfdlist.h>
 #include <cairo/cairo.h>
 #include <cairo/cairo-xlib.h>
 #include <pango/pangocairo.h>
@@ -523,6 +525,69 @@ static void key_event(XKeyEvent *e)
     }
 }
 
+/* ---------------------------------------------------------------- locking */
+#define IDLE "/usr/lib/paladin-session/paladin-idle"
+#define LOCK "/usr/lib/paladin-session/paladin-lock"
+static int ss_event = -1;
+static GDBusConnection *sys;
+static int sleep_fd = -1;
+
+static void spawn(const char *cmd)
+{
+    GError *err = NULL;
+    if (!g_spawn_command_line_async(cmd, &err)) { fprintf(stderr, "paladin-sessiond: %s: %s\n", cmd, err->message); g_error_free(err); }
+}
+
+/* holds sleep back a moment, so the screen is locked before the computer sleeps */
+static void take_sleep_delay(void)
+{
+    if (!sys || sleep_fd >= 0) return;
+    GUnixFDList *out = NULL;
+    GVariant *r = g_dbus_connection_call_with_unix_fd_list_sync(sys, "org.freedesktop.login1", "/org/freedesktop/login1",
+        "org.freedesktop.login1.Manager", "Inhibit", g_variant_new("(ssss)", "sleep", "palOS", "Lock the screen first", "delay"),
+        G_VARIANT_TYPE("(h)"), G_DBUS_CALL_FLAGS_NONE, -1, NULL, &out, NULL, NULL);
+    if (r && out) { gint32 idx; g_variant_get(r, "(h)", &idx); sleep_fd = g_unix_fd_list_get(out, idx, NULL); }
+    if (r) g_variant_unref(r);
+    if (out) g_object_unref(out);
+}
+
+static gboolean release_sleep_delay(gpointer d)
+{
+    (void)d;
+    if (sleep_fd >= 0) { close(sleep_fd); sleep_fd = -1; }
+    return G_SOURCE_REMOVE;
+}
+
+static void on_login1(GDBusConnection *c, const char *sender, const char *path, const char *iface, const char *signal,
+                      GVariant *params, gpointer data)
+{
+    (void)c; (void)sender; (void)path; (void)iface; (void)data;
+    if (!strcmp(signal, "PrepareForSleep")) {
+        gboolean going; g_variant_get(params, "(b)", &going);
+        if (going) { spawn(IDLE " lock-if-enabled"); g_timeout_add(1200, release_sleep_delay, NULL); }
+        else take_sleep_delay();
+    } else if (!strcmp(signal, "Lock")) {
+        spawn(LOCK);
+    }
+}
+
+static void watch_login(void)
+{
+    sys = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, NULL);
+    if (!sys) return;
+    g_dbus_connection_signal_subscribe(sys, "org.freedesktop.login1", "org.freedesktop.login1.Manager", "PrepareForSleep",
+                                       "/org/freedesktop/login1", NULL, G_DBUS_SIGNAL_FLAGS_NONE, on_login1, NULL, NULL);
+    GVariant *r = g_dbus_connection_call_sync(sys, "org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager",
+        "GetSessionByPID", g_variant_new("(u)", (guint32)getpid()), G_VARIANT_TYPE("(o)"), G_DBUS_CALL_FLAGS_NONE, -1, NULL, NULL);
+    if (r) {
+        const char *session; g_variant_get(r, "(&o)", &session);
+        g_dbus_connection_signal_subscribe(sys, "org.freedesktop.login1", "org.freedesktop.login1.Session", "Lock",
+                                           session, NULL, G_DBUS_SIGNAL_FLAGS_NONE, on_login1, NULL, NULL);
+        g_variant_unref(r);
+    }
+    take_sleep_delay();
+}
+
 /* ---------------------------------------------------------------- X events in the GLib loop */
 typedef struct { GSource base; gpointer tag; } XSrc;
 static gboolean xs_prepare(GSource *s, gint *t) { (void)s; *t = -1; return XPending(dpy) > 0; }
@@ -533,6 +598,11 @@ static gboolean xs_dispatch(GSource *s, GSourceFunc cb, gpointer data)
     while (XPending(dpy)) {
         XEvent ev; XNextEvent(dpy, &ev);
         if (ev.type == KeyPress || ev.type == KeyRelease) { key_event(&ev.xkey); continue; }
+        if (ss_event >= 0 && ev.type == ss_event + ScreenSaverNotify) {
+            /* the screen turned off for being idle: lock if Settings say so */
+            if (((XScreenSaverNotifyEvent *)&ev)->state == ScreenSaverOn) spawn(IDLE " lock-if-enabled");
+            continue;
+        }
         if (ev.type == MappingNotify) {
             XRefreshKeyboardMapping(&ev.xmapping);
             XUngrabKey(dpy, AnyKey, AnyModifier, root);
@@ -575,6 +645,15 @@ int main(void)
     XSelectInput(dpy, root, PropertyChangeMask);
     Bool ok; XkbSetDetectableAutoRepeat(dpy, True, &ok);
     load_keys();
+    int ss_err;
+    if (XScreenSaverQueryExtension(dpy, &ss_event, &ss_err)) XScreenSaverSelectInput(dpy, root, ScreenSaverNotifyMask);
+    else ss_event = -1;
+    /* not in the live session from the install USB (there's no password to unlock with) */
+    char *cmdline = NULL;
+    g_file_get_contents("/proc/cmdline", &cmdline, NULL, NULL);
+    if (cmdline && strstr(cmdline, "boot=casper")) ss_event = -1;
+    else watch_login();
+    g_free(cmdline);
 
     GError *err = NULL;
     bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &err);
