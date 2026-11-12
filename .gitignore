@@ -1,3 +1,5 @@
 private/
 *.key
 oauth.json
+*.o
+src/paladin-wm/paladin-wm

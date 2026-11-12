@@ -465,12 +465,6 @@
   "kind": "third-party folder"
  },
  {
-  "path": "/usr/bin/paladin-wm",
-  "size": 92904,
-  "sha256": "1e52e974a4dd7dc732b6aad8961ae12e46dd1c962b8d4787bf179fc8fb0a35fd",
-  "kind": "program"
- },
- {
   "path": "/usr/lib/kibble/runtime/node_modules",
   "size": 1261489,
   "files": 291,

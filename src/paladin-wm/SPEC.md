@@ -14,7 +14,7 @@ from the rest of palOS that talks to it, and from the notes kept while the first
 - Without texture-from-pixmap it keeps managing windows with no effects ("paladin-wm: no
   GLX_EXT_texture_from_pixmap, running without effects"). `PALADIN_WM_NO_COMPOSITE=1` forces that.
   `PALADIN_WM_DEBUG=1` logs. Refuses to start if another window manager runs.
-- Announces itself: `_NET_SUPPORTING_WM_CHECK` window named `paladin-wm` (version `paladin-wm 1.0`), and owns
+- Announces itself: `_NET_SUPPORTING_WM_CHECK` window named `paladin-wm` (version `paladin-wm 2.0` in `_PALADIN_WM_VERSION`), and owns
   `_NET_WM_CM_S<screen>` so apps know see-through windows work.
 
 ## Standards (EWMH / ICCCM)
@@ -44,6 +44,7 @@ MAXIMIZED_VERT/HORZ, ABOVE, BELOW, SKIP_TASKBAR, SKIP_PAGER, MODAL, STICKY, FOCU
 - Title bar art from palOS's interface kit: `titlebar-active.png`, `titlebar-inactive.png` and `-dark` versions
   for Dark Mode; buttons `close`, `minimize`, `maximize` (ruby, amber, jade) in states `normal`, `prelight`,
   `pressed`, `inactive` (`<button>-<state>[-dark].png`). Buttons on the left. Title centred.
+- Dark Mode: Seeker sets `_PALADIN_DARK` (CARDINAL 0/1) on the root window; the title bars follow it live.
 - Kit location: `/usr/lib/paladium/assets` (to move under a palOS path with the rest of the kit).
 - Cursors at the edges and corners for resizing (`top_left_corner`, `top_side`, … `left_side`), `fleur` to move.
 - Title bars are kept below the menu bar: a window never goes above the work area's top; ordinary windows are
@@ -57,6 +58,8 @@ MAXIMIZED_VERT/HORZ, ABOVE, BELOW, SKIP_TASKBAR, SKIP_PAGER, MODAL, STICKY, FOCU
 - A dialog that belongs to a window (`WM_TRANSIENT_FOR`, type DIALOG or modal) hangs under that window's title
   bar, centred, sliding down out of it, and moves with it. Sheets get no frame, no bevel.
 - A dialog that doesn't say which window it belongs to stays a separate framed window.
+- Sheets are marked `_PALADIN_SHEET` (the Dock and Seeker skip them). A window can set `_PALADIN_SHEET_TOP`
+  (CARDINAL, pixels) to hang its sheets lower, under its own toolbar.
 
 ## Minimising (Magic Lamp)
 
@@ -68,6 +71,8 @@ MAXIMIZED_VERT/HORZ, ABOVE, BELOW, SKIP_TASKBAR, SKIP_PAGER, MODAL, STICKY, FOCU
 ## Compositing
 
 - Redraws only what changed (Damage), at the screen's refresh rate.
+- Windows cut to a shape (X Shape extension) show only that shape (Seeker's menu bar is a screen-sized window
+  cut down to the bar).
 - See-through windows (32-bit visuals) blended correctly; menus and tooltips get small shadows, the Dock and
   menu bar none.
 - Full-screen windows are drawn without effects.
@@ -83,3 +88,8 @@ MAXIMIZED_VERT/HORZ, ABOVE, BELOW, SKIP_TASKBAR, SKIP_PAGER, MODAL, STICKY, FOCU
 
 C, Makefile, depends on libX11, libXext, libXcomposite, libXdamage, libXfixes, libXcursor, libGL, cairo,
 pango. Output `/usr/bin/paladin-wm`.
+
+## Building and testing
+
+`make` (needs the development files of the libraries above), `make install`. `PALADIN_WM_DEBUG=1` logs what it
+manages; with it on, `kill -USR1 $(pidof paladin-wm)` writes what it knows (windows, screens, work area) to the log.

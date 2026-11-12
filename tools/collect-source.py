@@ -14,12 +14,12 @@ ROOT, OUT = sys.argv[1], sys.argv[2]
 BIG = 5 * 1024 * 1024
 external = []
 
-# palOS pieces installed without a package (found by hand)
+# palOS pieces installed without a package (found by hand). Programs built from src/ (paladin-wm) aren't listed.
 EXTRA = ['/usr/lib/kibble/runtime', '/usr/lib/kibble/kibble', '/usr/lib/kibble/media', '/usr/lib/time-turner',
          '/usr/lib/paladin-portal', '/usr/lib/paladin-appd', '/usr/bin/palos-open-app', '/usr/bin/winetricks',
          '/usr/lib/palos-winetricks', '/usr/share/palos', '/usr/lib/palos-l10n', '/usr/lib/python3/dist-packages/palos_l10n.py',
          '/usr/share/applications/palos-open-app.desktop', '/usr/share/glib-2.0/schemas/org.palos.screens.gschema.xml',
-         '/etc/dpkg/dpkg.cfg.d/palos-clean', '/usr/bin/paladin-wm', '/etc/systemd/system/time-turnerd.service',
+         '/etc/dpkg/dpkg.cfg.d/palos-clean', '/etc/systemd/system/time-turnerd.service',
          '/usr/share/dbus-1/system-services/com.timeturner.Daemon.service', '/usr/local/share/applications']
 SKIP_PARTS = ('/__pycache__/', '/node_modules/.cache/')
 
