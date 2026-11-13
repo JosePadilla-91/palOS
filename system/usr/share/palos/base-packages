@@ -893,7 +893,6 @@ libxcursor1
 libxcvt0
 libxdamage1
 libxdmcp6
-libxdo3
 libxext6
 libxfixes3
 libxfont2
@@ -1006,7 +1005,6 @@ network-manager-openconnect
 network-manager-openvpn
 networkd-dispatcher
 ntfs-3g
-numlockx
 ocl-icd-libopencl1
 openssh-client
 openssl
@@ -1201,7 +1199,6 @@ whiptail
 wimtools
 wireless-regdb
 wireplumber
-wmctrl
 wpasupplicant
 x11-apps
 x11-common
@@ -1214,7 +1211,6 @@ xbindkeys
 xdg-desktop-portal
 xdg-user-dirs
 xdg-utils
-xdotool
 xfonts-base
 xfonts-encodings
 xfonts-utils

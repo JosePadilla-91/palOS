@@ -4,7 +4,7 @@
 xsetroot -solid '#1e2e40' 2>/dev/null
 xsetroot -cursor_name left_ptr 2>/dev/null
 xset s off -dpms 2>/dev/null
-command -v numlockx >/dev/null 2>&1 && numlockx on
+command -v palos-x >/dev/null 2>&1 && palos-x numlock on
 # The welcome film has sound: wait (up to 10 s) until palOS's sound system answers with a real output. Setup starts
 # the moment the computer does, and sound cards (and the graphics card's HDMI sound) are often found a moment later.
 i=0

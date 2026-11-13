@@ -121,11 +121,11 @@ function testSound() {
 const KB = 'org.gnome.desktop.peripherals.keyboard';
 async function keyboard() {
   const n = await gget(KB, 'numlock-state');
-  return { numlock: n !== false, numlockx: !!which('numlockx') };
+  return { numlock: n !== false };
 }
 async function setNumlock(on) {
   await gset(KB, 'numlock-state', !!on);
-  if (which('numlockx')) await run('numlockx', [on ? 'on' : 'off']);
+  await run('palos-x', ['numlock', on ? 'on' : 'off']);
   return keyboard();
 }
 

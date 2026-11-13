@@ -157,7 +157,6 @@ panel('keyboard', 'Keyboard', 'dev', async (root, stale) => {
   if (stale()) return;
   root.append(card(row('Num Lock On at Login', 'The number keys on the keypad type numbers as soon as you sign in',
     toggle(k.numlock, (v) => sys.call('kb:numlock', v), 'Num Lock on at login'))));
-  if (!k.numlockx) root.append(note('Install the “numlockx” package for this to take effect.'));
   root.append(heading('Screenshots'), card(
     row('Whole Screen', null, el('span', { class: 'badge', text: 'Print' })),
     row('Selected Area', null, el('span', { class: 'badge', text: 'Shift + Print' })),

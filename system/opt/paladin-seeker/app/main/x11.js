@@ -1,6 +1,6 @@
 'use strict';
 // X11 window tracking via the standard EWMH properties (works with Openbox, Compiz, Xfwm4 ...).
-// Uses xprop (x11-utils), wmctrl and xdotool.
+// Uses xprop (x11-utils) and palos-x.
 const { spawn } = require('child_process');
 const { EventEmitter } = require('events');
 const { sh, which } = require('./util');
@@ -126,13 +126,12 @@ class X11 extends EventEmitter {
   }
 
   // ---- actions ----
-  activate(id) { return sh('wmctrl', ['-i', '-a', hex(id)]); }
-  close(id) { return sh('wmctrl', ['-i', '-c', hex(id)]); }
+  activate(id) { return sh('palos-x', ['window', 'activate', hex(id)]); }
+  close(id) { return sh('palos-x', ['window', 'close', hex(id)]); }
   minimize(id) {
-    if (which('xdotool')) return sh('xdotool', ['windowminimize', String(id)]);
-    return sh('wmctrl', ['-i', '-r', hex(id), '-b', 'add,hidden']);
+    return sh('palos-x', ['window', 'minimize', hex(id)]);
   }
-  toggleMaximize(id) { return sh('wmctrl', ['-i', '-r', hex(id), '-b', 'toggle,maximized_vert,maximized_horz']); }
+  toggleMaximize(id) { return sh('palos-x', ['window', 'toggle-maximize', hex(id)]); }
   async wmName() {
     const root = parseXprop(await sh('xprop', ['-root', '_NET_SUPPORTING_WM_CHECK']));
     const w = (root._NET_SUPPORTING_WM_CHECK || [])[0];

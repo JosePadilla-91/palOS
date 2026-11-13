@@ -811,11 +811,11 @@ async function foreignCommand(id) {
     case 'f:zoom': return x11.toggleMaximize(f.xid);
     case 'f:front': for (const w of windows) await x11.activate(w.id); return x11.activate(f.xid);
   }
-  if (id.startsWith('k:') && which('xdotool')) {
+  if (id.startsWith('k:')) {
     // Press the app's shortcut in its own window.
     await x11.activate(f.xid);
     await new Promise((r) => setTimeout(r, 120));
-    return util.sh('xdotool', ['key', '--clearmodifiers', id.slice(2)]);
+    return util.sh('palos-x', ['key', id.slice(2)]);
   }
 }
 
@@ -1352,7 +1352,7 @@ function setupIpc() {
   // extras
   H('drag:rects', async () => {
     const { execFile } = require('child_process'); const out = [];
-    const geo = (id) => new Promise((res) => execFile('xdotool', ['getwindowgeometry', '--shell', String(id)], { timeout: 1500 }, (err, so) => {
+    const geo = (id) => new Promise((res) => execFile('palos-x', ['window', 'geometry', String(id)], { timeout: 1500 }, (err, so) => {
       if (err) return res(null);
       const g = Object.fromEntries(String(so).split('\n').map((l) => l.split('=')).filter((p) => p.length === 2));
       res({ x: +g.X, y: +g.Y, w: +g.WIDTH, h: +g.HEIGHT });

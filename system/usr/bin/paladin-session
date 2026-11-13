@@ -119,15 +119,16 @@ command -v xsetroot >/dev/null && xsetroot -cursor_name left_ptr
 # the mouse pointer starts in the top-left corner (just under the menu bar), never mid-screen: right away, and again
 # whenever setting up the screens put it back in the middle (only while it's still there: a mouse the person is
 # already moving is left alone)
-if command -v xdotool >/dev/null; then
-  xdotool mousemove 18 40 2>/dev/null
+if command -v palos-x >/dev/null; then
+  palos-x pointer move 18 40 2>/dev/null
   (
     for t in 1 1 1 2 3; do
       sleep "$t"
-      eval "$(xdotool getdisplaygeometry --shell 2>/dev/null)"; eval "$(xdotool getmouselocation --shell 2>/dev/null)"
+      WIDTH=; X=
+      eval "$(palos-x screen size 2>/dev/null)"; eval "$(palos-x pointer where 2>/dev/null)"
       [ -n "$WIDTH" ] && [ -n "$X" ] || continue
       dx=$((X - WIDTH / 2)); dy=$((Y - HEIGHT / 2))
-      if [ "${dx#-}" -le 2 ] && [ "${dy#-}" -le 2 ]; then xdotool mousemove 18 40; fi
+      if [ "${dx#-}" -le 2 ] && [ "${dy#-}" -le 2 ]; then palos-x pointer move 18 40; fi
     done
   ) &
 fi

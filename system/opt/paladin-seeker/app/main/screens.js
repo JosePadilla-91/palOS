@@ -63,7 +63,7 @@ function go(index) {
   const sw = g ? g[0] / s.cols : one.w, sh = g ? g[1] / s.rows : one.h;
   const i = Math.max(0, Math.min(s.count - 1, index | 0));
   const x = Math.round((i % s.cols) * sw), y = Math.round(Math.floor(i / s.cols) * sh);
-  execFile('xdotool', ['set_desktop_viewport', String(x), String(y)], () => {});
+  execFile('palos-x', ['viewport', String(x), String(y)], () => {});
 }
 
 /** Change how many screens there are (palOS's setting, so it also lasts across log-ins). */

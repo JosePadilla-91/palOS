@@ -8,7 +8,9 @@ if [ ! -x "$RT" ]; then
   command -v notify-send >/dev/null 2>&1 && notify-send -i palos-installer "palOS Installer" "The installer couldn't start (its runtime is missing)."
   exit 1
 fi
-if command -v wmctrl >/dev/null 2>&1 && wmctrl -l 2>/dev/null | grep -q "palOS Installer\|Programme d’installation de palOS"; then
-  exec wmctrl -a "palOS Installer"
-fi
+# already open: bring it to the front
+for title in "palOS Installer" "Programme d’installation de palOS"; do
+  W=$(palos-x window find "$title" 2>/dev/null | head -n 1)
+  [ -n "$W" ] && exec palos-x window activate "$W"
+done
 exec "$RT" "$@"

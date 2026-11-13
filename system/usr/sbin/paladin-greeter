@@ -3,7 +3,7 @@
 # plain software drawing (a graphics driver problem is the usual cause), so there is always a way to log in.
 export XCURSOR_THEME=Paladin XCURSOR_SIZE=24 NO_AT_BRIDGE=1 PALOS_NO_THEME=1
 export HOME="${HOME:-/var/lib/lightdm}" XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-/var/lib/lightdm/.config}"
-command -v numlockx >/dev/null 2>&1 && numlockx on
+command -v palos-x >/dev/null 2>&1 && palos-x numlock on
 # the display scale the last person chose (Settings → Displays) suits the login screen too
 export PALOS_SCALE=1   # the login screen is laid out for the screen as it is
 START=$(date +%s)

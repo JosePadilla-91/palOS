@@ -173,10 +173,7 @@ def numlock():
     """Num Lock at login: org.gnome.desktop.peripherals.keyboard numlock-state, on unless the user
     turned it off in Paladin Settings (the session sets it on the first time)."""
     on = gs('org.gnome.desktop.peripherals.keyboard', 'numlock-state', True)
-    if shutil.which('numlockx'):
-        subprocess.run(['numlockx', 'on' if on else 'off'], capture_output=True, timeout=5)
-    else:
-        log('numlockx missing; Num Lock left as is')
+    subprocess.run(['palos-x', 'numlock', 'on' if on else 'off'], capture_output=True, timeout=5)
 
 
 # ------------------------------------------------------------------------------------------- snap cursors
