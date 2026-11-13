@@ -1,5 +1,0 @@
-[Desktop Entry]
-Name=palOS Login
-Comment=The palOS login screen
-Exec=paladin-greeter
-Type=Application

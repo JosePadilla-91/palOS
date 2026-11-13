@@ -6,7 +6,7 @@ Maintainer: Paladin Maintainer <joe.lucas0413@gmail.com>
 Architecture: all
 Version: 1.4.0
 Depends: paladin-seeker (>= 1.2.0), python3, passwd, adduser, pkexec | policykit-1, x11-xserver-utils, libglib2.0-bin
-Recommends: network-manager, network-manager-gnome, pulseaudio-utils, accountsservice, upower, power-profiles-daemon, systemd-timesyncd | chrony
+Recommends: network-manager, network-manager-gnome, pulseaudio-utils, upower, power-profiles-daemon, systemd-timesyncd | chrony
 Conffiles:
  /etc/apparmor.d/paladin-settings 6b5b91a3c10c143a8a9597bf3857bc2b
 Description: System Settings for palOS

@@ -2,16 +2,16 @@
 # Paladin login screen (on Kibble). If it can't start (or quits straight away), it starts once more with
 # plain software drawing (a graphics driver problem is the usual cause), so there is always a way to log in.
 export XCURSOR_THEME=Paladin XCURSOR_SIZE=24 NO_AT_BRIDGE=1 PALOS_NO_THEME=1
-export HOME="${HOME:-/var/lib/lightdm}" XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-/var/lib/lightdm/.config}"
+export HOME="${HOME:-/var/lib/paladin-login}" XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-/var/lib/paladin-login/.config}"
 command -v palos-x >/dev/null 2>&1 && palos-x numlock on
 # the display scale the last person chose (Settings → Displays) suits the login screen too
 export PALOS_SCALE=1   # the login screen is laid out for the screen as it is
 START=$(date +%s)
-# LightDM ends the login screen with SIGTERM once the session starts: pass it on, so the login screen's
+# paladin-login ends the login screen with SIGTERM once the session starts: pass it on, so the login screen's
 # window never stays on top of the desktop (that looked like a frozen login)
 /usr/lib/kibble/kibble /usr/share/paladin-greeter/app &
 PID=$!
-trap 'kill -TERM $PID 2>/dev/null; sleep 1; kill -KILL $PID 2>/dev/null; pkill -KILL -f "greeterd.py" 2>/dev/null; exit 0' TERM INT HUP
+trap 'kill -TERM $PID 2>/dev/null; sleep 1; kill -KILL $PID 2>/dev/null; exit 0' TERM INT HUP
 wait $PID
 CODE=$?
 trap - TERM INT HUP
@@ -26,7 +26,7 @@ if [ $(( $(date +%s) - START )) -lt 30 ]; then
   echo "paladin-greeter: starting the login screen again with software drawing" >&2
   LIBGL_ALWAYS_SOFTWARE=1 KIBBLE_NO_DRI3=1 /usr/lib/kibble/kibble /usr/share/paladin-greeter/app &
   PID=$!
-  trap 'kill -TERM $PID 2>/dev/null; sleep 1; kill -KILL $PID 2>/dev/null; pkill -KILL -f "greeterd.py" 2>/dev/null; exit 0' TERM INT HUP
+  trap 'kill -TERM $PID 2>/dev/null; sleep 1; kill -KILL $PID 2>/dev/null; exit 0' TERM INT HUP
   wait $PID
   CODE=$?
 fi

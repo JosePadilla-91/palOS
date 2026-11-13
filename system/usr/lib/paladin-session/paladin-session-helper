@@ -137,9 +137,9 @@ SHEET_MATCH = '(type=Dialog | type=ModalDialog) & !(type=Normal)'
 
 def greeter_data():
     """Tell the Paladin login screen how this person likes it: Dark Mode and desktop picture, in the
-    folder LightDM shares between each user and the login screen (/var/lib/lightdm-data/USER)."""
+    folder the login screen reads for each person (/var/lib/paladin-login/users/USER)."""
     import json
-    d = os.path.join('/var/lib/lightdm-data', os.environ.get('USER') or os.path.basename(HOME))
+    d = os.path.join('/var/lib/paladin-login/users', os.environ.get('USER') or os.path.basename(HOME))
     if not os.path.isdir(d) or not os.access(d, os.W_OK):
         return
     try:

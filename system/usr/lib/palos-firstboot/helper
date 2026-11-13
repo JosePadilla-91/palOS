@@ -4,7 +4,7 @@
 The setup screen (running as the palos-setup user) asks it, over /run/palos-firstboot/helper.sock,
 to do the few things that need root: check and create the first account, set the computer's name,
 remember the light/dark choice, and finish (which switches the computer to the normal login screen).
-Only the palos-setup user, and the login screen (lightdm, which runs setup itself when the automatic start
+Only the palos-setup user, and the login screen (paladin-login, which runs setup itself when the automatic start
 didn't work), may connect (checked with SO_PEERCRED). One JSON request per connection.
 """
 import base64
@@ -33,7 +33,7 @@ SETUP_USER = 'palos-setup'
 AVATARS = '/usr/share/palos/avatars'
 USER_RE = re.compile(r'^[a-z][a-z0-9_-]{0,31}$')
 RESERVED = {'root', 'admin', 'daemon', 'bin', 'sys', 'sync', 'games', 'man', 'lp', 'mail', 'news', 'uucp', 'proxy', 'www-data',
-            'backup', 'list', 'irc', 'gnats', 'nobody', 'systemd', 'messagebus', 'lightdm', 'palos', 'palos-setup', 'ubuntu', 'test',
+            'backup', 'list', 'irc', 'gnats', 'nobody', 'systemd', 'messagebus', 'lightdm', 'paladin-login', 'palos', 'palos-setup', 'ubuntu', 'test',
             'guest', 'sudo', 'user', 'users', 'sshd', 'syslog', 'polkitd', 'avahi', 'cups', 'pipewire', 'gdm', 'colord', 'geoclue'}
 # video/audio/render: the camera, sound and graphics work for this account even outside a seat session (logind's
 # uaccess covers the logged-in seat; the groups cover everything else: remote logins, services started by the account)
@@ -257,16 +257,16 @@ def apply_appearance(username, pw, dark):
     except (subprocess.TimeoutExpired, OSError) as e:
         log('appearance: palos-pref failed:', e)
     shutil.rmtree(env['XDG_RUNTIME_DIR'], ignore_errors=True)
-    # login screen look (LightDM's per-user shared data folder)
-    d = f'/var/lib/lightdm-data/{username}'
+    # login screen look (each person's folder the login screen reads)
+    d = f'/var/lib/paladin-login/users/{username}'
     try:
-        lightdm_gid = grp.getgrnam('lightdm').gr_gid
+        login_gid = grp.getgrnam('paladin-login').gr_gid
     except KeyError:
-        lightdm_gid = pw.pw_gid
+        login_gid = pw.pw_gid
     os.makedirs(d, exist_ok=True)
-    os.chown(d, pw.pw_uid, lightdm_gid)
+    os.chown(d, pw.pw_uid, login_gid)
     os.chmod(d, 0o770)
-    write_file(os.path.join(d, 'paladin.json'), json.dumps({'dark': dark}) + '\n', 0o644, pw.pw_uid, lightdm_gid)
+    write_file(os.path.join(d, 'paladin.json'), json.dumps({'dark': dark}) + '\n', 0o644, pw.pw_uid, login_gid)
 
 
 def set_hostname(name, pretty=None):
@@ -666,9 +666,9 @@ def a_finish(_):
         return {'ok': False, 'error': 'Create your account first.'}
     # the login screen should offer the new person first
     try:
-        lightdm = pwd.getpwnam('lightdm')
-        f = os.path.join(lightdm.pw_dir, '.paladin-greeter-state')
-        write_file(f, json.dumps({'user': state['user'], 'session': 'paladin'}), 0o600, lightdm.pw_uid, lightdm.pw_gid)
+        login = pwd.getpwnam('paladin-login')
+        f = os.path.join(login.pw_dir, '.paladin-greeter-state')
+        write_file(f, json.dumps({'user': state['user'], 'session': 'paladin'}), 0o600, login.pw_uid, login.pw_gid)
     except (KeyError, OSError) as e:
         log('greeter state:', e)
     try:
@@ -678,8 +678,9 @@ def a_finish(_):
     run(['/usr/lib/palos-firstboot/disarm'])
     # straight to the desktop: the new account logs in once by itself (finish-switch takes this away again)
     try:
-        write_file('/etc/lightdm/lightdm.conf.d/91-palos-first-login.conf',
-                   f"# palOS: log the new account straight in after setup (removed right after)\n[Seat:*]\nautologin-user={state['user']}\nautologin-user-timeout=0\nautologin-session=paladin\ndisplay-setup-script=/usr/lib/palos-firstboot/blue-screen\n", 0o644)
+        os.makedirs('/etc/paladin-login.d', exist_ok=True)
+        write_file('/etc/paladin-login.d/91-palos-first-login.conf',
+                   f"# palOS: log the new account straight in after setup (removed right after)\nautologin-user={state['user']}\nautologin-session=paladin\ndisplay-setup-script=/usr/lib/palos-firstboot/blue-screen\n", 0o644)
     except OSError as e:
         log('first login:', e)
     # now the computer takes its new name (the login screen restarts in a moment, with the new name)
@@ -715,7 +716,7 @@ def serve():
         return 1
     allowed = {setup.pw_uid}
     try:
-        allowed.add(pwd.getpwnam('lightdm').pw_uid)
+        allowed.add(pwd.getpwnam('paladin-login').pw_uid)
     except KeyError:
         pass
     os.makedirs(SOCK_DIR, exist_ok=True)

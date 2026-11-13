@@ -1,0 +1,11 @@
+#!/bin/sh
+# paladin-login: start a session the way a login shell would (the person's profile first).
+#   session-wrapper COMMAND   (COMMAND is the session's Exec line)
+LOG="$HOME/.xsession-errors"
+[ -L "$LOG" ] && rm -f "$LOG"
+exec >"$LOG" 2>&1
+echo "paladin-login: starting $1 for $USER ($(date))"
+for f in /etc/profile "$HOME/.profile" /etc/xprofile "$HOME/.xprofile"; do
+  [ -f "$f" ] && . "$f"
+done
+eval exec "$1"

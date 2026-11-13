@@ -1,0 +1,10 @@
+# palOS login screen (paladin-login runs it as paladin-login, no password)
+#%PAM-1.0
+auth    required        pam_permit.so
+@include common-account
+session [success=ok ignore=ignore module_unknown=ignore default=bad] pam_selinux.so close
+session required        pam_limits.so
+@include common-session
+session [success=ok ignore=ignore module_unknown=ignore default=bad] pam_selinux.so open
+session required        pam_env.so readenv=1
+session required        pam_env.so readenv=1 user_readenv=1 envfile=/etc/default/locale

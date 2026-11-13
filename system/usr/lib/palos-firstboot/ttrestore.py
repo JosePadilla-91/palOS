@@ -768,7 +768,7 @@ class Session:
                         os.unlink(f)
                     except OSError:
                         pass
-                shutil.rmtree(f'/var/lib/lightdm-data/{name}', ignore_errors=True)
+                shutil.rmtree(f'/var/lib/paladin-login/users/{name}', ignore_errors=True)
             elif kind == 'group':
                 run(['groupdel', name])
 
@@ -780,7 +780,7 @@ class Session:
         includes = [u['home'] for u in with_home]
         for u in users:
             includes += [f'/var/lib/AccountsService/icons/{u["name"]}', f'/var/lib/AccountsService/users/{u["name"]}',
-                         f'/var/lib/lightdm-data/{u["name"]}']
+                         f'/var/lib/paladin-login/users/{u["name"]}']
         job['phase'], job['progress'], job['detail'] = 'Restoring files…', 0.0, ''
         free = shutil.disk_usage('/home').free
         state = {'checked': False}
@@ -869,15 +869,15 @@ class Session:
                 os.chmod(pic, 0o644)
             write_file(f'/var/lib/AccountsService/users/{u["name"]}',
                        '[User]\nSession=paladin\nXSession=paladin\n' + (f'Icon={pic}\n' if pic else '') + 'SystemAccount=false\n', 0o600)
-            ld_src = staging + f'/var/lib/lightdm-data/{u["name"]}/paladin.json'
+            ld_src = staging + f'/var/lib/paladin-login/users/{u["name"]}/paladin.json'
             dark = False
             try:
                 dark = bool(json.load(open(ld_src)).get('dark'))
             except (OSError, ValueError, AttributeError):
                 pass
-            d = f'/var/lib/lightdm-data/{u["name"]}'
+            d = f'/var/lib/paladin-login/users/{u["name"]}'
             try:
-                lgid = grp.getgrnam('lightdm').gr_gid
+                lgid = grp.getgrnam('paladin-login').gr_gid
             except KeyError:
                 lgid = gid
             os.makedirs(d, exist_ok=True)

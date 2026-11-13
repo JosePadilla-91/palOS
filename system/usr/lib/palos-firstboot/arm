@@ -27,21 +27,16 @@ printf '[User]\nSystemAccount=true\n' > /var/lib/AccountsService/users/palos-set
 [ -x /usr/lib/palos-firstboot/basic-setup ] || fail "Basic Setup is missing: neither setup screen could run"
 [ -x /usr/lib/palos-firstboot/run-setup ] || fail "run-setup is missing"
 [ -f /usr/lib/palos-firstboot/sessions/palos-firstboot.desktop ] || fail "the setup session file is missing"
-getent passwd lightdm >/dev/null || fail "LightDM's account is missing"
+getent passwd paladin-login >/dev/null || fail "the login screen's account (paladin-login) is missing"
 
 # switch it on
 mkdir -p /var/lib/palos
 : > /var/lib/palos/firstboot
 rm -f /var/lib/palos/firstboot-safe
-mkdir -p /etc/lightdm/lightdm.conf.d
-cat > /etc/lightdm/lightdm.conf.d/90-palos-firstboot.conf <<'CONF'
+mkdir -p /etc/paladin-login.d
+cat > /etc/paladin-login.d/90-palos-firstboot.conf <<'CONF'
 # palOS first-boot setup (removed automatically when setup finishes)
-[LightDM]
-sessions-directory=/usr/share/lightdm/sessions:/usr/share/xsessions:/usr/lib/palos-firstboot/sessions
-
-[Seat:*]
 autologin-user=palos-setup
-autologin-user-timeout=0
 autologin-session=palos-firstboot
 CONF
 # a login screen that only lists real people would otherwise be all there is: make sure the
@@ -51,7 +46,7 @@ systemctl enable palos-firstboot-helper.service >/dev/null 2>&1 || \
 [ -e /etc/systemd/system/graphical.target.wants/palos-firstboot-helper.service ] || fail "couldn't switch on setup's helper"
 # the login screen itself must be switched on
 if [ ! -e /etc/systemd/system/display-manager.service ]; then
-  ln -sf /lib/systemd/system/lightdm.service /etc/systemd/system/display-manager.service
+  ln -sf /usr/lib/systemd/system/paladin-login.service /etc/systemd/system/display-manager.service
 fi
 say "first-boot setup is ready"
 exit 0

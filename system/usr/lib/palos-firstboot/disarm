@@ -1,5 +1,5 @@
 #!/bin/sh
 # palOS first-boot setup is done: the login screen goes back to normal.
-rm -f /etc/lightdm/lightdm.conf.d/90-palos-firstboot.conf /var/lib/palos/firstboot /var/lib/palos/firstboot-safe
+rm -f /etc/paladin-login.d/90-palos-firstboot.conf /var/lib/palos/firstboot /var/lib/palos/firstboot-safe
 systemctl disable palos-firstboot-helper.service >/dev/null 2>&1 || true
 exit 0

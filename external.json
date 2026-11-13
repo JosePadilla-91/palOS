@@ -369,6 +369,12 @@
   "kind": "program"
  },
  {
+  "path": "/usr/sbin/paladin-login",
+  "size": 43144,
+  "sha256": "d04725ed686722ed256755d83b4c0858aa1e29e869c2e110d39cab78709f67a4",
+  "kind": "program"
+ },
+ {
   "path": "/usr/share/palos/welcome.mkv",
   "size": 16491261,
   "sha256": "43a7e40bbd48169c96c287ebc792ca97a2b128a3850c85927a2db2af1b48719c",

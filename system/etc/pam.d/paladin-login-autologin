@@ -1,0 +1,15 @@
+# palOS automatic login (setup, the first login after setup, the install USB)
+#%PAM-1.0
+auth    requisite       pam_nologin.so
+auth    required        pam_permit.so
+@include common-account
+# palOS Parental Controls: bedtime and screen time
+account requisite       pam_exec.so stdout quiet /usr/lib/palos-parental/pam-check
+session [success=ok ignore=ignore module_unknown=ignore default=bad] pam_selinux.so close
+#session required        pam_loginuid.so
+session required        pam_limits.so
+@include common-session
+session [success=ok ignore=ignore module_unknown=ignore default=bad] pam_selinux.so open
+session required        pam_env.so readenv=1
+session required        pam_env.so readenv=1 user_readenv=1 envfile=/etc/default/locale
+@include common-password

@@ -32,7 +32,7 @@ sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import snapstore  # noqa: E402
 
 # palOS's own packages: always installed, never offered for removal
-CORE = re.compile(r'^(paladin-|palos-|calamares|casper$|ubuntu-minimal$|linux-|grub|shim|systemd|xorg$|xserver-xorg|lightdm$|network-manager$|pipewire|wireplumber|sudo$|apt$|dpkg$|python3$|base-files$|compiz)')
+CORE = re.compile(r'^(paladin-|palos-|calamares|casper$|ubuntu-minimal$|linux-|grub|shim|systemd|xorg$|xserver-xorg|paladin-login$|network-manager$|pipewire|wireplumber|sudo$|apt$|dpkg$|python3$|base-files$|compiz)')
 
 CATEGORIES = [
     ('AudioVideo', 'Music & Video'),

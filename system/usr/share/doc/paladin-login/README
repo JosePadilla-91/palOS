@@ -1,0 +1,17 @@
+palOS login (paladin-login)
+
+paladin-login is palOS's login manager. It starts the X server, shows the palOS login screen
+(paladin-greeter, a Kibble app run as the unprivileged "paladin-login" account), checks passwords
+through PAM (/etc/pam.d/paladin-login), and starts the chosen session registered with systemd-logind.
+When the session ends, the X server starts afresh and the login screen comes back.
+
+Settings: /etc/paladin-login.conf, then /etc/paladin-login.d/NAME.conf in name order:
+  autologin-user, autologin-session   log someone in once when paladin-login starts
+  default-session                     the session used when none is chosen (paladin)
+  sessions-dirs                       where sessions are found
+  display-setup-script, session-setup-script
+
+The login screen's own look: /etc/paladin-greeter.conf. Each person's look on the login screen
+(Dark Mode, desktop picture) is in /var/lib/paladin-login/users/NAME, written by their session.
+On the palOS install USB the live account logs in automatically. The screen lock is palOS's own
+(paladin-locker), not the login screen.

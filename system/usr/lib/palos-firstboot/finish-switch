@@ -12,7 +12,7 @@ After=display-manager.service
 
 [Service]
 Type=oneshot
-ExecStart=/bin/sh -c 'sleep 25; rm -f /etc/lightdm/lightdm.conf.d/91-palos-first-login.conf; pkill -u palos-setup 2>/dev/null; cp -f /var/lib/palos-setup/.cache/palos-setup.log /var/log/palos-setup.log 2>/dev/null; find /var/lib/palos-setup -mindepth 1 -delete 2>/dev/null; systemctl disable palos-first-login-cleanup.service; rm -f /etc/systemd/system/palos-first-login-cleanup.service; systemctl daemon-reload'
+ExecStart=/bin/sh -c 'sleep 25; rm -f /etc/paladin-login.d/91-palos-first-login.conf; pkill -u palos-setup 2>/dev/null; cp -f /var/lib/palos-setup/.cache/palos-setup.log /var/log/palos-setup.log 2>/dev/null; find /var/lib/palos-setup -mindepth 1 -delete 2>/dev/null; systemctl disable palos-first-login-cleanup.service; rm -f /etc/systemd/system/palos-first-login-cleanup.service; systemctl daemon-reload'
 
 [Install]
 WantedBy=graphical.target
@@ -23,11 +23,11 @@ UNIT
   systemctl reboot
   exit 0
 fi
-systemctl restart lightdm.service 2>/dev/null || systemctl restart display-manager.service
+systemctl restart display-manager.service
 sleep 4
 # the one automatic login has happened: from now on the login screen asks as usual
 sleep 12
-rm -f /etc/lightdm/lightdm.conf.d/91-palos-first-login.conf
+rm -f /etc/paladin-login.d/91-palos-first-login.conf
 # tidy the setup account's home (it stays as a locked system account)
 pkill -u palos-setup 2>/dev/null || true
 cp -f /var/lib/palos-setup/.cache/palos-setup.log /var/log/palos-setup.log 2>/dev/null; find /var/lib/palos-setup -mindepth 1 -delete 2>/dev/null || true
