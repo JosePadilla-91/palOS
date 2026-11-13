@@ -181,10 +181,7 @@ WM_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/paladin-session"
 /usr/bin/python3 "$HELPER" wait-wm 20 >> "$LOG" 2>&1 || log "window manager did not report in time (continuing)"
 # The desktop, menu bar and Dock use see-through windows: start them only once the window manager's compositing runs
 # (made before it, they could come up black or with garbled colours until clicked).
-/usr/bin/python3 -c 'import sys,time
-from Xlib import display, X
-d=display.Display(); a=d.intern_atom("_NET_WM_CM_S0"); end=time.time()+10
-while time.time()<end and d.get_selection_owner(a) in (0, X.NONE): time.sleep(0.2)' >> "$LOG" 2>&1 || true
+palos-x wait-compositor 10 >> "$LOG" 2>&1 || log "the compositor did not start in time (continuing)"
 # The window manager resets the keyboard as it starts: set Num Lock again once it's up.
 ( sleep 2; /usr/bin/python3 "$HELPER" numlock >> "$LOG" 2>&1 ) &
 # The trackpad: this person's settings (Settings › Trackpad) and the gestures (pinch, rotate, swipes).

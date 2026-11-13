@@ -11,6 +11,7 @@
      palos-x window find TITLE              the ids of windows whose title contains TITLE, one per line
      palos-x viewport X Y                   show that part of the desktop (palOS's screens)
      palos-x numlock on|off
+     palos-x wait-compositor [SECONDS]      wait (10 s at most by default) until the compositor runs; exit 1 if it didn't
 
    Window ids may be decimal or 0x hex. Everything goes through the window manager the usual way
    (EWMH messages), and keys through XTest. */
@@ -224,7 +225,7 @@ int main(int argc, char **argv)
     if (argc < 2 || !strcmp(argv[1], "-h") || !strcmp(argv[1], "--help")) {
         fputs("palos-x pointer move X Y | pointer where | screen size | key COMBO... | type TEXT |\n"
               "        window activate|close|minimize|toggle-maximize|geometry ID | window find TITLE |\n"
-              "        viewport X Y | numlock on|off\n", argc < 2 ? stderr : stdout);
+              "        viewport X Y | numlock on|off | wait-compositor [SECONDS]\n", argc < 2 ? stderr : stdout);
         return argc < 2 ? 2 : 0;
     }
     if (!(dpy = XOpenDisplay(NULL))) { fputs("palos-x: no display\n", stderr); return 3; }
@@ -262,6 +263,13 @@ int main(int argc, char **argv)
     if (!strcmp(c, "window") && argc == 4) return window_cmd(argv[2], argv[3]);
     if (!strcmp(c, "viewport") && argc == 4) { ewmh(root, "_NET_DESKTOP_VIEWPORT", atol(argv[2]), atol(argv[3]), 0, 0); return 0; }
     if (!strcmp(c, "numlock") && argc == 3) return numlock(!strcmp(argv[2], "on"));
+    if (!strcmp(c, "wait-compositor")) {
+        char sel[32]; snprintf(sel, sizeof sel, "_NET_WM_CM_S%d", DefaultScreen(dpy));
+        Atom a = A(sel);
+        int tenths = (argc >= 3 ? atoi(argv[2]) : 10) * 10;
+        for (int i = 0; i <= tenths; i++) { if (XGetSelectionOwner(dpy, a) != None) return 0; usleep(100000); }
+        return 1;
+    }
     fprintf(stderr, "palos-x: what is \"%s\"? (palos-x --help)\n", c);
     return 2;
 }
