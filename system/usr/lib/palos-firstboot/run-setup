@@ -2,7 +2,7 @@
 # Starts palOS setup on the current screen and keeps trying until it works:
 #   1. the full setup screen (welcome film, Wi-Fi, account, light or dark)
 #   2. the same, drawn without the graphics card (a graphics driver that can't cope can't stop setup)
-#   3. Basic Setup: a plain screen that only creates the first account (needs nothing but GTK)
+#   3. Basic Setup: a plain screen that only creates the first account (needs nothing but X)
 # Used by the first-boot session, by the login screen when setup didn't start by itself, and by the
 # login screen's launcher if the login screen itself can't start. Everything it does goes to the system
 # log (journalctl -t palos-setup) as well as ~/.cache/palos-setup.log, so a failure always leaves a record.
@@ -10,7 +10,7 @@ FLAG=/var/lib/palos/firstboot
 RT=/usr/lib/kibble/kibble     # Kibble: palOS's app runtime (its media engine plays the welcome film)
 APP=/opt/palos-firstboot/app
 [ -e "$FLAG" ] || exit 0
-export XCURSOR_THEME=Paladin XCURSOR_SIZE=24 GDK_BACKEND=x11 NO_AT_BRIDGE=1
+export XCURSOR_THEME=Paladin XCURSOR_SIZE=24 NO_AT_BRIDGE=1
 # the language and keyboard chosen in the installer (or on setup's own language page, for a new owner)
 read_language() {
   [ -r /var/lib/palos-firstboot/locale.conf ] || return 0
@@ -77,4 +77,4 @@ else
 fi
 [ -e "$FLAG" ] || exit 0
 note "starting Basic Setup"
-exec /usr/bin/python3 /usr/lib/palos-firstboot/basic-setup >>"$LOG" 2>&1
+exec /usr/lib/palos-firstboot/basic-setup >>"$LOG" 2>&1

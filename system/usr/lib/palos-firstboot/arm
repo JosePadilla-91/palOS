@@ -24,8 +24,7 @@ printf '[User]\nSystemAccount=true\n' > /var/lib/AccountsService/users/palos-set
 
 # the setup screen runs on Kibble, palOS's app runtime
 [ -x /usr/lib/kibble/kibble ] && [ -f /opt/palos-firstboot/app/package.json ] || say "WARNING: Kibble or the setup screen is missing; Basic Setup will be used"
-python3 -c 'import gi; gi.require_version("Gtk", "3.0"); from gi.repository import Gtk' 2>/dev/null \
-  || fail "GTK for Python is missing: neither setup screen could run"
+[ -x /usr/lib/palos-firstboot/basic-setup ] || fail "Basic Setup is missing: neither setup screen could run"
 [ -x /usr/lib/palos-firstboot/run-setup ] || fail "run-setup is missing"
 [ -f /usr/lib/palos-firstboot/sessions/palos-firstboot.desktop ] || fail "the setup session file is missing"
 getent passwd lightdm >/dev/null || fail "LightDM's account is missing"

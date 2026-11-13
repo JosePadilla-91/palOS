@@ -11,3 +11,4 @@ src/kibble/image/kibble-image
 src/palos-screenshot/palos-screenshot
 src/palos-alert/palos-alert
 src/palos-bluetooth-agent/palos-bluetooth-agent
+src/palos-basic-setup/basic-setup
