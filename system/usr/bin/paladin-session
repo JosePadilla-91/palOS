@@ -132,13 +132,13 @@ if command -v xdotool >/dev/null; then
   ) &
 fi
 
-# Saved passwords (the login screen already unlocked the keyring).
-if command -v gnome-keyring-daemon >/dev/null; then
-  eval "$(gnome-keyring-daemon --start --components=secrets,pkcs11 2>>"$LOG")"
-  export GNOME_KEYRING_CONTROL
+# SSH keys for the session (OpenSSH's own agent, one per login)
+if [ -z "${SSH_AUTH_SOCK:-}" ] && command -v ssh-agent >/dev/null; then
+  AGENT_SOCK="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/ssh-agent.socket"
+  rm -f "$AGENT_SOCK"
+  eval "$(ssh-agent -s -a "$AGENT_SOCK" 2>>"$LOG")" >/dev/null
 fi
-[ -S "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/gcr/ssh" ] && export SSH_AUTH_SOCK="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/gcr/ssh"
-dbus-update-activation-environment --systemd SSH_AUTH_SOCK GNOME_KEYRING_CONTROL >> "$LOG" 2>&1 || true
+dbus-update-activation-environment --systemd SSH_AUTH_SOCK >> "$LOG" 2>&1 || true
 
 # Password prompts for administrator tasks (palOS's own).
 /usr/lib/paladin-authenticate/paladin-authenticate >> "$LOG" 2>&1 &
@@ -271,4 +271,5 @@ supervise "Tray" /usr/bin/python3 /usr/lib/paladin-session/xembed-tray
 
 # ---------------------------------------------------------------- stay alive until logout
 while xprop -root -len 0 >/dev/null 2>&1; do sleep 5; done
+[ -n "${SSH_AGENT_PID:-}" ] && kill "$SSH_AGENT_PID" 2>/dev/null
 log "---- Paladin session ended"

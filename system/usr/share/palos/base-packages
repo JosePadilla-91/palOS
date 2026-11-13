@@ -129,8 +129,6 @@ fwupd
 fwupd-signed
 gcc-13-base
 gcc-14-base
-gcr
-gcr4
 gdisk
 geoclue-2.0
 gettext-base
@@ -163,7 +161,6 @@ gir1.2-wnck-3.0
 glib-networking
 glib-networking-common
 glib-networking-services
-gnome-keyring
 gnome-online-accounts
 gnome-settings-daemon-common
 gnome-themes-extra
@@ -651,7 +648,6 @@ liborc-0.4-0t64
 libp11-kit0
 libpackagekit-glib2-18
 libpam-cap
-libpam-gnome-keyring
 libpam-modules
 libpam-modules-bin
 libpam-runtime
@@ -1062,7 +1058,6 @@ perl-modules-5.38
 perl-openssl-defaults
 picom
 pinentry-curses
-pinentry-gnome3
 pipewire
 pipewire-alsa
 pipewire-audio
