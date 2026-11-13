@@ -282,7 +282,10 @@ static gboolean pd_connect(WPEDisplay *display, GError **error)
     int major, minor; Bool pixmaps;
     d->shm = XShmQueryVersion(d->dpy, &major, &minor, &pixmaps) && getenv("KIBBLE_NO_SHM") == NULL;
     /* GPU buffers go straight to the X server (DRI3 + Present) when it can take them */
-    if (!getenv("KIBBLE_NO_DRI3")) {
+    /* (asking an X server for an extension it doesn't have would close the connection: check first) */
+    const xcb_query_extension_reply_t *dri3_ext = xcb_get_extension_data(d->xcb, &xcb_dri3_id);
+    const xcb_query_extension_reply_t *present_ext = xcb_get_extension_data(d->xcb, &xcb_present_id);
+    if (!getenv("KIBBLE_NO_DRI3") && dri3_ext && dri3_ext->present && present_ext && present_ext->present) {
         xcb_dri3_query_version_reply_t *dv = xcb_dri3_query_version_reply(d->xcb, xcb_dri3_query_version(d->xcb, 1, 2), NULL);
         xcb_present_query_version_reply_t *pv = xcb_present_query_version_reply(d->xcb, xcb_present_query_version(d->xcb, 1, 2), NULL);
         d->dri3 = dv && pv && (dv->major_version > 1 || dv->minor_version >= 2);

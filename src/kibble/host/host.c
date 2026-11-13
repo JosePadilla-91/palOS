@@ -698,7 +698,6 @@ int main(int argc, char **argv)
                                                  "enable-media", TRUE, "enable-mediasource", TRUE,
                                                  "enable-webaudio", TRUE, "enable-media-stream", TRUE,
                                                  "media-playback-requires-user-gesture", FALSE,
-                                                 "enable-back-forward-navigation-gestures", FALSE,
                                                  NULL);
     wins = g_hash_table_new(g_direct_hash, g_direct_equal);
     schemes = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
