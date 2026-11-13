@@ -13,3 +13,4 @@ src/palos-alert/palos-alert
 src/palos-bluetooth-agent/palos-bluetooth-agent
 src/palos-basic-setup/basic-setup
 src/palos-pref/palos-pref
+tools/__pycache__/

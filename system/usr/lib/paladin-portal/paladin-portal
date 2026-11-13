@@ -1,5 +1,6 @@
 #!/usr/bin/python3
-"""palOS's Open and Save sheets for apps that ask the desktop for them (xdg-desktop-portal).
+"""palOS's desktop portal: the Open and Save sheets, and palOS's settings, for apps that ask the desktop
+(xdg-desktop-portal).
 
 Firefox, Chromium, Flatpaks and other apps don't draw their own file dialogs: they ask the portal,
 and the portal asks this. Instead of GTK's file chooser (a separate program with its own Dock icon), the
@@ -7,10 +8,13 @@ person gets palOS's sheet, the same one Seeker and every palOS app use, rolling 
 bar of the window that asked.
 
   org.freedesktop.impl.portal.FileChooser  OpenFile, SaveFile, SaveFiles
+  org.freedesktop.impl.portal.Settings     Dark Mode (org.freedesktop.appearance color-scheme) and the
+                                           interface settings (fonts, icons, cursor) from palOS's settings
+                                           (palos-pref), with SettingChanged when they change
   (registered for the Paladin desktop in /usr/share/xdg-desktop-portal/paladin-portals.conf)
 
 The sheet itself is drawn by chooser/ (on Kibble, palOS's app runtime), kept running while there's work and
-for a minute after."""
+for a minute after. The service itself stays for the session (apps are told when a setting changes)."""
 import json
 import mimetypes
 import os
@@ -28,6 +32,7 @@ from gi.repository import GLib
 BUS_NAME = 'org.freedesktop.impl.portal.desktop.paladin'
 OBJ = '/org/freedesktop/portal/desktop'
 IFACE = 'org.freedesktop.impl.portal.FileChooser'
+SETTINGS = 'org.freedesktop.impl.portal.Settings'
 REQUEST = 'org.freedesktop.impl.portal.Request'
 HERE = os.path.dirname(os.path.realpath(__file__))
 RUNTIME = '/usr/lib/kibble/kibble'          # Kibble, palOS's app runtime
@@ -225,9 +230,79 @@ class FileChooser(dbus.service.Object):
     def _maybe_quit(self):
         if self.helper.busy():
             return True
-        self.helper.stop()
-        loop.quit()
+        self.helper.stop()          # the sheet's runtime goes; the service stays (it carries the settings)
+        self.idle = None
         return False
+
+    # ------------------------------------------------------------------ Settings
+    @staticmethod
+    def _pref_variant(v):
+        if isinstance(v, bool):
+            return dbus.Boolean(v, variant_level=1)
+        if isinstance(v, int):
+            return dbus.Int32(v, variant_level=1)
+        if isinstance(v, float):
+            return dbus.Double(v, variant_level=1)
+        return dbus.String(str(v), variant_level=1)
+
+    def _settings(self):
+        """{namespace: {key: variant}}: palOS's interface settings as GTK and Flatpaks know them, and the
+        freedesktop appearance keys"""
+        prefs = read_prefs()
+        out = {'org.gnome.desktop.interface': {}, 'org.freedesktop.appearance': {}}
+        for k, v in prefs.items():
+            if k.startswith('interface.'):
+                out['org.gnome.desktop.interface'][k[len('interface.'):]] = self._pref_variant(v)
+        dark = prefs.get('interface.color-scheme') == 'prefer-dark'
+        out['org.freedesktop.appearance']['color-scheme'] = dbus.UInt32(1 if dark else 0, variant_level=1)
+        out['org.freedesktop.appearance']['contrast'] = dbus.UInt32(0, variant_level=1)
+        return out
+
+    @dbus.service.method(SETTINGS, in_signature='as', out_signature='a{sa{sv}}')
+    def ReadAll(self, namespaces):
+        import fnmatch
+        allv = self._settings()
+        want = [str(n) for n in namespaces if str(n)]
+        res = {}
+        for ns, vals in allv.items():
+            if not want or any(fnmatch.fnmatchcase(ns, w) for w in want):
+                res[ns] = dbus.Dictionary(vals, signature='sv')
+        return dbus.Dictionary(res, signature='sa{sv}')
+
+    @dbus.service.method(SETTINGS, in_signature='ss', out_signature='v')
+    def Read(self, namespace, key):
+        v = self._settings().get(str(namespace), {}).get(str(key))
+        if v is None:
+            raise dbus.exceptions.DBusException('Requested setting not found', name='org.freedesktop.portal.Error.NotFound')
+        return v
+
+    @dbus.service.signal(SETTINGS, signature='ssv')
+    def SettingChanged(self, namespace, key, value):
+        pass
+
+    def watch_settings(self):
+        """palos-pref monitor prints "KEY VALUE" when a setting changes: tell the apps"""
+        try:
+            proc = subprocess.Popen(['palos-pref', 'monitor'], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+        except OSError:
+            return
+
+        def read(_fd, _cond):
+            line = proc.stdout.readline()
+            if not line:
+                GLib.timeout_add_seconds(5, lambda: (self.watch_settings(), False)[1])
+                return False
+            key = line.split(' ', 1)[0]
+            if key.startswith('interface.'):
+                vals = self._settings()
+                name = key[len('interface.'):]
+                v = vals['org.gnome.desktop.interface'].get(name)
+                if v is not None:
+                    self.SettingChanged('org.gnome.desktop.interface', name, v)
+                if name == 'color-scheme':
+                    self.SettingChanged('org.freedesktop.appearance', 'color-scheme', vals['org.freedesktop.appearance']['color-scheme'])
+            return True
+        GLib.io_add_watch(proc.stdout.fileno(), GLib.IO_IN | GLib.IO_HUP, read)
 
     def _run(self, handle, parent_window, params, finish, ok, err):
         self._touch()
@@ -302,6 +377,26 @@ def default_save_dir():
     return os.path.expanduser('~')
 
 
+def read_prefs():
+    """every palOS setting (palos-pref list: "KEY VALUE" per line), typed"""
+    try:
+        out = subprocess.run(['palos-pref', 'list'], capture_output=True, text=True, timeout=5).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return {}
+    prefs = {}
+    for line in out.splitlines():
+        k, _, v = line.partition(' ')
+        if v in ('true', 'false'):
+            prefs[k] = v == 'true'
+        elif re.fullmatch(r'-?[0-9]+', v):
+            prefs[k] = int(v)
+        elif re.fullmatch(r'-?[0-9]+\.[0-9]*', v):
+            prefs[k] = float(v)
+        else:
+            prefs[k] = v
+    return prefs
+
+
 loop = None
 
 
@@ -310,7 +405,8 @@ def main():
     DBusGMainLoop(set_as_default=True)
     bus = dbus.SessionBus()
     name = dbus.service.BusName(BUS_NAME, bus, do_not_queue=True)  # noqa: F841  (keeps the name)
-    FileChooser(bus, Helper(X11()))
+    portal = FileChooser(bus, Helper(X11()))
+    portal.watch_settings()
     loop = GLib.MainLoop()
     loop.run()
 

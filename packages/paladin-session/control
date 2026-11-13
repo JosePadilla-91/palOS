@@ -6,7 +6,7 @@ Maintainer: Paladin Maintainer <joe.lucas0413@gmail.com>
 Architecture: all
 Version: 1.6.1
 Depends: paladin-seeker (>= 1.8.0), paladin-dock, python3, python3-gi, x11-utils, x11-xserver-utils, dbus-user-session, xsettingsd, lightdm, util-linux, xdotool, numlockx, appmenu-gtk3-module, python3-xlib, python3-pil, fonts-noto-core, palos-screenshot, paladin-save-sheets
-Recommends: paladin-settings, paladin-login, paladin-boot, xdg-desktop-portal-gtk, palos-icons, openbox, brightnessctl, playerctl, pipewire-bin | pulseaudio-utils, libnotify-bin
+Recommends: paladin-settings, paladin-login, paladin-boot, palos-icons, openbox, brightnessctl, playerctl, pipewire-bin | pulseaudio-utils, libnotify-bin
 Description: Paladin desktop session: steel title bars, GTK theme, cursor and tools
  A login session that replaces GNOME Shell: Compiz with Paladin title bars,
  Seeker (desktop, menu bar, file browser) and Paladin Dock, plus the helpers a

@@ -106,22 +106,12 @@ def paladin_theme_in_use():
     return gs('org.gnome.desktop.interface', 'gtk-theme', LIGHT) in (LIGHT, DARK)
 
 
-def gtk_bridge(dark, name):
-    """Firefox is the one GTK app palOS still carries. GTK (and its file-picker portal) read GNOME's settings,
-    not palOS's, so Dark Mode is copied there. Remove this with Firefox."""
-    if not shutil.which('gsettings'):
-        return
-    for key, val in (('color-scheme', "'prefer-dark'" if dark else "'default'"), ('gtk-theme', "'%s'" % name)):
-        subprocess.run(['gsettings', 'set', 'org.gnome.desktop.interface', key, val], capture_output=True, timeout=5)
-
-
 def apply_appearance(start_decorator=True):
     """Keep everything on the same light/dark look as the Dark Mode switch (the color-scheme key):
     the toolkit themes apps read and the title bars."""
     dark = is_dark()
     name = DARK if dark else LIGHT
     greeter_data()
-    gtk_bridge(dark, name)
     if paladin_theme_in_use() and gs('org.gnome.desktop.interface', 'gtk-theme') != name:
         gset('org.gnome.desktop.interface', 'gtk-theme', "'%s'" % name)
     wm = 'org.gnome.desktop.wm.preferences'
