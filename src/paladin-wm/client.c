@@ -437,6 +437,16 @@ void restack(void)
     for (i = 0; i < n; i++) wins[i] = top_of(order[n - 1 - i]);
     XRaiseWindow(dpy, wins[0]);
     XRestackWindows(dpy, wins, n);
+    /* windows we don't manage (menus, tooltips, notification bubbles, the lock screen) stay above ours */
+    Window r, p, *kids = NULL; unsigned int nk = 0;
+    if (XQueryTree(dpy, root, &r, &p, &kids, &nk)) {
+        for (unsigned int k = 0; k < nk; k++) {
+            XWindowAttributes a;
+            if (XGetWindowAttributes(dpy, kids[k], &a) && a.override_redirect && a.map_state == IsViewable && !find_client(kids[k]))
+                XRaiseWindow(dpy, kids[k]);
+        }
+        if (kids) XFree(kids);
+    }
     free(wins); free(all); free(order); free(done);
     update_client_list();
     request_repaint();

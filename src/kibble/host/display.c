@@ -210,6 +210,10 @@ static void dispatch_one(PaladinDisplay *d, XEvent *ev)
         if (d->screen) wpe_screen_set_size(d->screen, ev->xconfigure.width, ev->xconfigure.height);
         return;
     }
+    if (ev->type == KeyPress && ev->xkey.window == d->root) {
+        if (d->hooks.root_key) d->hooks.root_key(ev->xkey.keycode, ev->xkey.state, d->hooks.data);
+        return;
+    }
     if (d->clipboard && paladin_clipboard_handle_event(PALADIN_CLIPBOARD(d->clipboard), ev)) return;
     if (paladin_dnd_handle_event(d, ev)) return;
     gpointer tl = toplevel_for(d, ev->xany.window);

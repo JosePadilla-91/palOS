@@ -99,6 +99,10 @@ static void scheme_request(WebKitURISchemeRequest *req, gpointer data)
     json_builder_set_member_name(b, "method"); json_builder_add_string_value(b, method ? method : "GET");
     Win *w = win_of_view(webkit_uri_scheme_request_get_web_view(req));
     if (w) { json_builder_set_member_name(b, "id"); json_builder_add_int_value(b, w->id); }
+    /* a part of the file (pictures and sound are read in pieces when seeking) */
+    SoupMessageHeaders *rh = webkit_uri_scheme_request_get_http_headers(req);
+    const char *range = rh ? soup_message_headers_get_one(rh, "Range") : NULL;
+    if (range) { json_builder_set_member_name(b, "range"); json_builder_add_string_value(b, range); }
     GInputStream *body = webkit_uri_scheme_request_get_http_body(req);
     if (body) {
         GOutputStream *out = g_memory_output_stream_new_resizable();
@@ -142,6 +146,10 @@ static void scheme_reply(JsonObject *m)
             stream = G_INPUT_STREAM(g_file_read(f, NULL, NULL));
             if (info) { len = g_file_info_get_size(info); g_object_unref(info); }
             g_object_unref(f);
+            gint64 offset = json_object_get_int_member_with_default(m, "offset", 0);
+            gint64 part = json_object_get_int_member_with_default(m, "length", -1);
+            if (stream && offset > 0) g_seekable_seek(G_SEEKABLE(stream), offset, G_SEEK_SET, NULL, NULL);
+            if (stream && part >= 0) len = part;
         } else {
             gsize n = 0;
             guchar *data = g_base64_decode(json_object_get_string_member_with_default(m, "data", ""), &n);
@@ -159,6 +167,13 @@ static void scheme_reply(JsonObject *m)
         webkit_uri_scheme_response_set_content_type(res, type);
         SoupMessageHeaders *h = soup_message_headers_new(SOUP_MESSAGE_HEADERS_RESPONSE);
         soup_message_headers_append(h, "Access-Control-Allow-Origin", "*");
+        if (json_object_has_member(m, "headers") && JSON_NODE_HOLDS_OBJECT(json_object_get_member(m, "headers"))) {
+            JsonObject *ho = json_object_get_object_member(m, "headers");
+            GList *keys = json_object_get_members(ho);
+            for (GList *k = keys; k; k = k->next)
+                soup_message_headers_append(h, k->data, json_object_get_string_member_with_default(ho, k->data, ""));
+            g_list_free(keys);
+        }
         webkit_uri_scheme_response_set_http_headers(res, h);
         webkit_uri_scheme_request_finish_with_response(req, res);
         g_object_unref(res);
@@ -377,7 +392,76 @@ static void apply_theme(void)
         wpe_settings_set_boolean(s, WPE_SETTING_DARK_MODE, paladin_display_dark(display), WPE_SETTINGS_SOURCE_PLATFORM, NULL);
 }
 
-static void hook_dark(gboolean dark, gpointer data) { (void)dark; (void)data; apply_theme(); }
+static void hook_dark(gboolean dark, gpointer data)
+{
+    (void)data;
+    apply_theme();
+    JsonBuilder *b = ev_begin("dark", 0);
+    json_builder_set_member_name(b, "dark"); json_builder_add_boolean_value(b, dark);
+    emit(b);
+}
+
+/* ---------------------------------------------------------------- shortcuts anywhere (globalShortcut) */
+typedef struct { int n; unsigned int code, mods; } Grab;
+static GArray *grabs;
+static const unsigned int lock_variants[4] = { 0, LockMask, Mod2Mask, LockMask | Mod2Mask };
+
+static void hook_root_key(unsigned int code, unsigned int state, gpointer data)
+{
+    (void)data;
+    unsigned int mods = state & (ShiftMask | ControlMask | Mod1Mask | Mod4Mask);
+    for (guint i = 0; grabs && i < grabs->len; i++) {
+        Grab *g = &g_array_index(grabs, Grab, i);
+        if (g->code != code || g->mods != mods) continue;
+        JsonBuilder *b = ev_begin("shortcut", 0);
+        json_builder_set_member_name(b, "n"); json_builder_add_int_value(b, g->n);
+        emit(b);
+        return;
+    }
+}
+
+static gboolean grab_failed;
+static int grab_error(Display *d, XErrorEvent *e) { (void)d; (void)e; grab_failed = TRUE; return 0; }
+
+static void grab_key(JsonObject *m)
+{
+    Display *dpy = paladin_display_get_xdisplay(display);
+    int n = (int)json_object_get_int_member_with_default(m, "n", 0);
+    xkb_keysym_t sym = xkb_keysym_from_name(json_object_get_string_member_with_default(m, "key", ""), XKB_KEYSYM_CASE_INSENSITIVE);
+    KeyCode code = sym != XKB_KEY_NoSymbol ? XKeysymToKeycode(dpy, sym) : 0;
+    int mods = (int)json_object_get_int_member_with_default(m, "mods", 0);
+    unsigned int xm = ((mods & 1) ? ControlMask : 0) | ((mods & 2) ? ShiftMask : 0) | ((mods & 4) ? Mod1Mask : 0) | ((mods & 8) ? Mod4Mask : 0);
+    gboolean ok = FALSE;
+    if (code) {
+        XSync(dpy, False);
+        grab_failed = FALSE;
+        XErrorHandler old = XSetErrorHandler(grab_error);
+        for (int k = 0; k < 4; k++) XGrabKey(dpy, code, xm | lock_variants[k], DefaultRootWindow(dpy), False, GrabModeAsync, GrabModeAsync);
+        XSync(dpy, False);
+        XSetErrorHandler(old);
+        ok = !grab_failed;
+        if (ok) { if (!grabs) grabs = g_array_new(FALSE, FALSE, sizeof(Grab)); Grab g = { n, code, xm }; g_array_append_val(grabs, g); }
+        else for (int k = 0; k < 4; k++) XUngrabKey(dpy, code, xm | lock_variants[k], DefaultRootWindow(dpy));
+    }
+    JsonBuilder *b = ev_begin("grab-result", 0);
+    json_builder_set_member_name(b, "n"); json_builder_add_int_value(b, n);
+    json_builder_set_member_name(b, "ok"); json_builder_add_boolean_value(b, ok);
+    emit(b);
+}
+
+static void ungrab_key(JsonObject *m)
+{
+    Display *dpy = paladin_display_get_xdisplay(display);
+    int n = (int)json_object_get_int_member_with_default(m, "n", 0);
+    for (guint i = 0; grabs && i < grabs->len; i++) {
+        Grab *g = &g_array_index(grabs, Grab, i);
+        if (g->n != n) continue;
+        for (int k = 0; k < 4; k++) XUngrabKey(dpy, g->code, g->mods | lock_variants[k], DefaultRootWindow(dpy));
+        g_array_remove_index(grabs, i);
+        break;
+    }
+    XFlush(dpy);
+}
 
 /* ---------------------------------------------------------------- answering eval */
 typedef struct { int id, req; char *js; gboolean retried; } EvalCtx;
@@ -421,6 +505,59 @@ static void eval_async_done(GObject *o, GAsyncResult *r, gpointer data)
     if (v) g_object_unref(v);
     if (err) g_error_free(err);
     g_free(c->js); g_free(c);
+}
+
+/* ---------------------------------------------------------------- a picture of the page (capturePage, printToPDF) */
+typedef struct { int id, req; char *path; } SnapCtx;
+
+static void snapshot_done(GObject *o, GAsyncResult *r, gpointer data)
+{
+    SnapCtx *c = data;
+    GError *err = NULL;
+    WebKitImage *img = webkit_web_view_get_snapshot_finish(WEBKIT_WEB_VIEW(o), r, &err);
+    JsonBuilder *b = ev_begin("snapshot", c->id);
+    json_builder_set_member_name(b, "req"); json_builder_add_int_value(b, c->req);
+    if (img) {
+        /* written as "W H\n" + RGBA (straight alpha), the same as kibble-image */
+        int w = webkit_image_get_width(img), h = webkit_image_get_height(img), stride = webkit_image_get_stride(img);
+        GBytes *bytes = webkit_image_as_bytes(img);
+        const guint8 *px = g_bytes_get_data(bytes, NULL);
+        FILE *f = fopen(c->path, "wb");
+        if (f) {
+            fprintf(f, "%d %d\n", w, h);
+            guint8 *row = g_malloc((gsize)w * 4);
+            for (int y = 0; y < h; y++) {
+                const guint8 *s = px + (gsize)y * stride;
+                for (int x = 0; x < w; x++) {      /* premultiplied B, G, R, A in memory */
+                    guint8 a = s[4 * x + 3];
+                    row[4 * x] = a ? MIN(255, s[4 * x + 2] * 255 / a) : 0;
+                    row[4 * x + 1] = a ? MIN(255, s[4 * x + 1] * 255 / a) : 0;
+                    row[4 * x + 2] = a ? MIN(255, s[4 * x] * 255 / a) : 0;
+                    row[4 * x + 3] = a;
+                }
+                fwrite(row, 1, (gsize)w * 4, f);
+            }
+            g_free(row);
+            fclose(f);
+            json_builder_set_member_name(b, "file"); json_builder_add_string_value(b, c->path);
+        }
+        g_object_unref(img);      /* (the bytes belong to the image) */
+    } else {
+        json_builder_set_member_name(b, "error"); json_builder_add_string_value(b, err ? err->message : "no picture");
+    }
+    if (err) g_error_free(err);
+    emit(b);
+    g_free(c->path); g_free(c);
+}
+
+static void snapshot(Win *w, JsonObject *m)
+{
+    SnapCtx *c = g_new0(SnapCtx, 1);
+    c->id = w->id; c->req = (int)json_object_get_int_member_with_default(m, "req", 0);
+    c->path = g_strdup(json_object_get_string_member_with_default(m, "path", "/tmp/kibble-snapshot.raw"));
+    gboolean full = json_object_get_boolean_member_with_default(m, "full", FALSE);
+    webkit_web_view_get_snapshot(w->web, full ? WEBKIT_SNAPSHOT_REGION_FULL_DOCUMENT : WEBKIT_SNAPSHOT_REGION_VISIBLE,
+                                 WEBKIT_SNAPSHOT_OPTIONS_NONE, NULL, snapshot_done, c);
 }
 
 /* ---------------------------------------------------------------- windows */
@@ -557,6 +694,8 @@ static void handle(JsonObject *m)
     if (!strcmp(op, "scheme-reply")) { scheme_reply(m); return; }
     if (!strcmp(op, "dialog-reply")) { dialog_reply(m); return; }
     if (!strcmp(op, "quit")) { g_main_loop_quit(loop); return; }
+    if (!strcmp(op, "grab-key")) { grab_key(m); return; }
+    if (!strcmp(op, "ungrab-key")) { ungrab_key(m); return; }
     if (!strcmp(op, "clipboard")) {
         paladin_clipboard_set_text(PALADIN_CLIPBOARD(wpe_display_get_clipboard(WPE_DISPLAY(display))),
                                    json_object_get_string_member_with_default(m, "text", ""));
@@ -618,6 +757,7 @@ static void handle(JsonObject *m)
         for (int i = 0; i < n; i++) g_free(owned[i]);
         g_free(owned); g_free(v);
     } else if (!strcmp(op, "key")) send_key(w, m);
+    else if (!strcmp(op, "snapshot")) snapshot(w, m);
     else if (!strcmp(op, "theme")) { g_free(theme_mode); theme_mode = g_strdup(json_object_get_string_member_with_default(m, "mode", "system")); apply_theme(); }
     else if (!strcmp(op, "startDrag")) {
         JsonArray *a = json_object_get_array_member(m, "uris");
@@ -675,7 +815,7 @@ int main(int argc, char **argv)
     /* each window comes with its own (made here, with the app's options) */
     wpe_settings_set_boolean(wpe_display_get_settings(WPE_DISPLAY(display)), WPE_SETTING_CREATE_VIEWS_WITH_A_TOPLEVEL, FALSE,
                              WPE_SETTINGS_SOURCE_APPLICATION, NULL);
-    PaladinHooks hooks = { hook_close, hook_drop, hook_gesture, hook_dark, NULL };
+    PaladinHooks hooks = { hook_close, hook_drop, hook_gesture, hook_dark, hook_root_key, NULL };
     paladin_display_set_hooks(display, &hooks);
 
     const char *data_dir = getenv("KIBBLE_DATA_DIR"), *cache_dir = getenv("KIBBLE_CACHE_DIR");
@@ -728,6 +868,7 @@ int main(int argc, char **argv)
     json_builder_set_member_name(b, "height"); json_builder_add_int_value(b, (gint64)(wh / sc));
     json_builder_end_object(b);
     json_builder_end_object(b);
+    json_builder_set_member_name(b, "dark"); json_builder_add_boolean_value(b, paladin_display_dark(display));
     emit(b);
 
     g_main_loop_run(loop);

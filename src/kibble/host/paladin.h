@@ -54,6 +54,7 @@ typedef struct {
     void (*drop)(WPEToplevel *toplevel, int phase, int x, int y, const char *uris, gpointer data);
     void (*gesture)(WPEToplevel *toplevel, int phase, double scale, double rotation, double x, double y, gpointer data);
     void (*dark_changed)(gboolean dark, gpointer data);
+    void (*root_key)(unsigned int keycode, unsigned int state, gpointer data);   /* a grabbed shortcut */
     gpointer data;
 } PaladinHooks;
 void paladin_display_set_hooks(PaladinDisplay *display, const PaladinHooks *hooks);
