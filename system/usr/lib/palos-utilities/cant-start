@@ -1,0 +1,161 @@
+#!/usr/bin/python3
+# palOS Utilities couldn't start from the install USB: its files can't be read (in a working image they're
+# always there, so the USB stick, its write, or the USB port is the usual cause). Instead of a blank screen,
+# say so in both languages, and offer: Check the USB Stick (reads every file against md5sum.txt, with a
+# progress bar), Restart, Shut Down, and Try palOS Anyway when the desktop itself can still start.
+# Exit 0: carry on to the desktop. (Restart and Shut Down don't come back.)
+import hashlib, json, os, subprocess, sys
+
+CDROM = '/cdrom'
+SEEKER_RT = '/usr/lib/kibble/kibble'   # Seeker runs on Kibble
+TITLE = 'palOS'
+
+INTRO = ('palOS couldn’t read its own files from the USB stick, so palOS Utilities can’t start.\n'
+         'This usually means the USB stick was written with an error, or the stick or the USB port is failing.\n\n'
+         'palOS n’a pas pu lire ses propres fichiers sur la clé USB : les Utilitaires palOS ne peuvent pas démarrer.\n'
+         'Cela veut généralement dire que la clé USB a été mal écrite, ou que la clé ou le port USB fait défaut.')
+FIX = ('To fix it: write the USB stick again (Disk Utility, balenaEtcher, or Rufus in DD mode), or try another USB port '
+       '(a port on the back of the computer, or a USB 2 port) or another USB stick.\n\n'
+       'Pour corriger : écrivez de nouveau la clé USB (Utilitaire de disque, balenaEtcher, ou Rufus en mode DD), ou essayez un '
+       'autre port USB (à l’arrière de l’ordinateur, ou un port USB 2) ou une autre clé USB.')
+B_CHECK = 'Check the USB Stick · Vérifier la clé USB'
+B_TRY = 'Try palOS Anyway · Essayer palOS quand même'
+B_RESTART = 'Restart · Redémarrer'
+B_OFF = 'Shut Down · Éteindre'
+
+
+def alert(text, buttons):
+    """palOS's own question window; the answer is the chosen button's label ('' if it was closed)"""
+    args = ['palos-alert', '--wide', '--title', TITLE, '--icon', 'dialog-warning', '--text', text]
+    for b in buttons:
+        args += ['--button', b]
+    try:
+        p = subprocess.run(args, text=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        return p.returncode, p.stdout.strip()
+    except OSError:
+        return -1, ''
+
+
+def kernel_errors():
+    """read errors the kernel reported (squashfs, the USB stick, the disk layer): the clearest sign."""
+    try:
+        out = subprocess.run(['sudo', '-n', 'dmesg'], text=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=10).stdout
+    except Exception:
+        return []
+    keys = ('SQUASHFS error', 'squashfs', 'I/O error', 'blk_update_request', 'critical medium error',
+            'Buffer I/O error', 'reset high-speed USB', 'reset SuperSpeed', 'device descriptor read', 'isofs')
+    return [l.strip() for l in out.splitlines() if any(k in l for k in keys)][-8:]
+
+
+def background_check():
+    """the result of Ubuntu's own check (casper-md5check), if it has finished by now."""
+    try:
+        with open('/run/casper-md5check.json') as f:
+            r = json.load(f)
+        return r.get('result'), r.get('checksum_missmatch') or []
+    except Exception:
+        return None, []
+
+
+def check_stick():
+    """read every file on the stick and compare it with md5sum.txt; returns (ok, bad files, unreadable)."""
+    sums = os.path.join(CDROM, 'md5sum.txt')
+    try:
+        with open(sums) as f:
+            entries = [l.split(None, 1) for l in f if l.strip() and not l.startswith('#')]
+    except OSError:
+        return False, [], ['md5sum.txt']
+    entries = [(h, n.strip().lstrip('*')) for h, n in entries]
+    sizes = []
+    for _, n in entries:
+        try: sizes.append(os.path.getsize(os.path.join(CDROM, n)))
+        except OSError: sizes.append(0)
+    total = max(1, sum(sizes))
+    bad, unreadable, done = [], [], 0
+    prog = subprocess.Popen(['palos-alert', '--progress', '--title', TITLE, '--icon', 'drive-removable-media',
+                             '--text', 'Checking the USB stick… · Vérification de la clé USB…'],
+                            stdin=subprocess.PIPE, text=True, stderr=subprocess.DEVNULL)
+    last = -1
+    try:
+        for (h, n), size in zip(entries, sizes):
+            name = n[2:] if n.startswith('./') else n
+            md = hashlib.md5()
+            try:
+                with open(os.path.join(CDROM, n), 'rb', buffering=0) as f:
+                    while True:
+                        if prog.poll() is not None:      # Cancel
+                            return None, bad, unreadable
+                        b = f.read(4 << 20)
+                        if not b: break
+                        md.update(b); done += len(b)
+                        pct = min(99, done * 100 // total)
+                        if pct != last:
+                            last = pct
+                            prog.stdin.write(f'{pct}\n# Checking {name} … {pct}% · Vérification de {name} … {pct} %\n'); prog.stdin.flush()
+            except OSError:
+                unreadable.append(name); done += size; continue
+            if md.hexdigest() != h.lower():
+                bad.append(name)
+        prog.stdin.write('100\n'); prog.stdin.flush()
+    except (BrokenPipeError, OSError):
+        return None, bad, unreadable
+    finally:
+        try: prog.stdin.close()
+        except Exception: pass
+        prog.wait()
+    return not bad and not unreadable, bad, unreadable
+
+
+def power(what):
+    subprocess.run(['systemctl', what])
+    sys.exit(0)
+
+
+def main():
+    checked = None   # None: not yet; else the text of the result
+    while True:
+        desktop_ok = os.access(SEEKER_RT, os.X_OK)
+        errs = kernel_errors()
+        res, mism = background_check()
+        text = INTRO
+        if checked:
+            text += '\n\n' + checked
+        else:
+            if errs:
+                text += ('\n\nThe computer reported read errors from the USB stick · L’ordinateur a signalé des erreurs de lecture '
+                         'sur la clé USB :\n' + '\n'.join(e[-110:] for e in errs[-4:]))
+            elif res == 'fail':
+                text += '\n\nThese files on the USB stick are damaged · Ces fichiers de la clé USB sont endommagés : ' + ', '.join(mism[:6])
+            text += '\n\n' + FIX
+        if not desktop_ok:
+            text += ('\n\nThe desktop can’t start either, for the same reason. · Le bureau ne peut pas démarrer non plus, '
+                     'pour la même raison.')
+        # the answer is the button's label; closing the window just asks again
+        code, out = alert(text, ([B_TRY] if desktop_ok else []) + [B_OFF, B_RESTART, B_CHECK])
+        if code < 0:
+            return 0           # the window itself couldn't open
+        if out == B_RESTART:
+            power('reboot')
+        if out == B_OFF:
+            power('poweroff')
+        if out == B_TRY and desktop_ok:
+            return 0
+        if out == B_CHECK:
+            ok, bad, unreadable = check_stick()
+            if ok is None:
+                continue
+            if ok:
+                checked = ('The USB stick checked out: every file reads correctly, so the stick is fine. Restart and try again; '
+                           'if it happens again, try another USB port.\n'
+                           'La clé USB est correcte : tous les fichiers se lisent bien. Redémarrez et réessayez ; si cela se '
+                           'reproduit, essayez un autre port USB.')
+            else:
+                names = ', '.join((bad + unreadable)[:6])
+                checked = (f'The check found damaged files on the USB stick · La vérification a trouvé des fichiers endommagés '
+                           f'sur la clé USB : {names}\n\n' + FIX)
+            continue
+        # anything else (the window was closed): ask again; there's nothing behind this window
+
+
+if __name__ == '__main__':
+    sys.exit(main())

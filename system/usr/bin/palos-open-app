@@ -142,27 +142,18 @@ def failed(p, log, name):
 
 def ask_program(path):
     """an ordinary program file: confirm once, the way a downloaded program should be"""
+    name = os.path.basename(path)
+    cancel, ok = t('Cancel', 'Annuler'), t('Open', 'Ouvrir')
     try:
-        import gi
-        gi.require_version('Gtk', '4.0'); gi.require_version('Adw', '1')
-        from gi.repository import Adw, GLib
-    except (ImportError, ValueError):
-        return True
-    name = os.path.basename(path); res = {'ok': False}
-    app = Adw.Application(application_id='org.palos.OpenApp')
-
-    def act(_app):
-        d = Adw.MessageDialog(heading=t(f'Open “{name}”?', f'Ouvrir « {name} » ?'),
-                              body=t('This is a program, not a palOS app. Only open programs that come from someone you trust.',
-                                     'C’est un programme, pas une app palOS. N’ouvrez que les programmes qui viennent de quelqu’un de confiance.'))
-        d.add_response('cancel', t('Cancel', 'Annuler')); d.add_response('open', t('Open', 'Ouvrir'))
-        d.set_default_response('cancel'); d.set_close_response('cancel')
-        d.set_response_appearance('open', Adw.ResponseAppearance.SUGGESTED)
-        d.connect('response', lambda _d, r: (res.__setitem__('ok', r == 'open'), app.quit()))
-        app.hold(); d.set_application(app); d.present()
-    app.connect('activate', act)
-    app.run([])
-    return res['ok']
+        r = subprocess.run(['palos-alert', '--icon', 'application-x-executable',
+                            '--heading', t(f'Open “{name}”?', f'Ouvrir « {name} » ?'),
+                            '--text', t('This is a program, not a palOS app. Only open programs that come from someone you trust.',
+                                        'C’est un programme, pas une app palOS. N’ouvrez que les programmes qui viennent de quelqu’un de confiance.'),
+                            '--button', cancel, '--button', ok, '--cancel', cancel, '--default', cancel],
+                           capture_output=True, text=True)
+    except OSError:
+        return False
+    return r.returncode == 0 and r.stdout.strip() == ok
 
 
 def offer_move(path, name, icon):

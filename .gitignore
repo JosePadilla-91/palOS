@@ -9,3 +9,5 @@ src/paladin-sessiond/paladin-sessiond
 src/paladin-sessiond/paladin-locker
 src/kibble/image/kibble-image
 src/palos-screenshot/palos-screenshot
+src/palos-alert/palos-alert
+src/palos-bluetooth-agent/palos-bluetooth-agent
