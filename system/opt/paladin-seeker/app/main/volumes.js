@@ -80,7 +80,7 @@ class Volumes extends EventEmitter {
       r = await run('fusermount3', ['-u', v.target]);
       if (r.ok) { try { fs.rmdirSync(v.target); } catch {} }
     } else if (v.network) {
-      r = v.gvfs ? await run('gio', ['mount', '-u', v.target]) : await run('umount', [v.target]);
+      r = await run('umount', [v.target]);
     } else if (which('udisksctl')) {
       r = await run('udisksctl', ['unmount', '-b', v.dev, '--no-user-interaction']);
       if (r.ok && v.removable && v.disk) {
@@ -103,8 +103,7 @@ function isBackup(label, target) {
 }
 
 const NET_FS = /^(cifs|smb3?|nfs4?|fuse\.sshfs|sshfs|davfs|fuse\.davfs|9p|afpfs|fuse\.rclone)$/;
-const GVFS = path.join(process.env.XDG_RUNTIME_DIR || `/run/user/${process.getuid ? process.getuid() : 1000}`, 'gvfs');
-/** Network shares: mounted by the system (fstab, mount -t cifs/nfs...) or by the file browser through gvfs. */
+/** Network shares mounted by the system (fstab, mount -t cifs/nfs, sshfs...). */
 function networkMounts() {
   const out = [];
   const icon = ['drive-harddisk-network', 'network-server', 'folder-remote', 'drive-harddisk'];
@@ -116,16 +115,6 @@ function networkMounts() {
     const target = f[4].replace(/\\(\d{3})/g, (_, o) => String.fromCharCode(parseInt(o, 8)));
     const name = path.basename(source.replace(/\/+$/, '')) || source.replace(/^.*[:\/]/, '') || path.basename(target);
     out.push({ dev: 'net:' + target, target, name, removable: true, network: true, fstype, size: 0, icon });
-  }
-  let entries = [];
-  try { entries = fs.readdirSync(GVFS); } catch {}
-  for (const e of entries) {
-    // gvfs names shares like  smb-share:server=nas,share=photos  or  sftp:host=box,user=me
-    const m = e.match(/^(smb-share|sftp|ftp|dav|davs|nfs|afp-volume|ssh):(.*)$/);
-    if (!m) continue;
-    const kv = Object.fromEntries(m[2].split(',').map((x) => x.split('=')));
-    const name = kv.share ? `${kv.share} on ${kv.server}` : (kv.host || kv.server || e);
-    out.push({ dev: 'gvfs:' + e, target: path.join(GVFS, e), name, removable: true, network: true, gvfs: true, fstype: m[1], size: 0, icon });
   }
   return out;
 }

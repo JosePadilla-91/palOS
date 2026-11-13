@@ -193,12 +193,6 @@ gstreamer1.0-plugins-good
 gtk-update-icon-cache
 gtk2-engines-pixbuf
 guile-3.0-libs
-gvfs
-gvfs-backends
-gvfs-common
-gvfs-daemons
-gvfs-fuse
-gvfs-libs
 gzip
 hdparm
 heif-gdk-pixbuf
@@ -1186,7 +1180,6 @@ ubuntu-mono
 ucf
 udev
 udisks2
-unar
 unattended-upgrades
 unzip
 update-inetd
@@ -1219,7 +1212,6 @@ x11-xserver-utils
 xauth
 xbindkeys
 xdg-desktop-portal
-xdg-desktop-portal-gtk
 xdg-user-dirs
 xdg-utils
 xdotool

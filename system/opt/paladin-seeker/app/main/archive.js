@@ -7,9 +7,9 @@
 // Names already taken get a number ("Photos 2"). Nothing is overwritten. If anything fails, the
 // scratch folder is removed and nothing is left behind.
 //
-// Tools: bsdtar (libarchive) for zip, 7z, rar, tar.*, iso, cab, cpio, xar, lha...; unar for rar and
-// anything bsdtar can't read and for password-protected archives; gzip/bzip2/xz/zstd/lz4/lzip for a
-// single compressed file.
+// Tools: bsdtar (libarchive) for zip, 7z, rar, tar.*, iso, cab, cpio, xar, lha...; 7-Zip for anything
+// bsdtar can't read and for password-protected archives; gzip/bzip2/xz/zstd/lz4/lzip for a single
+// compressed file.
 const fs = require('fs');
 const fsp = fs.promises;
 const path = require('path');
@@ -98,6 +98,9 @@ function run(cmd, args, { cwd, stdoutFile, signal } = {}) {
 }
 
 const PASSWORD_HINT = /passphrase|password|encrypt/i;
+// 7-Zip, never waiting for a password on its input: "-p " means "no password" (an encrypted archive then
+// fails with "Wrong password", which asks the person)
+const sevenZip = (file, scratch, pw, signal) => run('7z', ['x', '-y', '-bso0', '-bsp0', '-o' + scratch, '-p' + (pw == null ? ' ' : pw), '--', file], { signal });
 
 /**
  * Extract one archive next to itself.
@@ -120,19 +123,19 @@ async function extractHere(file, { askPassword, signal } = {}) {
     } else if (k && k.type === 'single') {
       const [cmd, args] = SINGLE[k.ext];
       r = await run(cmd, [...args, file], { stdoutFile: path.join(scratch, baseName(name)), signal });
-      if (r.code !== 0) r = await run('unar', ['-q', '-f', '-D', '-o', scratch, file], { signal });
+      if (r.code !== 0) { await emptyDir(scratch); r = await sevenZip(file, scratch, null, signal); }
     } else {
       r = await run('bsdtar', ['-x', '-f', file, '-C', scratch, '--no-same-owner'], { signal });
       if (r.code !== 0 && !PASSWORD_HINT.test(r.err)) {
         await emptyDir(scratch);
-        r = await run('unar', ['-q', '-f', '-D', '-o', scratch, file], { signal });
+        r = await sevenZip(file, scratch, null, signal);
       }
       let retry = false;
       while (r.code !== 0 && PASSWORD_HINT.test(r.err)) {
         const pw = askPassword ? await askPassword(name, retry) : null;
         if (pw == null) { await cleanup(); return { cancelled: true }; }
         await emptyDir(scratch);
-        r = await run('unar', ['-q', '-f', '-D', '-p', pw, '-o', scratch, file], { signal });
+        r = await sevenZip(file, scratch, pw, signal);
         retry = true;
       }
     }
