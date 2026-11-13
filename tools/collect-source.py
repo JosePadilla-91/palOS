@@ -21,6 +21,8 @@ EXTRA = ['/usr/lib/kibble/runtime', '/usr/lib/kibble/kibble', '/usr/lib/kibble/m
          '/usr/share/applications/palos-open-app.desktop',
          '/etc/dpkg/dpkg.cfg.d/palos-clean', '/etc/systemd/system/time-turnerd.service', '/etc/paladin-session',
          '/usr/lib/palos-utilities', '/usr/lib/palos-firstboot/arm', '/usr/lib/palos-firstboot/run-setup',
+         '/usr/share/xdg-desktop-portal/portals/paladin.portal',
+         '/usr/share/dbus-1/services/org.freedesktop.impl.portal.desktop.paladin.service',
          '/usr/share/dbus-1/system-services/com.timeturner.Daemon.service', '/usr/local/share/applications']
 SKIP_PARTS = ('/__pycache__/', '/node_modules/.cache/')
 # private keys the build adds from palOS's private files: never into the repository
