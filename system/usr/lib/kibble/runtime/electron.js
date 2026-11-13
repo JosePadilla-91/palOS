@@ -12,9 +12,7 @@ const readline = require('readline');
 const KIBBLE = process.env.KIBBLE_ROOT || path.join(__dirname, '..');
 const HOST = process.env.KIBBLE_HOST || path.join(KIBBLE, 'bin', 'kibble-host');
 const BRIDGE = fs.readFileSync(path.join(__dirname, 'bridge.js'), 'utf8')
-  // <video>, <audio> and new Audio(), played by Kibble's media engine (palOS's WebKit has no media of its own)
-  + '\n' + (() => { try { return fs.readFileSync(path.join(__dirname, 'media-page.js'), 'utf8'); } catch { return ''; } })();
-const media = require('./media');
+;
 
 // ---------------------------------------------------------------- JSON that keeps Buffers and Dates
 function enc(k, v) {
@@ -40,8 +38,6 @@ function startHost() {
   if (hostReady) return hostReady;
   hostReady = new Promise((resolve) => {
     const env = Object.assign({}, process.env, {
-      WPE_PLATFORMS_PATH: process.env.WPE_PLATFORMS_PATH || path.join(KIBBLE, 'platforms'),
-      WPE_PLATFORM: process.env.WPE_PLATFORM || 'paladin',
       KIBBLE_APP_ID: app.getName(), KIBBLE_APP_CLASS: windowClass(),
       KIBBLE_DATA_DIR: path.join(app.getPath('userData'), 'WebKit'), KIBBLE_CACHE_DIR: path.join(os.homedir(), '.cache', app.getName()),
     });
@@ -49,8 +45,12 @@ function startHost() {
     host.on('exit', (code) => { host = null; if (!quitting) { process.stderr.write(`kibble: the window host stopped (${code})\n`); process.exit(code || 1); } });
     readline.createInterface({ input: host.stdout }).on('line', (line) => {
       let m; try { m = JSON.parse(line); } catch { return; }
-      if (m.ev === 'ready') { if (m.screen) screenInfo = m.screen; for (const n of schemeNames) host.stdin.write(JSON.stringify({ op: 'scheme', name: n }) + '\n'); resolve(); return; }
+      if (m.ev === 'ready') { if (m.screen) screenInfo = m.screen; if (typeof m.dark === 'boolean') systemDark = m.dark; if (typeof m.clipboard === 'string') clip = m.clipboard; for (const n of schemeNames) host.stdin.write(JSON.stringify({ op: 'scheme', name: n }) + '\n'); resolve(); return; }
       if (m.ev === 'scheme') { onScheme(m); return; }
+      if (m.ev === 'clipboard') { clip = typeof m.text === 'string' ? m.text : ''; return; }
+      if (m.ev === 'dark') { if (m.dark !== systemDark) { systemDark = m.dark; nativeTheme.emit('updated'); } return; }
+      if (m.ev === 'shortcut') { const f = shortcutFns.get(m.n); if (f) try { f(); } catch (e) { console.error(e); } return; }
+      if (m.ev === 'grab-result') { if (!m.ok) { const a = shortcutAccel.get(m.n); console.error(`globalShortcut: ${a} is taken by another program`); } return; }
       const w = windows.get(m.id); if (!w) return;
       w._hostEvent(m);
     });
@@ -111,7 +111,18 @@ async function onScheme(m) {
     Object.defineProperty(req, 'url', { value: m.url });
     const res = await fn(req);
     if (!res) return reply({ status: 0 });
-    if (res._kibbleFile) return reply({ status: res.status || 200, type: res.headers.get('content-type') || mimeOf(res._kibbleFile), file: res._kibbleFile });
+    if (res._kibbleFile) {
+      const type = res.headers.get('content-type') || mimeOf(res._kibbleFile);
+      let size = -1; try { size = fs.statSync(res._kibbleFile).size; } catch {}
+      const r = m.range && size >= 0 && /^bytes=(\d*)-(\d*)$/.exec(m.range.trim());
+      if (r && (r[1] || r[2])) {         // a piece of the file (seeking in sound and video)
+        let a = r[1] ? Number(r[1]) : Math.max(0, size - Number(r[2])), b = r[1] && r[2] ? Math.min(size - 1, Number(r[2])) : size - 1;
+        if (a >= size) return reply({ status: 416, type, data: '', headers: { 'Content-Range': `bytes */${size}` } });
+        return reply({ status: 206, type, file: res._kibbleFile, offset: a, length: b - a + 1,
+                       headers: { 'Content-Range': `bytes ${a}-${b}/${size}`, 'Accept-Ranges': 'bytes', 'Content-Length': String(b - a + 1) } });
+      }
+      return reply({ status: res.status || 200, type, file: res._kibbleFile, headers: { 'Accept-Ranges': 'bytes' } });
+    }
     const buf = Buffer.from(await res.arrayBuffer());
     reply({ status: res.status || 200, type: res.headers.get('content-type') || 'application/octet-stream', data: buf.toString('base64') });
   } catch (e) {
@@ -165,6 +176,10 @@ class App extends EventEmitter {
   setPath() {}
   whenReady() { return ready ? Promise.resolve() : new Promise((r) => this.once('ready', r)); }
   isReady() { return ready; }
+  // (Electron start-up switches that mean nothing on Kibble)
+  disableHardwareAcceleration() {} disableDomainBlockingFor3DAPIs() {} enableSandbox() {} setAccessibilitySupportEnabled() {}
+  isAccessibilitySupportEnabled() { return false; } getGPUFeatureStatus() { return {}; } getAppMetrics() { return []; }
+  isHardwareAccelerationEnabled() { return true; } setLoginItemSettings() {} getLoginItemSettings() { return { openAtLogin: false }; }
   setDesktopName() {} setAboutPanelOptions(o) { this._about = o; } setAppUserModelId() {} setAsDefaultProtocolClient() { return false; }
   addRecentDocument() {} clearRecentDocuments() {} setBadgeCount() { return false; } focus() { const w = BrowserWindow.getAllWindows()[0]; if (w) w.focus(); }
   quit() {
@@ -229,7 +244,14 @@ class WebContents extends EventEmitter {
     if (!files.length || this.isDestroyed()) return;
     const uris = files.map((f) => { const u = new URL('file://'); u.pathname = path.resolve(f); return u.href; });
     // the picture that follows the pointer: { w, h, rgba } (RGBA bytes, base64), as the page drew it
-    const ic = item.icon && typeof item.icon === 'object' && item.icon.rgba && item.icon.w && item.icon.h ? { w: item.icon.w | 0, h: item.icon.h | 0, rgba: String(item.icon.rgba) } : undefined;
+    let icon = item.icon;
+    if (icon instanceof NativeImage) {       // a picture made with nativeImage: sent as its pixels (at most 128 across)
+      let im = icon; const z = im.getSize(); const k = Math.min(1, 128 / Math.max(1, z.width, z.height));
+      if (k < 1) im = im.resize({ width: Math.round(z.width * k), height: Math.round(z.height * k) });
+      const bm = im._bitmap();
+      icon = bm ? { w: bm.w, h: bm.h, rgba: bm.px.toString('base64') } : null;
+    }
+    const ic = icon && typeof icon === 'object' && icon.rgba && icon.w && icon.h ? { w: icon.w | 0, h: icon.h | 0, rgba: String(icon.rgba) } : undefined;
     hostSend({ op: 'startDrag', id: this.id, uris, icon: ic });
   }
   loadFile(f, o = {}) { const u = new URL('file://'); u.pathname = path.resolve(f); if (o.search) u.search = o.search; if (o.hash) u.hash = o.hash; if (o.query) u.search = new URLSearchParams(o.query).toString(); return this.loadURL(u.href); }
@@ -246,34 +268,57 @@ class WebContents extends EventEmitter {
   copy() { this.executeJavaScript('document.execCommand("copy")'); } cut() { this.executeJavaScript('document.execCommand("cut")'); } paste() { this.executeJavaScript('document.execCommand("paste")'); }
   undo() { this.executeJavaScript('document.execCommand("undo")'); } redo() { this.executeJavaScript('document.execCommand("redo")'); } delete() { this.executeJavaScript('document.execCommand("delete")'); }
   print(o, cb) { this.executeJavaScript('window.print()'); if (cb) cb(true, ''); }
-  // the page as a PDF: Paladium's PDF engine (/usr/lib/kibble/pdf-engine, on palOS's Chromium-based runtime) lays out
-  // a copy of the page as it is now (same address, so its pictures and styles load) and prints it
-  async printToPDF(opts = {}) {
-    if (this.isDestroyed()) throw new Error('Object has been destroyed');
-    const os = require('os'), fs = require('fs'), cp = require('child_process');
-    const html = await this.executeJavaScript('"<!DOCTYPE html>\\n" + document.documentElement.outerHTML');
-    const base = this._url && /^(file|https?):/.test(this._url) ? this._url : '';
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'paladium-pdf-'));
-    const src = path.join(dir, 'page.html'), out = path.join(dir, 'page.pdf');
-    // the copy keeps the page's own address for its files, and drops scripts (it's printed as shown)
-    let page = String(html).replace(/<script\b[\s\S]*?<\/script>/gi, '');
-    if (base && !/<base\s/i.test(page)) page = page.replace(/<head([^>]*)>/i, (m) => `${m}<base href="${base.replace(/"/g, '&quot;')}">`);
-    fs.writeFileSync(src, page);
-    const RT = '/usr/lib/paladin-runtime/electron-44/paladin-app';
-    const o = Object.assign({}, opts);
-    const env = Object.assign({}, process.env, { PALOS_APP_DIR: '/usr/lib/kibble/pdf-engine', PALADIUM_PDF_IN: 'file://' + src, PALADIUM_PDF_OUT: out, PALADIUM_PDF_OPTS: JSON.stringify(o), ELECTRON_RUN_AS_NODE: '' });
-    delete env.ELECTRON_RUN_AS_NODE;
-    try {
-      await new Promise((resolve, reject) => {
-        const args = [process.env.DISPLAY ? '--ozone-platform=x11' : '--ozone-platform=headless', '--no-sandbox'];
-        cp.execFile(RT, args, { env, timeout: 150000, maxBuffer: 4 << 20 }, (err, so, se) => {
-          if (!err && fs.existsSync(out)) resolve(); else reject(new Error('The PDF couldn’t be made' + (se ? ': ' + String(se).trim().split('\n').pop() : (err ? ': ' + err.message : ''))));
-        });
-      });
-      return fs.readFileSync(out);
-    } finally { try { fs.rmSync(dir, { recursive: true, force: true }); } catch (_) {} }
+  // a picture of the page (what's shown, or the whole document)
+  _snapshot(full) {
+    const req = ++evalSeq;
+    const file = path.join(os.tmpdir(), `kibble-snap-${process.pid}-${req}.raw`);
+    return new Promise((resolve, reject) => {
+      evalWaiting.set(req, { resolve: (m) => {
+        try { const bm = rawOf(fs.readFileSync(m.file)); fs.rmSync(m.file, { force: true }); bm ? resolve(bm) : reject(new Error('no picture')); }
+        catch (e) { reject(e); }
+      }, reject });
+      hostSend({ op: 'snapshot', id: this.id, req, full: !!full, path: file });
+    });
   }
-  capturePage() { return Promise.resolve(nativeImage.createEmpty()); }
+  async capturePage(rect) {
+    try {
+      const im = new NativeImage(Buffer.alloc(0), '', await this._snapshot(false));
+      return rect && rect.width && rect.height ? im.crop(rect) : im;
+    } catch { return nativeImage.createEmpty(); }
+  }
+  // the page as a PDF: the whole document's picture, cut into pages (A4 or Letter, or the size asked for)
+  async printToPDF(opts = {}) {
+    const bm = await this._snapshot(true);
+    const sizes = { A3: [842, 1191], A4: [595, 842], A5: [420, 595], Letter: [612, 792], Legal: [612, 1008], Tabloid: [792, 1224] };
+    let [pw, ph] = sizes[opts.pageSize] || (opts.pageSize && opts.pageSize.width ? [opts.pageSize.width * 72, opts.pageSize.height * 72]
+      : (/^en[-_](US|CA)/.test(app.getLocale && app.getLocale() || process.env.LANG || '') ? sizes.Letter : sizes.A4));
+    if (opts.landscape) [pw, ph] = [ph, pw];
+    const mm = opts.margins && opts.margins.marginType === 'none' ? 0 : 36;          // half an inch
+    const k = (pw - 2 * mm) / bm.w;                       // page points per page pixel
+    const sliceH = Math.max(1, Math.floor((ph - 2 * mm) / k));
+    const objs = [], pages = [];
+    const add = (body) => { objs.push(body); return objs.length; };
+    for (let y = 0; y < bm.h; y += sliceH) {
+      const h = Math.min(sliceH, bm.h - y);
+      const slice = new NativeImage(Buffer.alloc(0), '', { w: bm.w, h, px: bm.px.subarray(y * bm.w * 4, (y + h) * bm.w * 4) });
+      const jpg = slice.toJPEG(92);
+      const img = add(Buffer.concat([Buffer.from(`<< /Type /XObject /Subtype /Image /Width ${bm.w} /Height ${h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpg.length} >>\nstream\n`), jpg, Buffer.from('\nendstream')]));
+      const dh = h * k, cmd = `q ${(bm.w * k).toFixed(2)} 0 0 ${dh.toFixed(2)} ${mm} ${(ph - mm - dh).toFixed(2)} cm /Im0 Do Q`;
+      const content = add(Buffer.from(`<< /Length ${cmd.length} >>\nstream\n${cmd}\nendstream`));
+      pages.push({ img, content });
+    }
+    const pagesId = objs.length + pages.length + 1;
+    const pageIds = pages.map((p) => add(Buffer.from(`<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${pw} ${ph}] /Resources << /XObject << /Im0 ${p.img} 0 R >> >> /Contents ${p.content} 0 R >>`)));
+    add(Buffer.from(`<< /Type /Pages /Kids [${pageIds.map((i) => `${i} 0 R`).join(' ')}] /Count ${pageIds.length} >>`));
+    const catalog = add(Buffer.from(`<< /Type /Catalog /Pages ${pagesId} 0 R >>`));
+    const parts = [Buffer.from('%PDF-1.4\n%\xe2\xe3\xcf\xd3\n', 'binary')]; const offs = [];
+    let pos = parts[0].length;
+    objs.forEach((o, i) => { offs.push(pos); const b = Buffer.concat([Buffer.from(`${i + 1} 0 obj\n`), o, Buffer.from('\nendobj\n')]); parts.push(b); pos += b.length; });
+    const xref = `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n` + offs.map((o) => `${String(o).padStart(10, '0')} 00000 n \n`).join('')
+      + `trailer\n<< /Size ${objs.length + 1} /Root ${catalog} 0 R >>\nstartxref\n${pos}\n%%EOF\n`;
+    parts.push(Buffer.from(xref));
+    return Buffer.concat(parts);
+  }
   // sendInputEvent({ type: 'keyDown'|'keyUp'|'char', keyCode, modifiers }): a real key press (keyboard only)
   sendInputEvent(e = {}) {
     if (this.isDestroyed() || !e.type) return;
@@ -300,7 +345,7 @@ class BrowserWindow extends EventEmitter {
     this.id = nextWin++;
     this._o = o; this._title = o.title || app.getName(); this._destroyed = false; this._visible = o.show !== false;
     this._bounds = { x: o.x ?? -1, y: o.y ?? -1, width: o.width || 800, height: o.height || 600 };
-    this._fits = !o.type || o.type === 'normal';     // an ordinary window: kept on screen and below the menu bar
+    this._fits = (!o.type || o.type === 'normal') && !(o.webPreferences && o.webPreferences.offscreen);     // an ordinary window: kept on screen and below the menu bar
     this._fit(this._bounds);
     this._state = { max: false, min: false, full: false, focused: false };
     this._parent = o.parent || null;
@@ -350,6 +395,11 @@ class BrowserWindow extends EventEmitter {
         else p.reject(new Error(m.error || 'Script failed to execute'));
         break;
       }
+      case 'snapshot': {
+        const p = evalWaiting.get(m.req); if (!p) break; evalWaiting.delete(m.req);
+        if (m.file) p.resolve(m); else p.reject(new Error(m.error || 'no picture'));
+        break;
+      }
       case 'message': this._message(m.data); break;
       case 'loaded':
         wc._loading = false;
@@ -376,6 +426,15 @@ class BrowserWindow extends EventEmitter {
         break;
       }
       case 'closed': this._finish(); break;
+      // the page's alert / confirm / prompt, as a palOS sheet on this window
+      case 'dialog': {
+        const reply = (ok, text) => hostSend({ op: 'dialog-reply', rid: m.rid, ok, text });
+        if (m.kind === 'prompt') { reply(false); break; }       // (no text field in sheets yet: as Cancel)
+        const buttons = m.kind === 'alert' ? ['OK'] : m.kind === 'leave' ? ['Leave', 'Stay'] : ['OK', 'Cancel'];
+        require('./sheet').messageBox(this, { type: m.kind === 'alert' ? 'info' : 'question', message: m.message || '', buttons, defaultId: 0, cancelId: buttons.length - 1 })
+          .then((r) => reply(r.response === 0), () => reply(false));
+        break;
+      }
     }
   }
   _message(raw) {
@@ -389,7 +448,6 @@ class BrowserWindow extends EventEmitter {
     if (m.ch === 'kibble:clipboard') { clipboard.writeText(m.args[0]); return; }
     if (m.ch === 'kibble:menu-closed') { contextClick(this, m.args[0], m.args[1]); return; }
     if (m.ch === 'kibble:accel') { accelClick(this, m.args[0]); return; }
-    if (m.ch === 'kibble:media') { media.setup({ appName: app.getName(), schemeHandler: (u) => { try { return schemeHandlers.get(new URL(u).protocol.slice(0, -1)) || null; } catch { return null; } } }); media.fromPage(wc, m.args[0]); return; }
     if (m.ch === 'kibble:sheet') { require('./sheet').answered(m.args[0], m.args[1], m.args[2]); return; }
     if (m.t === 'send') { ipcMain.emit(m.ch, event, ...(m.args || [])); return; }
     if (m.t === 'invoke') {
@@ -401,7 +459,6 @@ class BrowserWindow extends EventEmitter {
   }
   _finish() {
     if (this._destroyed) return;
-    try { media.closeOwner(this.webContents); } catch {}
     this._destroyed = true; windows.delete(this.id);
     for (const v of views.values()) if (v._parent === this) v._parent = null;
     if (focusedId === this.id) focusedId = null;
@@ -589,35 +646,140 @@ const shell = {
 // ---------------------------------------------------------------- clipboard (through the window host's X selection)
 let clip = '';
 const clipboard = {
-  writeText(t) { clip = String(t); hostSend({ op: 'clipboard', text: clip }); const p = spawn('xclip', ['-selection', 'clipboard'], { stdio: ['pipe', 'ignore', 'ignore'] }); p.on('error', () => {}); p.stdin.end(clip); },
-  readText() { try { return require('child_process').execFileSync('xclip', ['-selection', 'clipboard', '-o'], { timeout: 1500, encoding: 'utf8' }); } catch { return clip; } },
+  writeText(t) { clip = String(t); hostSend({ op: 'clipboard', text: clip }); },
+  readText() { return clip; },      // kept current by the host whenever anything is copied
   writeHTML(h) { clipboard.writeText(h); }, readHTML() { return ''; }, write(o) { if (o && o.text) clipboard.writeText(o.text); },
   read() { return ''; }, readBuffer() { return Buffer.alloc(0); }, writeBuffer() {}, availableFormats() { return ['text/plain']; }, clear() { clipboard.writeText(''); },
   readImage() { return nativeImage.createEmpty(); }, writeImage() {},
 };
 
 // ---------------------------------------------------------------- nativeImage
+// Pictures: decoded and encoded by kibble-image (GStreamer), sized and cut here.
+const KIBBLE_IMAGE = path.join(KIBBLE, 'bin', 'kibble-image');
+function imgRun(args, input) {
+  try { return require('child_process').execFileSync(KIBBLE_IMAGE, args, { input, maxBuffer: 1 << 30, timeout: 30000, stdio: ['pipe', 'pipe', 'ignore'] }); }
+  catch { return null; }
+}
+function rawOf(out) {        // "W H\n" + RGBA
+  if (!out) return null;
+  const nl = out.indexOf(10); if (nl < 0) return null;
+  const [w, h] = out.subarray(0, nl).toString().split(' ').map(Number);
+  const px = out.subarray(nl + 1);
+  return w > 0 && h > 0 && px.length >= w * h * 4 ? { w, h, px: Buffer.from(px.subarray(0, w * h * 4)) } : null;
+}
 class NativeImage {
-  constructor(buf, p) { this._buf = buf || Buffer.alloc(0); this._path = p || ''; }
-  isEmpty() { return this._buf.length === 0; }
-  toPNG() { return this._buf; } toJPEG() { return this._buf; } toBitmap() { return this._buf; } getBitmap() { return this._buf; }
-  toDataURL() { const ext = path.extname(this._path).slice(1).toLowerCase(); const mime = ext === 'svg' ? 'image/svg+xml' : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'image/png'; return `data:${mime};base64,${this._buf.toString('base64')}`; }
-  getSize() { const b = this._buf; if (b.length > 24 && b.readUInt32BE(0) === 0x89504e47) return { width: b.readUInt32BE(16), height: b.readUInt32BE(20) }; return { width: 0, height: 0 }; }
-  resize() { return this; } crop() { return this; } setTemplateImage() {} isTemplateImage() { return false; } getAspectRatio() { const s = this.getSize(); return s.height ? s.width / s.height : 1; }
+  constructor(buf, p, bitmap) { this._buf = buf || Buffer.alloc(0); this._path = p || ''; this._bm = bitmap || null; this._scale = 1; }
+  _isSvg() { return /\.svg$/i.test(this._path) || /^\s*<(\?xml|svg)/.test(this._buf.subarray(0, 64).toString()); }
+  _bitmap() {
+    if (this._bm || this._failed) return this._bm;
+    if (!this._buf.length || this._isSvg()) return null;
+    this._bm = rawOf(imgRun(['decode', '-'], this._buf));
+    if (!this._bm) this._failed = true;
+    return this._bm;
+  }
+  isEmpty() { return this._buf.length === 0 && !this._bm; }
+  getSize() {
+    const b = this._buf;
+    if (!this._bm && b.length > 24 && b.readUInt32BE(0) === 0x89504e47) return { width: b.readUInt32BE(16), height: b.readUInt32BE(20) };
+    const bm = this._bitmap(); return bm ? { width: bm.w, height: bm.h } : { width: 0, height: 0 };
+  }
+  getAspectRatio() { const s = this.getSize(); return s.height ? s.width / s.height : 1; }
+  getScaleFactors() { return [1]; }
+  toPNG() {
+    if (!this._bm && this._buf.length > 8 && this._buf.readUInt32BE(0) === 0x89504e47) return this._buf;
+    const bm = this._bitmap(); if (!bm) return this._buf;
+    return imgRun(['encode', 'png', '0', String(bm.w), String(bm.h)], bm.px) || Buffer.alloc(0);
+  }
+  toJPEG(q) {
+    if (!this._bm && this._buf.length > 3 && this._buf[0] === 0xff && this._buf[1] === 0xd8) return this._buf;
+    const bm = this._bitmap(); if (!bm) return Buffer.alloc(0);
+    return imgRun(['encode', 'jpeg', String(Math.max(1, Math.min(100, q | 0 || 90))), String(bm.w), String(bm.h)], bm.px) || Buffer.alloc(0);
+  }
+  toBitmap() {      // Electron's order: B, G, R, A
+    const bm = this._bitmap(); if (!bm) return Buffer.alloc(0);
+    const o = Buffer.allocUnsafe(bm.px.length);
+    for (let i = 0; i < o.length; i += 4) { o[i] = bm.px[i + 2]; o[i + 1] = bm.px[i + 1]; o[i + 2] = bm.px[i]; o[i + 3] = bm.px[i + 3]; }
+    return o;
+  }
+  getBitmap() { return this.toBitmap(); }
+  toDataURL() {
+    if (this._isSvg()) return `data:image/svg+xml;base64,${this._buf.toString('base64')}`;
+    return `data:image/png;base64,${this.toPNG().toString('base64')}`;
+  }
+  resize(o = {}) {
+    const bm = this._bitmap(); if (!bm) return this;
+    let w = o.width | 0, h = o.height | 0;
+    if (!w && !h) return this;
+    if (!w) w = Math.max(1, Math.round(bm.w * h / bm.h)); if (!h) h = Math.max(1, Math.round(bm.h * w / bm.w));
+    if (w === bm.w && h === bm.h) return this;
+    const out = Buffer.alloc(w * h * 4), sx = bm.w / w, sy = bm.h / h;
+    // area average when shrinking (smooth), bilinear when growing
+    for (let y = 0; y < h; y++) {
+      const y0 = y * sy, y1 = Math.min(bm.h, (y + 1) * sy);
+      for (let x = 0; x < w; x++) {
+        const x0 = x * sx, x1 = Math.min(bm.w, (x + 1) * sx);
+        let r = 0, g = 0, b = 0, a = 0, n = 0;
+        if (sx > 1 || sy > 1) {
+          for (let yy = Math.floor(y0); yy < Math.ceil(y1); yy++) for (let xx = Math.floor(x0); xx < Math.ceil(x1); xx++) {
+            const i = (yy * bm.w + xx) * 4, al = bm.px[i + 3];
+            r += bm.px[i] * al; g += bm.px[i + 1] * al; b += bm.px[i + 2] * al; a += al; n++;
+          }
+          const j = (y * w + x) * 4;
+          out[j] = a ? r / a : 0; out[j + 1] = a ? g / a : 0; out[j + 2] = a ? b / a : 0; out[j + 3] = n ? a / n : 0;
+        } else {
+          const fx = Math.min(bm.w - 1, Math.max(0, (x + 0.5) * sx - 0.5)), fy = Math.min(bm.h - 1, Math.max(0, (y + 0.5) * sy - 0.5));
+          const ix = Math.floor(fx), iy = Math.floor(fy), dx = fx - ix, dy = fy - iy, ix1 = Math.min(bm.w - 1, ix + 1), iy1 = Math.min(bm.h - 1, iy + 1);
+          const j = (y * w + x) * 4;
+          for (let c = 0; c < 4; c++) {
+            const p = (yy, xx) => bm.px[(yy * bm.w + xx) * 4 + c];
+            out[j + c] = (p(iy, ix) * (1 - dx) + p(iy, ix1) * dx) * (1 - dy) + (p(iy1, ix) * (1 - dx) + p(iy1, ix1) * dx) * dy;
+          }
+        }
+      }
+    }
+    return new NativeImage(Buffer.alloc(0), '', { w, h, px: out });
+  }
+  crop(r = {}) {
+    const bm = this._bitmap(); if (!bm) return this;
+    const x = Math.max(0, r.x | 0), y = Math.max(0, r.y | 0), w = Math.min(bm.w - x, r.width | 0), h = Math.min(bm.h - y, r.height | 0);
+    if (w <= 0 || h <= 0) return new NativeImage();
+    const out = Buffer.alloc(w * h * 4);
+    for (let yy = 0; yy < h; yy++) bm.px.copy(out, yy * w * 4, ((y + yy) * bm.w + x) * 4, ((y + yy) * bm.w + x + w) * 4);
+    return new NativeImage(Buffer.alloc(0), '', { w, h, px: out });
+  }
+  setTemplateImage() {} isTemplateImage() { return false; }
 }
 const nativeImage = {
   createEmpty: () => new NativeImage(),
   createFromPath: (p) => { try { return new NativeImage(fs.readFileSync(p), p); } catch { return new NativeImage(); } },
-  createFromBuffer: (b) => new NativeImage(Buffer.from(b)), createFromBitmap: (b) => new NativeImage(Buffer.from(b)),
+  createFromBuffer: (b, o = {}) => {
+    b = Buffer.from(b);
+    // raw pixels (B, G, R, A) when a size is given and nothing in it looks like a picture file
+    if (o.width && o.height && b.length === o.width * o.height * 4 && !(b.readUInt32BE(0) === 0x89504e47 || (b[0] === 0xff && b[1] === 0xd8))) return nativeImage.createFromBitmap(b, o);
+    return new NativeImage(b);
+  },
+  createFromBitmap: (b, o = {}) => {
+    b = Buffer.from(b); const w = o.width | 0, h = o.height | 0;
+    if (!w || !h || b.length < w * h * 4) return new NativeImage();
+    const px = Buffer.allocUnsafe(w * h * 4);
+    for (let i = 0; i < px.length; i += 4) { px[i] = b[i + 2]; px[i + 1] = b[i + 1]; px[i + 2] = b[i]; px[i + 3] = b[i + 3]; }
+    return new NativeImage(Buffer.alloc(0), '', { w, h, px });
+  },
   createFromDataURL: (u) => new NativeImage(Buffer.from(String(u).split(',')[1] || '', 'base64'), String(u).includes('svg') ? 'x.svg' : 'x.png'),
+  createThumbnailFromPath: async (p, size) => { const im = nativeImage.createFromPath(p); const s = im.getSize(); const k = Math.min(1, (size.width || 256) / Math.max(1, s.width), (size.height || 256) / Math.max(1, s.height)); return k < 1 ? im.resize({ width: Math.round(s.width * k), height: Math.round(s.height * k) }) : im; },
 };
 
 // ---------------------------------------------------------------- nativeTheme: palOS's Dark Mode switch
 // (org.gnome.desktop.interface color-scheme, the same setting Seeker follows). Pages follow it by themselves
 // through the window layer; themeSource lets an app pick its own.
-let systemDark = null, themeSource = 'system', monitor = null;
-function readSystemDark() {
-  try { return /prefer-dark/.test(require('child_process').execFileSync('gsettings', ['get', 'org.gnome.desktop.interface', 'color-scheme'], { encoding: 'utf8', timeout: 2000 })); } catch { return false; }
+// palOS's Dark Mode (the desktop's _PALADIN_DARK, told by the window host); themeSource lets an app pick its own.
+let systemDark = null, themeSource = 'system';
+function darkNow() {      // before the window host has said
+  if (systemDark === null) {
+    try { systemDark = /=\s*1\b/.test(require('child_process').execFileSync('xprop', ['-root', '_PALADIN_DARK'], { encoding: 'utf8', timeout: 2000 })); }
+    catch { systemDark = false; }
+  }
+  return systemDark;
 }
 const nativeTheme = Object.assign(new EventEmitter(), {
   get themeSource() { return themeSource; },
@@ -626,21 +788,9 @@ const nativeTheme = Object.assign(new EventEmitter(), {
     for (const w of windows.values()) hostSend({ op: 'theme', id: w.id, mode: themeSource });
     nativeTheme.emit('updated');
   },
-  get shouldUseDarkColors() {
-    if (themeSource !== 'system') return themeSource === 'dark';
-    if (systemDark === null) {
-      systemDark = readSystemDark();
-      try {   // follow the switch while the app runs
-        monitor = spawn('gsettings', ['monitor', 'org.gnome.desktop.interface', 'color-scheme'], { stdio: ['ignore', 'pipe', 'ignore'] });
-        monitor.on('error', () => {}); monitor.unref(); monitor.stdout.unref && monitor.stdout.unref();
-        readline.createInterface({ input: monitor.stdout }).on('line', (l) => { const d = /prefer-dark/.test(l); if (d !== systemDark) { systemDark = d; nativeTheme.emit('updated'); } });
-      } catch {}
-    }
-    return systemDark;
-  },
+  get shouldUseDarkColors() { return themeSource === 'system' ? darkNow() : themeSource === 'dark'; },
   shouldUseHighContrastColors: false, shouldUseInvertedColorScheme: false, inForcedColorsMode: false, prefersReducedTransparency: false,
 });
-process.on('exit', () => { try { if (monitor) monitor.kill(); } catch {} });
 
 // ---------------------------------------------------------------- dialog: palOS's own sheets, through the desktop portal
 const dialog = {
@@ -676,12 +826,60 @@ const protocol = {
     return true;
   },
 };
-const globalShortcut = { register: () => false, registerAll() {}, unregister() {}, unregisterAll() {}, isRegistered: () => false };
+// shortcuts anywhere on the desktop (Electron accelerators: "Super+Space", "CommandOrControl+Shift+K", "F12")
+const shortcutFns = new Map(), shortcutAccel = new Map(), shortcutByAccel = new Map();
+let shortcutSeq = 0;
+const KEY_NAMES = { space: 'space', plus: 'plus', tab: 'Tab', enter: 'Return', return: 'Return', esc: 'Escape', escape: 'Escape',
+  backspace: 'BackSpace', delete: 'Delete', insert: 'Insert', home: 'Home', end: 'End', pageup: 'Prior', pagedown: 'Next',
+  up: 'Up', down: 'Down', left: 'Left', right: 'Right', printscreen: 'Print', volumeup: 'XF86AudioRaiseVolume',
+  volumedown: 'XF86AudioLowerVolume', volumemute: 'XF86AudioMute', medianexttrack: 'XF86AudioNext',
+  mediaprevioustrack: 'XF86AudioPrev', mediastop: 'XF86AudioStop', mediaplaypause: 'XF86AudioPlay' };
+function parseAccel(a) {
+  let mods = 0, key = '';
+  for (const part of String(a).split('+')) {
+    const p = part.trim().toLowerCase();
+    if (['commandorcontrol', 'cmdorctrl', 'control', 'ctrl'].includes(p)) mods |= 1;
+    else if (p === 'shift') mods |= 2;
+    else if (['alt', 'option', 'altgr'].includes(p)) mods |= 4;
+    else if (['super', 'meta', 'command', 'cmd'].includes(p)) mods |= 8;
+    else key = KEY_NAMES[p] || (p.length === 1 ? p : part.trim());
+  }
+  return key ? { key, mods } : null;
+}
+const globalShortcut = {
+  register(accel, fn) {
+    const k = parseAccel(accel); if (!k || shortcutByAccel.has(accel)) return false;
+    const n = ++shortcutSeq;
+    shortcutFns.set(n, fn); shortcutAccel.set(n, accel); shortcutByAccel.set(accel, n);
+    startHost().then(() => hostSend({ op: 'grab-key', n, key: k.key, mods: k.mods }));
+    return true;
+  },
+  registerAll(list, fn) { for (const a of list) globalShortcut.register(a, fn); },
+  unregister(accel) {
+    const n = shortcutByAccel.get(accel); if (!n) return;
+    shortcutByAccel.delete(accel); shortcutFns.delete(n); shortcutAccel.delete(n);
+    hostSend({ op: 'ungrab-key', n });
+  },
+  unregisterAll() { for (const a of [...shortcutByAccel.keys()]) globalShortcut.unregister(a); },
+  isRegistered: (accel) => shortcutByAccel.has(accel),
+};
 const powerSaveBlocker = { start: () => 0, stop() {}, isStarted: () => false };
 const powerMonitor = Object.assign(new EventEmitter(), { getSystemIdleTime: () => 0, getSystemIdleState: () => 'active', isOnBatteryPower: () => false });
 const safeStorage = { isEncryptionAvailable: () => false, encryptString: (s) => Buffer.from(String(s)), decryptString: (b) => Buffer.from(b).toString() };
 const net = { fetch: (u, ...a) => (String(u && u.url || u).startsWith('file:') ? Promise.resolve(fileResponse(String(u && u.url || u))) : fetch(u, ...a)), isOnline: () => true, request() { throw new Error('Kibble: use net.fetch'); } };
-const desktopCapturer = { getSources: async () => [] };
+// the screen's picture (Seeker's widgets); windows aren't offered one by one
+const desktopCapturer = {
+  getSources: async (o = {}) => {
+    if (!(o.types || ['screen']).includes('screen')) return [];
+    const bm = rawOf(imgRun(['screen']));
+    if (!bm) return [];
+    let thumb = new NativeImage(Buffer.alloc(0), '', bm);
+    const ts = o.thumbnailSize || { width: 150, height: 150 };
+    const k = Math.min(ts.width / bm.w, ts.height / bm.h);
+    if (k > 0 && k < 1) thumb = thumb.resize({ width: Math.max(1, Math.round(bm.w * k)), height: Math.max(1, Math.round(bm.h * k)) });
+    return [{ id: 'screen:0:0', name: 'Entire Screen', display_id: '0', thumbnail: thumb, appIcon: null }];
+  },
+};
 const systemPreferences = { getAccentColor: () => '8a96a3ff', getColor: () => '#000000', getMediaAccessStatus: () => 'granted', askForMediaAccess: async () => true, on() {} };
 class Notification extends EventEmitter { constructor(o = {}) { super(); this.o = o; } show() { run('notify-send', [this.o.title || app.getName(), this.o.body || '']); this.emit('show'); } close() {} static isSupported() { return true; } }
 class Tray extends EventEmitter { constructor() { super(); } setToolTip() {} setContextMenu() {} setImage() {} destroy() {} isDestroyed() { return false; } }

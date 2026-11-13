@@ -77,6 +77,16 @@ static void answer_request(PaladinClipboard *c, XSelectionRequestEvent *rq)
 }
 
 /* ---------------------------------------------------------------- what others offer */
+static GBytes *pc_read(WPEClipboard *clipboard, const char *format);
+static void tell_text(PaladinClipboard *c, const char *text, gsize len)
+{
+    const PaladinHooks *h = paladin_display_hooks(c->display);
+    if (!h || !h->clipboard_text) return;
+    char *t = g_utf8_make_valid(text ? text : "", text ? (gssize)len : 0);
+    h->clipboard_text(t, h->data);
+    g_free(t);
+}
+
 static void got_targets(PaladinClipboard *c)
 {
     Atom type; int fmt; unsigned long n, after; unsigned char *data = NULL;
@@ -92,6 +102,11 @@ static void got_targets(PaladinClipboard *c)
         }
         if (text) g_ptr_array_insert(formats, 0, (gpointer)g_intern_static_string(TEXT_MIME));
         XFree(data);
+        /* Kibble's clipboard.readText() answers from this */
+        GBytes *t = text ? pc_read(WPE_CLIPBOARD(c), TEXT_MIME) : NULL;
+        gsize len = 0; const char *tx = t ? g_bytes_get_data(t, &len) : "";
+        tell_text(c, tx, t ? len : 0);
+        if (t) g_bytes_unref(t);
     }
     WPE_CLIPBOARD_GET_CLASS(c)->changed(WPE_CLIPBOARD(c), formats, FALSE, NULL);
     g_ptr_array_unref(formats);
@@ -190,6 +205,8 @@ static void pc_changed(WPEClipboard *clipboard, GPtrArray *formats, gboolean is_
         XSetSelectionOwner(xd(c), A(c, PA_CLIPBOARD), c->win, paladin_display_last_time(c->display));
         c->owner = XGetSelectionOwner(xd(c), A(c, PA_CLIPBOARD)) == c->win;
         XFlush(xd(c));
+        const char *t = content ? wpe_clipboard_content_get_text(content) : NULL;
+        tell_text(c, t ? t : "", t ? strlen(t) : 0);
     }
     WPE_CLIPBOARD_CLASS(paladin_clipboard_parent_class)->changed(clipboard, formats, is_local, content);
 }
@@ -200,6 +217,18 @@ void paladin_clipboard_set_text(PaladinClipboard *c, const char *text)
     wpe_clipboard_content_set_text(content, text ? text : "");
     wpe_clipboard_set_content(WPE_CLIPBOARD(c), content);
     wpe_clipboard_content_unref(content);
+}
+
+char *paladin_clipboard_text(PaladinClipboard *c)
+{
+    Window owner = XGetSelectionOwner(xd(c), A(c, PA_CLIPBOARD));
+    if (owner == None || owner == c->win) return g_strdup("");
+    GBytes *t = pc_read(WPE_CLIPBOARD(c), TEXT_MIME);
+    gsize len = 0; const char *tx = t ? g_bytes_get_data(t, &len) : "";
+    char *r = g_utf8_make_valid(tx, t ? (gssize)len : 0);
+    if (t) g_bytes_unref(t);
+    ask_targets(c, CurrentTime);      /* and then what it offers, for pages */
+    return r;
 }
 
 static void pc_finalize(GObject *o)
@@ -230,6 +259,6 @@ WPEClipboard *paladin_clipboard_new(PaladinDisplay *display)
         c->xfixes_event = ev;
         XFixesSelectSelectionInput(dpy, c->win, A(c, PA_CLIPBOARD), XFixesSetSelectionOwnerNotifyMask);
     }
-    if (XGetSelectionOwner(dpy, A(c, PA_CLIPBOARD)) != None) ask_targets(c, CurrentTime);
+    /* what's already on the clipboard is read at start-up (paladin_clipboard_text) */
     return WPE_CLIPBOARD(c);
 }

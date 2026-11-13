@@ -8,3 +8,4 @@ src/kibble/host/kibble-host
 src/paladin-sessiond/paladin-sessiond
 src/paladin-sessiond/paladin-locker
 src/kibble/image/kibble-image
+src/palos-screenshot/palos-screenshot

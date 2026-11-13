@@ -55,6 +55,7 @@ typedef struct {
     void (*gesture)(WPEToplevel *toplevel, int phase, double scale, double rotation, double x, double y, gpointer data);
     void (*dark_changed)(gboolean dark, gpointer data);
     void (*root_key)(unsigned int keycode, unsigned int state, gpointer data);   /* a grabbed shortcut */
+    void (*clipboard_text)(const char *text, gpointer data);                     /* the clipboard's text changed */
     gpointer data;
 } PaladinHooks;
 void paladin_display_set_hooks(PaladinDisplay *display, const PaladinHooks *hooks);
@@ -93,6 +94,7 @@ void paladin_view_set_size(PaladinView *view, int width, int height);
 WPEClipboard *paladin_clipboard_new(PaladinDisplay *display);
 gboolean paladin_clipboard_handle_event(PaladinClipboard *clipboard, XEvent *ev);
 void paladin_clipboard_set_text(PaladinClipboard *clipboard, const char *text);
+char *paladin_clipboard_text(PaladinClipboard *clipboard);      /* what's on the clipboard now, as text (g_free) */
 
 /* dnd.c: files dragged out of a page, files dropped onto one */
 gboolean paladin_dnd_handle_event(PaladinDisplay *display, XEvent *ev);

@@ -401,6 +401,15 @@ static void hook_dark(gboolean dark, gpointer data)
     emit(b);
 }
 
+/* ---------------------------------------------------------------- the clipboard's text, for clipboard.readText() */
+static void hook_clipboard_text(const char *text, gpointer data)
+{
+    (void)data;
+    JsonBuilder *b = ev_begin("clipboard", 0);
+    json_builder_set_member_name(b, "text"); json_builder_add_string_value(b, text);
+    emit(b);
+}
+
 /* ---------------------------------------------------------------- shortcuts anywhere (globalShortcut) */
 typedef struct { int n; unsigned int code, mods; } Grab;
 static GArray *grabs;
@@ -815,7 +824,7 @@ int main(int argc, char **argv)
     /* each window comes with its own (made here, with the app's options) */
     wpe_settings_set_boolean(wpe_display_get_settings(WPE_DISPLAY(display)), WPE_SETTING_CREATE_VIEWS_WITH_A_TOPLEVEL, FALSE,
                              WPE_SETTINGS_SOURCE_APPLICATION, NULL);
-    PaladinHooks hooks = { hook_close, hook_drop, hook_gesture, hook_dark, hook_root_key, NULL };
+    PaladinHooks hooks = { hook_close, hook_drop, hook_gesture, hook_dark, hook_root_key, hook_clipboard_text, NULL };
     paladin_display_set_hooks(display, &hooks);
 
     const char *data_dir = getenv("KIBBLE_DATA_DIR"), *cache_dir = getenv("KIBBLE_CACHE_DIR");
@@ -869,6 +878,9 @@ int main(int argc, char **argv)
     json_builder_end_object(b);
     json_builder_end_object(b);
     json_builder_set_member_name(b, "dark"); json_builder_add_boolean_value(b, paladin_display_dark(display));
+    char *ct = paladin_clipboard_text(PALADIN_CLIPBOARD(wpe_display_get_clipboard(WPE_DISPLAY(display))));
+    json_builder_set_member_name(b, "clipboard"); json_builder_add_string_value(b, ct);
+    g_free(ct);
     emit(b);
 
     g_main_loop_run(loop);
