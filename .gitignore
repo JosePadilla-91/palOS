@@ -15,3 +15,4 @@ src/palos-basic-setup/basic-setup
 src/palos-pref/palos-pref
 tools/__pycache__/
 src/palos-x/palos-x
+src/paladin-xembed-tray/xembed-tray
