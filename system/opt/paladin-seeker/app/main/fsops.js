@@ -188,11 +188,10 @@ async function listDir(dir, opts = {}) {
 }
 
 // ---------- virtual locations ----------
-// Apps that live in the Utilities folder: anything that says X-Palos-Folder=Utilities, plus the system tools every desktop has.
-const UTILITY_BINS = new Set(['gnome-terminal', 'xfce4-terminal', 'x-terminal-emulator', 'baobab', 'xsane', 'gnome-disks', 'gnome-system-monitor', 'mate-terminal']);
+// Apps that live in the Utilities folder: anything that says X-Palos-Folder=Utilities.
+const UTILITY_BINS = new Set(['x-terminal-emulator']);
 // system settings tools that belong in Utilities rather than among the everyday apps
-const UTILITY_IDS = new Set(['palos-screenshot','nm-connection-editor', 'blueman-manager', 'blueman-adapters', 'paladin-dock',
-  'org.gnome.seahorse.Application', 'seahorse', 'system-config-printer', 'winetricks', 'palos-windows-programs', 'palos-windows-settings']);
+const UTILITY_IDS = new Set(['palos-screenshot', 'paladin-dock', 'winetricks', 'palos-windows-programs', 'palos-windows-settings']);
 const bareId = (id) => String(id || '').replace(/\.desktop$/, '');
 // Windows' own tools live one level further down, in Utilities › WINE
 const WINE_IDS = new Set(['winetricks', 'palos-windows-programs', 'palos-windows-settings', 'palos-windows-regedit', 'palos-windows-files']);

@@ -7,7 +7,7 @@ Maintainer: palOS <joe.lucas0413@gmail.com>
 Architecture: all
 Version: 1.0.0
 Replaces: blueman
-Depends: bluez, python3-dbus, python3-gi, gir1.2-gtk-3.0
+Depends: bluez
 Conflicts: blueman
 Description: Bluetooth Manager for palOS
  Turn Bluetooth on or off, pair and connect headphones, speakers, keyboards,

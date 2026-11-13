@@ -59,7 +59,7 @@ const sound = {
     start();
   },
   openSettings() {
-    for (const c of [['paladin-settings', 'sound'], ['pavucontrol'], ['gnome-control-center', 'sound'], ['xfce4-pulseaudio-plugin']]) if (which(c[0])) return detached(c[0], c.slice(1));
+    if (which('paladin-settings')) return detached('paladin-settings', ['sound']);
     return false;
   },
 };
@@ -121,7 +121,7 @@ const wifi = {
   },
   async disconnect() { const s = await this.status(); if (s && s.device) await sh('nmcli', ['device', 'disconnect', s.device]); return this.status(); },
   openSettings() {
-    for (const c of [['paladin-settings', 'wifi'], ['nm-connection-editor'], ['gnome-control-center', 'wifi']]) if (which(c[0])) return detached(c[0], c.slice(1));
+    if (which('paladin-settings')) return detached('paladin-settings', ['wifi']);
     return false;
   },
 };
@@ -197,10 +197,12 @@ function clearRecentDocuments() {
   try { fs.writeFileSync(file, '<?xml version="1.0" encoding="UTF-8"?>\n<xbel version="1.0" xmlns:bookmark="http://www.freedesktop.org/standards/desktop-bookmarks" xmlns:mime="http://www.freedesktop.org/standards/shared-mime-info">\n</xbel>\n'); } catch {}
 }
 
-/** First installed command from a list like ['gnome-control-center', 'gnome-software --mode=updates']. */
+/** First installed command from a list like ['paladin-settings', 'paladin-preferences']. */
 function firstCommand(list) {
   for (const c of [].concat(list || [])) { const parts = c.split(/\s+/); if (which(parts[0])) return parts; }
   return null;
 }
 
+// the network watcher belongs to Wi-Fi (the menu bar's Wi-Fi item follows it)
+wifi.watch = sound.watch; delete sound.watch;
 module.exports = { sound, wifi, power, systemInfo, recentDocuments, addRecentDocument, clearRecentDocuments, firstCommand };

@@ -189,8 +189,8 @@ static int run_int(const char *cmd, int fallback)
 /* palOS's screens setting. Kept in this one place so the settings system can change under it. */
 void read_screens(void)
 {
-    int h = run_int("gsettings get org.palos.screens hsize 2>/dev/null", 2);
-    int v = run_int("gsettings get org.palos.screens vsize 2>/dev/null", 1);
+    int h = run_int("palos-pref get screens.hsize 2>/dev/null", 2);
+    int v = run_int("palos-pref get screens.vsize 2>/dev/null", 1);
     if (h < 1) h = 1;
     if (h > 16) h = 16;
     if (v < 1) v = 1;
@@ -214,7 +214,7 @@ void read_screens(void)
     LOG("screens %d x %d", hsize, vsize);
 }
 
-/* Follow the screens setting while running: `gsettings monitor` prints a line on every change. */
+/* Follow the screens setting while running: `palos-pref monitor` prints a line on every change. */
 static void start_settings_watch(void)
 {
     int fds[2];
@@ -226,7 +226,7 @@ static void start_settings_watch(void)
         if (nul >= 0) dup2(nul, 2);
         close(fds[0]); close(fds[1]);
         if (ConnectionNumber(dpy) > 2) close(ConnectionNumber(dpy));
-        execlp("gsettings", "gsettings", "monitor", "org.palos.screens", (char *)NULL);
+        execlp("palos-pref", "palos-pref", "monitor", "screens.hsize", "screens.vsize", (char *)NULL);
         _exit(127);
     }
     close(fds[1]);

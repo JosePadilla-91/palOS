@@ -5,6 +5,6 @@
  "icon": "composer",
  "version": "1.0.1",
  "folder": "",
- "kind": "shared",
- "runtime": "electron-44"
+ "kind": "kibble",
+ "runtime": "kibble"
 }

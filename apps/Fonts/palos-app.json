@@ -5,7 +5,6 @@
  "icon": "palos-fonts",
  "version": "27.0.0",
  "folder": "Utilities",
- "kind": "shared",
- "runtime": "kibble",
- "fallback": "electron-44"
+ "kind": "kibble",
+ "runtime": "kibble"
 }

@@ -49,11 +49,11 @@ const isImage = (p) => NATIVE.has(ext(p)) || CONVERT.has(ext(p));
 
 // ---------------------------------------------------------------- dark mode (palOS switch)
 function readDark() {
-  try { return /prefer-dark/.test(execFileSync('gsettings', ['get', 'org.gnome.desktop.interface', 'color-scheme'], { encoding: 'utf8', timeout: 3000 })); } catch { return null; }
+  try { return /prefer-dark/.test(execFileSync('palos-pref', ['get', 'interface.color-scheme'], { encoding: 'utf8', timeout: 3000 })); } catch { return null; }
 }
 function watchDark() {
   let p;
-  try { p = spawn('gsettings', ['monitor', 'org.gnome.desktop.interface', 'color-scheme'], { stdio: ['ignore', 'pipe', 'ignore'] }); } catch { return; }
+  try { p = spawn('palos-pref', ['monitor', 'interface.color-scheme'], { stdio: ['ignore', 'pipe', 'ignore'] }); } catch { return; }
   p.on('error', () => {});
   p.stdout.on('data', (d) => { nativeTheme.themeSource = /prefer-dark/.test(String(d)) ? 'dark' : 'light'; });
   app.on('will-quit', () => { try { p.kill(); } catch {} });

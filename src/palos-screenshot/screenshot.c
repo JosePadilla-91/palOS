@@ -104,7 +104,7 @@ static void shutter(void)
     const char *snd = "/usr/share/sounds/freedesktop/stereo/camera-shutter.oga";
     if (!g_file_test(snd, G_FILE_TEST_EXISTS)) return;
     char *out = NULL;
-    g_spawn_command_line_sync("gsettings get org.gnome.desktop.sound event-sounds", &out, NULL, NULL, NULL);
+    g_spawn_command_line_sync("palos-pref get sound.event-sounds", &out, NULL, NULL, NULL);
     gboolean off = out && strstr(out, "false");
     g_free(out);
     if (off) return;

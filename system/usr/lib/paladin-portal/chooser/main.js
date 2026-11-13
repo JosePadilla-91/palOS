@@ -7,7 +7,7 @@
 //   out: { id, xid }       the sheet's window, before it's shown
 //        { id, result }    { path } | { paths: [] } | {} (cancelled)
 // The sheet is Seeker's own (ui/sheet.js and sheet.css from /opt/paladin-seeker), in a see-through window
-// the size of the sheet; paladin-sheets hangs it under the title bar of the app's window.
+// the size of the sheet; the window manager hangs it under the title bar of the app's window.
 const { app, BrowserWindow, ipcMain, screen } = require('electron');
 const fs = require('fs');
 const os = require('os');
@@ -48,7 +48,7 @@ ipcMain.handle('sheet:mkdir', (e, dir, name) => {
 });
 ipcMain.handle('sheet:exists', (e, p) => { try { return fs.statSync(p).isDirectory() ? 'dir' : 'file'; } catch { return ''; } });
 
-// the sheet tells us how big it is; the window follows, staying centred where paladin-sheets put it
+// the sheet tells us how big it is; the window follows, staying centred where the window manager put it
 ipcMain.on('chooser:size', (e, w, h) => {
   const s = mine(e); if (!s || s.closing) return;
   const W = Math.ceil(w) + MARGIN * 2, H = Math.ceil(h) + MARGIN;

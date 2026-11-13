@@ -96,9 +96,9 @@ export GDK_BACKEND=x11
 
 # First-login defaults (title bar buttons on the left, Paladin cursor ...).
 /usr/bin/python3 "$HELPER" setup >> "$LOG" 2>&1 || log "setup step failed (continuing)"
-CURSOR=$(gsettings get org.gnome.desktop.interface cursor-theme 2>/dev/null | tr -d "'")
+CURSOR=$(palos-pref get interface.cursor-theme 2>/dev/null)
 [ -n "$CURSOR" ] && export XCURSOR_THEME="$CURSOR"
-SIZE=$(gsettings get org.gnome.desktop.interface cursor-size 2>/dev/null)
+SIZE=$(palos-pref get interface.cursor-size 2>/dev/null)
 [ -n "$SIZE" ] && export XCURSOR_SIZE="$SIZE"
 
 # Num Lock the way the user left it in Settings (on by default); snap apps get the cursor theme.
@@ -113,7 +113,7 @@ LVARS=""; for v in LANG LANGUAGE LC_TIME LC_NUMERIC LC_MONETARY LC_PAPER LC_MEAS
 [ -n "$LVARS" ] && dbus-update-activation-environment --systemd $LVARS >> "$LOG" 2>&1 || true
 
 # ---------------------------------------------------------------- helpers GNOME used to provide
-# Font, theme, cursor and scaling settings for every app (XSETTINGS), kept in sync with gsettings.
+# Font, theme, cursor and scaling settings for every app (XSETTINGS), kept in sync with palOS settings.
 /usr/bin/python3 "$HELPER" xsettings >> "$LOG" 2>&1 &
 command -v xsetroot >/dev/null && xsetroot -cursor_name left_ptr
 # the mouse pointer starts in the top-left corner (just under the menu bar), never mid-screen: right away, and again
@@ -140,26 +140,11 @@ fi
 [ -S "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/gcr/ssh" ] && export SSH_AUTH_SOCK="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/gcr/ssh"
 dbus-update-activation-environment --systemd SSH_AUTH_SOCK GNOME_KEYRING_CONTROL >> "$LOG" 2>&1 || true
 
-# Password prompts for administrator tasks.
-for agent in /usr/lib/policykit-1-gnome/polkit-gnome-authentication-agent-1 \
-             /usr/libexec/polkit-gnome-authentication-agent-1 \
-             /usr/lib/x86_64-linux-gnu/polkit-mate/polkit-mate-authentication-agent-1 \
-             /usr/bin/lxpolkit; do
-  if [ -x "$agent" ]; then "$agent" >> "$LOG" 2>&1 & break; fi
-done
+# Password prompts for administrator tasks (palOS's own).
+/usr/lib/paladin-authenticate/paladin-authenticate >> "$LOG" 2>&1 &
 
-# Notifications.
-if command -v dunst >/dev/null; then
-  DUNSTRC=/etc/paladin-session/dunstrc
-  [ -f "$HOME/.config/paladin-session/dunstrc" ] && DUNSTRC="$HOME/.config/paladin-session/dunstrc"
-  dunst -config "$DUNSTRC" >> "$LOG" 2>&1 &
-fi
-
-# Volume, brightness and media keys.
-if command -v xbindkeys >/dev/null; then
-  xbindkeys -n -f /etc/paladin-session/xbindkeysrc >> "$LOG" 2>&1 &
-  [ -f "$HOME/.xbindkeysrc" ] && xbindkeys >> "$LOG" 2>&1
-fi
+# Notifications and palOS's keys (volume, brightness, media, screenshots, lock, screen reader): palOS's own.
+/usr/lib/paladin-session/paladin-sessiond >> "$LOG" 2>&1 &
 
 # Settings → Power: screen off, lock, sleep and log out when idle (paladin-idle follows the settings as they
 # change). Not in the live session from the palOS USB stick: installing takes a while, and the screen must stay
@@ -168,34 +153,25 @@ if grep -qw 'boot=casper' /proc/cmdline 2>/dev/null; then
   xset s off -dpms 2>/dev/null
 else
   /usr/lib/paladin-session/paladin-idle >> "$LOG" 2>&1 &
-  # locks when the screen turns off and before sleep, only if "Lock the Screen" is on
-  command -v xss-lock >/dev/null && xss-lock -l -- /usr/lib/paladin-session/paladin-idle lock-if-enabled >> "$LOG" 2>&1 &
+  # (locking when the screen turns off and before sleep, if "Lock the Screen" is on: paladin-sessiond)
 fi
 
 # ---------------------------------------------------------------- 1. window manager
 # paladin-wm: palOS's own (X11 and OpenGL: steel title bars, sheets, snapping, Magic Lamp). If it can't start
-# three times in a row, a plain emergency window manager (Openbox) keeps the session usable, and it's logged.
+# three times in a row with its effects, it runs without them (plain drawing, everything else the same).
 WM_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/paladin-session"
 (
-  pfails=0; fails=0
+  fails=0
   while :; do
-    started=$(date +%s); which=
-    if [ "$pfails" -lt 3 ] && [ -x /usr/bin/paladin-wm ]; then
-      which=paladin; log "starting paladin-wm"
-      ( /usr/bin/python3 /usr/lib/paladin-session/paladin-repaint --wait 20 >> "$LOG" 2>&1; sleep 4; /usr/bin/python3 /usr/lib/paladin-session/paladin-repaint >> "$LOG" 2>&1 ) &
+    started=$(date +%s)
+    if [ "$fails" -lt 3 ]; then
+      log "starting paladin-wm"
       /usr/bin/paladin-wm >> "$LOG" 2>&1
-    elif command -v openbox >/dev/null; then
-      which=emergency
-      log "paladin-wm keeps failing; using the emergency window manager (Openbox)"
-      openbox --replace >> "$LOG" 2>&1
     else
-      sleep 5
+      log "paladin-wm keeps stopping with its effects on; running it without effects"
+      /usr/bin/paladin-wm --no-effects >> "$LOG" 2>&1
     fi
-    if [ $(( $(date +%s) - started )) -lt 20 ]; then
-      if [ "$which" = paladin ]; then pfails=$((pfails + 1)); else fails=$((fails + 1)); fi
-    else
-      pfails=0; fails=0
-    fi
+    if [ $(( $(date +%s) - started )) -lt 20 ]; then fails=$((fails + 1)); else fails=0; fi
     xprop -root -len 0 >/dev/null 2>&1 || exit 0     # X is gone: session over
     sleep 1
   done
@@ -208,13 +184,6 @@ WM_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/paladin-session"
 from Xlib import display, X
 d=display.Display(); a=d.intern_atom("_NET_WM_CM_S0"); end=time.time()+10
 while time.time()<end and d.get_selection_owner(a) in (0, X.NONE): time.sleep(0.2)' >> "$LOG" 2>&1 || true
-# Dialogs from other apps become sheets on the window they belong to (palOS apps draw their own).
-# paladin-wm makes sheets itself: this runs only under the emergency window manager.
-wm_name() { w=$(xprop -root _NET_SUPPORTING_WM_CHECK 2>/dev/null | awk '{print $NF}'); [ -n "$w" ] && xprop -id "$w" _NET_WM_NAME 2>/dev/null | sed -n 's/.*= "\(.*\)"/\1/p'; }
-( while xprop -root -len 0 >/dev/null 2>&1; do
-    case "$(wm_name)" in Paladin*) sleep 5; continue ;; esac
-    /usr/bin/python3 /usr/lib/paladin-session/paladin-sheets >> "$LOG" 2>&1; sleep 2
-  done ) &
 # The window manager resets the keyboard as it starts: set Num Lock again once it's up.
 ( sleep 2; /usr/bin/python3 "$HELPER" numlock >> "$LOG" 2>&1 ) &
 # The trackpad: this person's settings (Settings › Trackpad) and the gestures (pinch, rotate, swipes).
@@ -272,7 +241,7 @@ rm -f "${XDG_DATA_HOME:-$HOME/.local/share}"/icons/hicolor/*/apps/paladin-calend
 
 # Screen Reader (Settings → Accessibility, or Super+Alt+S): when it's on, every app starts with its
 # accessibility switched on (Chromium/Electron apps only build it when asked), and the reader starts.
-if [ "$(gsettings get org.gnome.desktop.a11y.applications screen-reader-enabled 2>/dev/null)" = "true" ]; then
+if [ "$(palos-pref get a11y.applications.screen-reader-enabled 2>/dev/null)" = "true" ]; then
   export ACCESSIBILITY_ENABLED=1 GTK_MODULES="${GTK_MODULES:+$GTK_MODULES:}gail:atk-bridge"
   dbus-update-activation-environment --systemd ACCESSIBILITY_ENABLED 2>/dev/null
   log "starting the Screen Reader"; /usr/lib/palos-screen-reader/palos-screen-reader >> "$LOG" 2>&1 &

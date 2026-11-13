@@ -1,15 +1,4 @@
 #!/bin/sh
-# Seeker: desktop, menu bar and file browser for Paladin.
-#   paladin-seeker              open a Seeker window
-#   paladin-seeker PATH|URI     open a folder (file://, trash:///, computer:///)
-#   paladin-seeker --session    start the desktop and menu bar only (used at login)
-#   paladin-seeker --select F   open F's folder with F selected
-#   paladin-seeker --prefs      open Seeker Preferences
-RT=/opt/paladin-seeker/runtime/electron
-if [ ! -x "$RT" ]; then
-  MSG="Seeker's runtime is not installed yet. Connect to the internet and run: sudo /usr/lib/paladin-seeker/fetch-runtime"
-  echo "$MSG" >&2
-  command -v notify-send >/dev/null 2>&1 && notify-send -i paladin-seeker "Seeker" "$MSG"
-  exit 1
-fi
-exec "$RT" --ozone-platform=x11 "$@"
+# Seeker: palOS's desktop, menu bar and file browser, on Kibble
+export PALOS_APP_DIR=/opt/paladin-seeker/app PALOS_APP_RESOURCES=/opt/paladin-seeker/app KIBBLE_APP_CLASS=paladin-seeker KIBBLE_APP_ID=paladin-seeker
+exec /usr/lib/kibble/kibble "$@"

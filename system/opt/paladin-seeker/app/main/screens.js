@@ -8,7 +8,7 @@ const x11 = require('./x11');
 const MAX = 16;
 // Counts that form a complete grid. Each entry is [count, columns, rows].
 const LAYOUTS = [[1, 1, 1], [2, 2, 1], [3, 3, 1], [4, 2, 2], [6, 3, 2], [8, 4, 2], [9, 3, 3], [12, 4, 3], [16, 4, 4]];
-const PROFILE = 'org.palos.screens';     // palOS's own setting (paladin-wm reads it)
+const PROFILE = 'screens';     // palOS's own setting, screens.hsize × screens.vsize (paladin-wm reads it)
 
 function layoutFor(count) {
   return LAYOUTS.find((l) => l[0] === count) || LAYOUTS.find((l) => l[0] >= count) || LAYOUTS[LAYOUTS.length - 1];
@@ -32,7 +32,7 @@ let grid = null;            // { cols, rows } from the setting
 function readGrid() {
   try {
     const { execFileSync } = require('child_process');
-    const get = (k) => parseInt(String(execFileSync('gsettings', ['get', PROFILE, k], { timeout: 3000 })).trim(), 10);
+    const get = (k) => parseInt(String(execFileSync('palos-pref', ['get', PROFILE + '.' + k], { timeout: 3000 })).trim(), 10);
     const cols = get('hsize'), rows = get('vsize');
     if (cols >= 1 && rows >= 1 && cols * rows <= MAX) grid = { cols, rows };
   } catch { /* no setting yet: the pixels decide */ }
@@ -40,7 +40,7 @@ function readGrid() {
 readGrid();
 let onGrid = null;
 try {
-  const mon = spawn('gsettings', ['monitor', PROFILE], { stdio: ['ignore', 'pipe', 'ignore'] });
+  const mon = spawn('palos-pref', ['monitor', PROFILE + '.hsize', PROFILE + '.vsize'], { stdio: ['ignore', 'pipe', 'ignore'] });
   mon.stdout.on('data', (d) => { if (/hsize|vsize/.test(String(d))) { readGrid(); if (onGrid) onGrid(); } });
   mon.on('error', () => {});
 } catch {}
@@ -70,7 +70,7 @@ function go(index) {
 function setCount(count) {
   const [, cols, rows] = layoutFor(Math.max(1, Math.min(MAX, count | 0)));
   for (const [key, val] of [['hsize', cols], ['vsize', rows]]) {
-    const p = spawn('gsettings', ['set', PROFILE, key, String(val)], { stdio: 'ignore' });
+    const p = spawn('palos-pref', ['set', PROFILE + '.' + key, String(val)], { stdio: 'ignore' });
     p.on('error', () => {});
   }
 }

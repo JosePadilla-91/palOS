@@ -2,14 +2,14 @@
 """Helpers for the Paladin session.
 
   setup          first-login defaults
-  xsettings      run xsettingsd with values from gsettings, following changes live; also keeps
+  xsettings      run xsettingsd with values from palOS settings, following changes live; also keeps
                  the light/dark look in step (GTK theme, title bars, GTK 4 colors)
   appearance     apply the light/dark look once (used by Paladin Settings)
   numlock        set Num Lock the way the user chose (on by default)
   snap-cursors   give snap apps (Firefox...) a copy of the cursor theme they can read
   wait-wm SECS   wait until a window manager is running
   autostart      start ~/.config/autostart and /etc/xdg/autostart entries (except Seeker and the dock)
-  key ACTION     volume/brightness/media keys (used by xbindkeys)
+  key ACTION     volume/brightness/media keys (used by paladin-sessiond)
 """
 import os
 import shlex
@@ -26,7 +26,7 @@ SETUP_VERSION = '5'
 DESKTOP = 'Paladin'
 SKIP_AUTOSTART = {'paladin-seeker.desktop', 'paladin-dock.desktop',
                   # paladin-wm is the compositor and the session runs its own key bindings / notifications
-                  'picom.desktop', 'compton.desktop', 'xcompmgr.desktop', 'xbindkeys.desktop',
+                  'picom.desktop', 'compton.desktop', 'xcompmgr.desktop', 'xbindkeys.desktop', 'dunst.desktop',
                   'plank.desktop', 'cairo-dock.desktop'}
 SKIP_EXEC = {'picom', 'compton', 'xcompmgr', 'fastcompmgr', 'plank', 'cairo-dock', 'tint2', 'xfce4-panel', 'lxpanel'}
 LIGHT, DARK = 'Paladin', 'Paladin-Dark'
@@ -38,17 +38,22 @@ def log(*a):
     print(time.strftime('%F %T'), 'helper:', *a, flush=True)
 
 
+def pref_name(schema, key):
+    """palOS settings use GNOME's key names without the org.gnome.desktop. / org.palos. prefix"""
+    for pre in ('org.gnome.desktop.', 'org.palos.'):
+        if schema.startswith(pre):
+            schema = schema[len(pre):]
+    return schema + '.' + key
+
+
 def gs(schema, key, default=None):
     try:
-        out = subprocess.run(['gsettings', 'get', schema, key], capture_output=True, text=True, timeout=5).stdout.strip()
+        r = subprocess.run(['palos-pref', 'get', pref_name(schema, key)], capture_output=True, text=True, timeout=5)
     except Exception:  # noqa: BLE001
         return default
-    if not out:
+    out = r.stdout.strip()
+    if r.returncode != 0:
         return default
-    if out.startswith("'") and out.endswith("'"):
-        return out[1:-1]
-    if out.startswith('uint32 '):
-        out = out[7:]
     if out in ('true', 'false'):
         return out == 'true'
     try:
@@ -58,7 +63,9 @@ def gs(schema, key, default=None):
 
 
 def gset(schema, key, value):
-    subprocess.run(['gsettings', 'set', schema, key, value], capture_output=True, timeout=5)
+    """value as GNOME wrote it ('text', true, 5): stored as the plain value"""
+    v = value[1:-1] if len(value) >= 2 and value[0] == value[-1] == "'" else value
+    subprocess.run(['palos-pref', 'set', pref_name(schema, key), v], capture_output=True, timeout=5)
 
 
 # ------------------------------------------------------------------------------------------- setup
@@ -99,12 +106,22 @@ def paladin_theme_in_use():
     return gs('org.gnome.desktop.interface', 'gtk-theme', LIGHT) in (LIGHT, DARK)
 
 
+def gtk_bridge(dark, name):
+    """Firefox is the one GTK app palOS still carries. GTK (and its file-picker portal) read GNOME's settings,
+    not palOS's, so Dark Mode is copied there. Remove this with Firefox."""
+    if not shutil.which('gsettings'):
+        return
+    for key, val in (('color-scheme', "'prefer-dark'" if dark else "'default'"), ('gtk-theme', "'%s'" % name)):
+        subprocess.run(['gsettings', 'set', 'org.gnome.desktop.interface', key, val], capture_output=True, timeout=5)
+
+
 def apply_appearance(start_decorator=True):
     """Keep everything on the same light/dark look as the Dark Mode switch (the color-scheme key):
     the toolkit themes apps read and the title bars."""
     dark = is_dark()
     name = DARK if dark else LIGHT
     greeter_data()
+    gtk_bridge(dark, name)
     if paladin_theme_in_use() and gs('org.gnome.desktop.interface', 'gtk-theme') != name:
         gset('org.gnome.desktop.interface', 'gtk-theme', "'%s'" % name)
     wm = 'org.gnome.desktop.wm.preferences'
@@ -294,41 +311,33 @@ def xsettings():
     apply_appearance()          # also corrects the title bars if they were left on the other look
     write()
     proc = subprocess.Popen(['xsettingsd', '-c', path], stderr=subprocess.DEVNULL)
-    try:
-        import gi
-        gi.require_version('Gio', '2.0')
-        from gi.repository import Gio, GLib
-    except Exception:  # noqa: BLE001
-        proc.wait()
-        return
-    loop = GLib.MainLoop()
-    keep = []
-
     look = {'dark': is_dark()}
 
-    def changed(_settings=None, key=None):
-        if key in ('color-scheme', 'gtk-theme', 'theme') and is_dark() != look['dark']:
+    def changed(key=None):
+        if key in ('interface.color-scheme', 'interface.gtk-theme', 'wm.preferences.theme') and is_dark() != look['dark']:
             look['dark'] = is_dark()
             log('switching to', apply_appearance())
         if write():
             proc.send_signal(signal.SIGHUP)
-    for schema in ('org.gnome.desktop.interface', 'org.gnome.desktop.wm.preferences'):
-        try:
-            s = Gio.Settings.new(schema)
-            s.connect('changed', changed)
-            for k in s.props.settings_schema.list_keys():     # GSettings only reports keys it has read
-                s.get_value(k)
-            keep.append(s)
-        except Exception:  # noqa: BLE001
-            pass
 
+    # palos-pref monitor prints "KEY VALUE" on every change
+    try:
+        mon = subprocess.Popen(['palos-pref', 'monitor'], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+    except OSError:
+        mon = None
     mouse = os.path.join(os.environ.get('XDG_CONFIG_HOME') or os.path.join(HOME, '.config'), 'palos', 'mouse.json')
     stamp = {'m': None}
-
-    def check():
-        if proc.poll() is not None:
-            loop.quit()
-            return False
+    import select
+    while proc.poll() is None:
+        ready = select.select([mon.stdout], [], [], 3)[0] if mon else (time.sleep(3) or [])
+        if ready:
+            line = mon.stdout.readline()
+            if not line:
+                mon = None
+                continue
+            key = line.split(' ', 1)[0]
+            if key.startswith(('interface.', 'wm.preferences.', 'peripherals.mouse.', 'sound.')):
+                changed(key)
         try:
             m = os.stat(mouse).st_mtime
         except OSError:
@@ -337,9 +346,8 @@ def xsettings():
             if stamp['m'] is not None or m is not None:
                 changed()
             stamp['m'] = m
-        return True
-    GLib.timeout_add_seconds(3, check)
-    loop.run()
+    if mon:
+        mon.kill()
 
 
 # ------------------------------------------------------------------------------------------- wait-wm

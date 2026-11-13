@@ -36,10 +36,10 @@ const DEFAULTS = {
   automount: true,
   compositor: 'auto',              // auto | on | off
   iconTheme: null,                 // null = from GTK settings
-  // Shield menu commands (first one installed wins); set by the distro
-  systemPreferences: ['paladin-settings', 'paladin-preferences', 'gnome-control-center', 'xfce4-settings-manager', 'lxqt-config', 'mate-control-center', 'cinnamon-settings'],
+  // Shield menu commands (first one installed wins)
+  systemPreferences: ['paladin-settings', 'paladin-preferences'],
   appStore: [],   // palOS Store comes back once it has its own software source
-  softwareUpdate: ['paladin-software-update', 'update-manager', 'gnome-software --mode=updates', 'mintupdate', 'software-properties-gtk'],
+  softwareUpdate: ['paladin-software-update'],
   aboutLogo: null,                 // path to an image for About This Computer; default = shield
   recentLimit: 10,
 };

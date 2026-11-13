@@ -51,21 +51,19 @@ function writeJSON(p, data) {
   fs.renameSync(p + '.tmp', p);
 }
 
-/** gsettings get, parsed into a JS value. */
+/** palOS settings use GNOME's key names without the org.gnome.desktop. / org.palos. prefix */
+function prefName(schema, key) { return String(schema).replace(/^org\.gnome\.desktop\.|^org\.palos\./, '') + '.' + key; }
+/** a palOS setting (palos-pref get), as a JS value */
 async function gget(schema, key) {
-  const r = await run('gsettings', ['get', schema, key], { timeout: 4000 });
+  const r = await run('palos-pref', ['get', prefName(schema, key)], { timeout: 4000 });
   if (!r.ok) return null;
-  let v = r.out.trim();
-  if (v.startsWith('uint32 ')) v = v.slice(7);
-  if (v.startsWith('int32 ')) v = v.slice(6);
+  const v = r.out.trim();
   if (v === 'true' || v === 'false') return v === 'true';
-  if (/^'.*'$/.test(v)) return v.slice(1, -1);
-  if (/^-?[0-9.]+$/.test(v)) return Number(v);
+  if (/^-?[0-9]+(\.[0-9]+)?$/.test(v)) return Number(v);
   return v;
 }
 async function gset(schema, key, value) {
-  const v = typeof value === 'string' ? `'${value.replace(/'/g, "\\'")}'` : String(value);
-  return (await run('gsettings', ['set', schema, key, v], { timeout: 4000 })).ok;
+  return (await run('palos-pref', ['set', prefName(schema, key), String(value)], { timeout: 4000 })).ok;
 }
 
 module.exports = { HOME, CONFIG, run, out, which, detached, readText, readJSON, writeJSON, gget, gset };

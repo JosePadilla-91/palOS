@@ -1,13 +1,10 @@
 #!/bin/sh
-# palOS .app: runs on Kibble, palOS's app runtime (WebKit and palOS windows; no Electron, no GTK).
-# PALOS_ELECTRON=1 starts it on its Electron runtime instead (kept for now, in case an app misbehaves).
+# palOS .app: Settings, on Kibble (palOS's app runtime: WebKit, palOS windows and Kibble's media engine)
 HERE="$(dirname "$(readlink -f "$0")")"
 export PALOS_APP="${APPIMAGE:-$HERE}"
 export PALOS_APP_DIR="$HERE/app" PALOS_APP_RESOURCES="$HERE/app"
-if [ -z "$PALOS_ELECTRON" ] && [ -x /usr/lib/kibble/kibble ]; then exec /usr/lib/kibble/kibble "$@"; fi
-RT=/usr/lib/paladin-runtime/electron-44
-if [ ! -x "$RT/paladin-app" ]; then
-  notify-send -i dialog-warning "Settings" "This app needs palOS's app runtime (electron-44), which isn't on this computer." 2>/dev/null
-  echo "Settings: palOS's app runtime (electron-44) is missing" >&2; exit 1
+if [ ! -x /usr/lib/kibble/kibble ]; then
+  notify-send -i dialog-warning "Settings" "Settings needs Kibble, palOS's app runtime, which isn't on this computer." 2>/dev/null
+  echo "Settings: Kibble (/usr/lib/kibble) is missing" >&2; exit 1
 fi
-exec "$RT/paladin-app" --ozone-platform=x11 "$@"
+exec /usr/lib/kibble/kibble "$@"

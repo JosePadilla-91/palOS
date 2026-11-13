@@ -5,9 +5,9 @@
 # a password field), so locking and logging in look and behave alike. LightDM does the locking:
 # `dm-tool lock` puts the login screen on its own console and your session waits behind it.
 #
-# This script stays running until you are back in your session, because xss-lock treats "script
+# This script stays running until you are back in your session, because paladin-sessiond treats "script
 # finished" as "unlocked". If the login screen can't be started (no LightDM seat, remote session,
-# greeter missing), it falls back to xsecurelock, a plain password prompt, so a lock request
+# greeter missing), it falls back to palOS's own lock screen (paladin-locker), so a lock request
 # is never silently ignored.
 
 LOG="${XDG_CACHE_HOME:-$HOME/.cache}/paladin-lock.log"
@@ -40,17 +40,8 @@ lock_with_login_screen() {
 }
 
 lock_with_prompt() {
-  say "using the password-prompt lock"
-  export XSECURELOCK_PASSWORD_PROMPT=asterisks
-  export XSECURELOCK_SHOW_HOSTNAME=0
-  export XSECURELOCK_SHOW_USERNAME=1
-  export XSECURELOCK_SHOW_DATETIME=1
-  export XSECURELOCK_DATETIME_FORMAT='%A %B %e  %l:%M %p'
-  export XSECURELOCK_FONT="${XSECURELOCK_FONT:-Noto Sans:size=13}"
-  export XSECURELOCK_AUTH_BACKGROUND_COLOR="#1d1f26"
-  export XSECURELOCK_BLANK_TIMEOUT=30
-  command -v xsecurelock >/dev/null 2>&1 || return 1
-  xsecurelock "$@" || return 1
+  say "using palOS's lock screen"
+  /usr/lib/paladin-session/paladin-locker || return 1
   unlocked
 }
 
@@ -64,5 +55,5 @@ lock_with_prompt "$@" && exit 0
 
 # Neither worked. Don't leave the computer open: end the session's screen by blanking it and say why.
 say "no lock available"
-command -v notify-send >/dev/null 2>&1 && notify-send -u critical "Screen couldn’t be locked" "Install xsecurelock or check the login screen, then try again."
+command -v notify-send >/dev/null 2>&1 && notify-send -u critical "Screen couldn’t be locked" "Another program is holding the keyboard. Close it, then try again."
 exit 1

@@ -11,89 +11,6 @@
   "kind": "program"
  },
  {
-  "path": "/Applications/BrushBoard.app/LICENSE.electron.txt",
-  "size": 1096,
-  "kind": "Electron runtime file (goes with Electron)"
- },
- {
-  "path": "/Applications/BrushBoard.app/LICENSES.chromium.html",
-  "size": 15168645,
-  "kind": "Electron runtime file (goes with Electron)"
- },
- {
-  "path": "/Applications/BrushBoard.app/brushboard",
-  "size": 201456856,
-  "sha256": "1ddc392c64e401f3e8e3682a12af14da5b23c8ff91349d33eea4642ef620f982",
-  "kind": "program"
- },
- {
-  "path": "/Applications/BrushBoard.app/chrome-sandbox",
-  "size": 15328,
-  "kind": "Electron runtime file (goes with Electron)"
- },
- {
-  "path": "/Applications/BrushBoard.app/chrome_100_percent.pak",
-  "size": 167701,
-  "kind": "Electron runtime file (goes with Electron)"
- },
- {
-  "path": "/Applications/BrushBoard.app/chrome_200_percent.pak",
-  "size": 259856,
-  "kind": "Electron runtime file (goes with Electron)"
- },
- {
-  "path": "/Applications/BrushBoard.app/chrome_crashpad_handler",
-  "size": 1549896,
-  "sha256": "6a22d6001b0cdc0026a0833c8a84f646d23cf1d662d5b5382a9b705de7e51f53",
-  "kind": "program"
- },
- {
-  "path": "/Applications/BrushBoard.app/icudtl.dat",
-  "size": 10467680,
-  "kind": "Electron runtime file (goes with Electron)"
- },
- {
-  "path": "/Applications/BrushBoard.app/libEGL.so",
-  "size": 253688,
-  "sha256": "aa9a65cbea0df9a2fcf5337620288984e6ecdafc7818c2f0c50c50365d2292b8",
-  "kind": "program"
- },
- {
-  "path": "/Applications/BrushBoard.app/libGLESv2.so",
-  "size": 6378568,
-  "sha256": "35dc7726655f256f95aa45d59b3046593449d9d494ac16e137412050632465e3",
-  "kind": "program"
- },
- {
-  "path": "/Applications/BrushBoard.app/libffmpeg.so",
-  "size": 2703664,
-  "sha256": "1156b12eeb17b772499a1b8cfe2edded44ac042523a46a1474ebbb59917642f2",
-  "kind": "program"
- },
- {
-  "path": "/Applications/BrushBoard.app/libvk_swiftshader.so",
-  "size": 4795488,
-  "sha256": "2dc164e264a0811b9ef15fba8b45ceef7f13f1e9b74905ee1a91a82681aa96c9",
-  "kind": "program"
- },
- {
-  "path": "/Applications/BrushBoard.app/libvulkan.so.1",
-  "size": 2375744,
-  "sha256": "d54f957ab4fd382a35e9ec9e411b4e29cc437c9b5d5ad82280fc54a55d44a386",
-  "kind": "program"
- },
- {
-  "path": "/Applications/BrushBoard.app/locales",
-  "size": 1717846,
-  "files": 3,
-  "kind": "third-party folder"
- },
- {
-  "path": "/Applications/BrushBoard.app/resources.pak",
-  "size": 6341846,
-  "kind": "Electron runtime file (goes with Electron)"
- },
- {
   "path": "/Applications/BrushBoard.app/resources/models/lama.onnx",
   "size": 92591623,
   "sha256": "7df918ac3921d3daf0aae1d219776cf0dc4e4935f035af81841b40adcf74fdf2",
@@ -112,25 +29,10 @@
   "kind": "third-party folder"
  },
  {
-  "path": "/Applications/BrushBoard.app/snapshot_blob.bin",
-  "size": 337714,
-  "kind": "Electron runtime file (goes with Electron)"
- },
- {
   "path": "/Applications/BrushBoard.app/source/node_modules",
   "size": 656629,
   "files": 13,
   "kind": "third-party folder"
- },
- {
-  "path": "/Applications/BrushBoard.app/v8_context_snapshot.bin",
-  "size": 712173,
-  "kind": "Electron runtime file (goes with Electron)"
- },
- {
-  "path": "/Applications/BrushBoard.app/vk_swiftshader_icd.json",
-  "size": 107,
-  "kind": "Electron runtime file (goes with Electron)"
  },
  {
   "path": "/Applications/Calendar.app/resources/app.asar.paladin-orig",
@@ -251,98 +153,10 @@
   "kind": "third-party folder"
  },
  {
-  "path": "/Applications/Utilities/Bundler.app/bundler",
-  "size": 186312608,
-  "sha256": "ee99780b5878638df40bf577cfcdbc3c157b0b3581ada099a13db446f1af84d8",
-  "kind": "program"
- },
- {
-  "path": "/Applications/Utilities/Bundler.app/chrome-sandbox",
-  "size": 38448,
-  "kind": "Electron runtime file (goes with Electron)"
- },
- {
-  "path": "/Applications/Utilities/Bundler.app/chrome_100_percent.pak",
-  "size": 151994,
-  "kind": "Electron runtime file (goes with Electron)"
- },
- {
-  "path": "/Applications/Utilities/Bundler.app/chrome_200_percent.pak",
-  "size": 230172,
-  "kind": "Electron runtime file (goes with Electron)"
- },
- {
-  "path": "/Applications/Utilities/Bundler.app/chrome_crashpad_handler",
-  "size": 2630640,
-  "sha256": "4f4ca930b3d32dbee08b5c5ae390a48163de84e707ceff05e63ebb30d9de9cfd",
-  "kind": "program"
- },
- {
-  "path": "/Applications/Utilities/Bundler.app/icudtl.dat",
-  "size": 10468208,
-  "kind": "Electron runtime file (goes with Electron)"
- },
- {
-  "path": "/Applications/Utilities/Bundler.app/libEGL.so",
-  "size": 259856,
-  "sha256": "ba1a2792d5e5f2ace61e8d00223deaf93352a72d9a121f92405c61592defc6d9",
-  "kind": "program"
- },
- {
-  "path": "/Applications/Utilities/Bundler.app/libGLESv2.so",
-  "size": 6921120,
-  "sha256": "666f9e633da57273a695789873f2e7db4a6ad0521064772f01c9323d95c776d5",
-  "kind": "program"
- },
- {
-  "path": "/Applications/Utilities/Bundler.app/libffmpeg.so",
-  "size": 2691856,
-  "sha256": "8d9224c9dd1fb1fdcc8e6c3323c40f78f895258258e18e0f059f394695da95fb",
-  "kind": "program"
- },
- {
-  "path": "/Applications/Utilities/Bundler.app/libvk_swiftshader.so",
-  "size": 4772328,
-  "sha256": "e964b96fe2f9338728d44dbe5928bab7f891d61bdb7065da4add4e3718f406de",
-  "kind": "program"
- },
- {
-  "path": "/Applications/Utilities/Bundler.app/libvulkan.so.1",
-  "size": 2238408,
-  "sha256": "bbef03a65ca36bc51aae2a73700ab987524fa8cd040ce972f24e8a9c928b94cb",
-  "kind": "program"
- },
- {
-  "path": "/Applications/Utilities/Bundler.app/locales",
-  "size": 963654,
-  "files": 2,
-  "kind": "third-party folder"
- },
- {
-  "path": "/Applications/Utilities/Bundler.app/resources.pak",
-  "size": 5954613,
-  "kind": "Electron runtime file (goes with Electron)"
- },
- {
   "path": "/Applications/Utilities/Bundler.app/resources/app/node_modules",
   "size": 221273,
   "files": 31,
   "kind": "third-party folder"
- },
- {
-  "path": "/Applications/Utilities/Bundler.app/snapshot_blob.bin",
-  "size": 316538,
-  "kind": "Electron runtime file (goes with Electron)"
- },
- {
-  "path": "/Applications/Utilities/Bundler.app/v8_context_snapshot.bin",
-  "size": 687473,
-  "kind": "Electron runtime file (goes with Electron)"
- },
- {
-  "path": "/Applications/Utilities/Bundler.app/vk_swiftshader_icd.json",
-  "size": 107,
-  "kind": "Electron runtime file (goes with Electron)"
  },
  {
   "path": "/Applications/Vid-View.app/resources/ffmpeg/bin/ffmpeg",
@@ -465,6 +279,12 @@
   "kind": "third-party folder"
  },
  {
+  "path": "/usr/bin/palos-screenshot",
+  "size": 55928,
+  "sha256": "a49317bb5144ffb39e9cd588eafad6583c66f0c22afeee783d968be07d5f2d9d",
+  "kind": "program"
+ },
+ {
   "path": "/usr/lib/kibble/runtime/node_modules",
   "size": 1261489,
   "files": 291,
@@ -474,6 +294,18 @@
   "path": "/usr/lib/paladin-appd/runtime-x86_64",
   "size": 944632,
   "sha256": "5e2e984a3342196b94df5ae38568677bb26e56ae13b5b9de1a2a875bb5677b0f",
+  "kind": "program"
+ },
+ {
+  "path": "/usr/lib/palos-bluetooth/palos-bluetooth-agent",
+  "size": 30936,
+  "sha256": "341097a8a1e30a7ccebd663b5574557b48523ddb22b442c8c0f64c774f4d1268",
+  "kind": "program"
+ },
+ {
+  "path": "/usr/lib/palos-firstboot/basic-setup",
+  "size": 43224,
+  "sha256": "69020486d9101982ce38a0188b3e5adf4b04fe67e9bca59fa2a96c7570977e11",
   "kind": "program"
  },
  {

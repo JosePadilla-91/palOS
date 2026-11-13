@@ -770,7 +770,7 @@ const nativeImage = {
 };
 
 // ---------------------------------------------------------------- nativeTheme: palOS's Dark Mode switch
-// (org.gnome.desktop.interface color-scheme, the same setting Seeker follows). Pages follow it by themselves
+// (palOS setting interface.color-scheme, the same one Seeker follows). Pages follow it by themselves
 // through the window layer; themeSource lets an app pick its own.
 // palOS's Dark Mode (the desktop's _PALADIN_DARK, told by the window host); themeSource lets an app pick its own.
 let systemDark = null, themeSource = 'system';

@@ -36,10 +36,10 @@ if (!app.requestSingleInstanceLock()) { app.quit(); process.exit(0); }
 // ---------------------------------------------------------------- light/dark, same switch as the rest of Paladin
 let watcher = null;
 function readDark() {
-  try { return /prefer-dark/.test(execFileSync('gsettings', ['get', 'org.gnome.desktop.interface', 'color-scheme'], { encoding: 'utf8', timeout: 3000 })); } catch { return false; }
+  try { return /prefer-dark/.test(execFileSync('palos-pref', ['get', 'interface.color-scheme'], { encoding: 'utf8', timeout: 3000 })); } catch { return false; }
 }
 function watchDark() {
-  try { watcher = spawn('gsettings', ['monitor', 'org.gnome.desktop.interface', 'color-scheme'], { stdio: ['ignore', 'pipe', 'ignore'] }); } catch { return; }
+  try { watcher = spawn('palos-pref', ['monitor', 'interface.color-scheme'], { stdio: ['ignore', 'pipe', 'ignore'] }); } catch { return; }
   watcher.stdout.on('data', (d) => {
     const dark = /prefer-dark/.test(String(d));
     nativeTheme.themeSource = dark ? 'dark' : 'light';

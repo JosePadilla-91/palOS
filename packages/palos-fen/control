@@ -5,7 +5,7 @@ Section: graphics
 Maintainer: palOS <joe.lucas0413@gmail.com>
 Architecture: all
 Version: 1.0.2
-Depends: paladin-seeker (>= 1.5.0), python3, python3-gi, gir1.2-gdkpixbuf-2.0, libimage-exiftool-perl, heif-gdk-pixbuf, webp-pixbuf-loader, libavif-gdk-pixbuf, dcraw, fontconfig
+Depends: paladin-seeker (>= 1.5.0), python3, libimage-exiftool-perl, dcraw, fontconfig, libjpeg-turbo8, libtiff6, libwebp7, libheif1, libexif12, libjxl0.7
 Conffiles:
  /etc/apparmor.d/palos-fen adc975f78f9cb2197945daf01be54242
 Description: Fen: palOS's viewer for photos, PDFs and fonts

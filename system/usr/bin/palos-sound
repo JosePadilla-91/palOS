@@ -9,9 +9,9 @@
 f="/usr/share/sounds/palos/stereo/$1.oga"
 [ -f "$f" ] || exit 0
 if [ "$1" = error ]; then
-  [ "$(gsettings get org.gnome.desktop.sound event-sounds 2>/dev/null)" = "false" ] && exit 0
+  [ "$(palos-pref get sound.event-sounds 2>/dev/null)" = "false" ] && exit 0
 else
-  [ "$(gsettings get org.gnome.desktop.sound input-feedback-sounds 2>/dev/null)" = "false" ] && exit 0
+  [ "$(palos-pref get sound.input-feedback-sounds 2>/dev/null)" = "false" ] && exit 0
 fi
 if command -v paplay >/dev/null 2>&1; then exec paplay "$f"
 elif command -v pw-play >/dev/null 2>&1; then exec pw-play "$f"

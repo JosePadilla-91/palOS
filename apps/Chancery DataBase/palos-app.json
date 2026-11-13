@@ -5,7 +5,6 @@
  "icon": "chancery-database",
  "version": "1.0",
  "folder": "",
- "kind": "shared",
- "runtime": "kibble",
- "fallback": "electron-45"
+ "kind": "kibble",
+ "runtime": "kibble"
 }

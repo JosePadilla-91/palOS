@@ -14,7 +14,6 @@ Conffiles:
  /etc/paladin-seeker/config.json f4f45bd6157cb118465a3b845c739553
  /etc/xdg/autostart/paladin-seeker.desktop a7d358ad3bc9989f3ec6e664c3ddc728
  /etc/X11/Xsession.d/85paladin-seeker-global-menu b3b1844ff532de2997963df227d09c24
- /etc/apparmor.d/paladin-seeker 1bd9649547bdc4ab4c6592b90ef88eca
 Description: Leopard-style desktop, menu bar and file browser for X11
  Seeker draws the desktop (wallpaper, files in ~/Desktop, mounted drives) and
  runs a global menu bar that follows the active application: real menus from

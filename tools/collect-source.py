@@ -18,10 +18,32 @@ external = []
 EXTRA = ['/usr/lib/kibble/runtime', '/usr/lib/kibble/kibble', '/usr/lib/kibble/media', '/usr/lib/time-turner',
          '/usr/lib/paladin-portal', '/usr/lib/paladin-appd', '/usr/bin/palos-open-app', '/usr/bin/winetricks',
          '/usr/lib/palos-winetricks', '/usr/share/palos', '/usr/lib/palos-l10n', '/usr/lib/python3/dist-packages/palos_l10n.py',
-         '/usr/share/applications/palos-open-app.desktop', '/usr/share/glib-2.0/schemas/org.palos.screens.gschema.xml',
-         '/etc/dpkg/dpkg.cfg.d/palos-clean', '/etc/systemd/system/time-turnerd.service',
+         '/usr/share/applications/palos-open-app.desktop',
+         '/etc/dpkg/dpkg.cfg.d/palos-clean', '/etc/systemd/system/time-turnerd.service', '/etc/paladin-session',
+         '/usr/lib/palos-utilities', '/usr/lib/palos-firstboot/arm', '/usr/lib/palos-firstboot/run-setup',
          '/usr/share/dbus-1/system-services/com.timeturner.Daemon.service', '/usr/local/share/applications']
 SKIP_PARTS = ('/__pycache__/', '/node_modules/.cache/')
+# private keys the build adds from palOS's private files: never into the repository
+SECRETS = [(r'  google: \{\n    clientId: "[^"]*",\n    clientSecret: "[^"]*"\n  \},',
+            "  // Google sign-in key: comes from /etc/paladin/oauth.json (the build adds it from palOS's private keys)\n  google: null,")]
+
+
+def redact(top):
+    import re
+    for d, _, files in os.walk(top):
+        for n in files:
+            if not n.endswith(('.js', '.json', '.ts')):
+                continue
+            p = os.path.join(d, n)
+            try:
+                s = open(p, encoding='utf-8').read()
+            except (OSError, UnicodeDecodeError):
+                continue
+            t = s
+            for pat, rep in SECRETS:
+                t = re.sub(pat, rep, t)
+            if t != s:
+                open(p, 'w', encoding='utf-8').write(t)
 
 
 def is_elf(p):
@@ -152,5 +174,6 @@ for app in sorted(glob.glob(ROOT + '/Applications/*.app') + glob.glob(ROOT + '/A
     shutil.rmtree(tmp, ignore_errors=True)
 
 external.extend(ext_dirs.values())
+redact(OUT)
 json.dump(sorted(external, key=lambda e: e['path']), open(OUT + '/external.json', 'w'), indent=1)
 print('packages', len(pkgs), 'external', len(external))

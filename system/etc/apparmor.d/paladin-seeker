@@ -1,8 +1,0 @@
-abi <abi/4.0>,
-include <tunables/global>
-
-profile paladin-seeker /opt/paladin-seeker/runtime/electron flags=(unconfined) {
-  userns,
-
-  include if exists <local/paladin-seeker>
-}

@@ -1,4 +1,3 @@
 /etc/paladin-seeker/config.json
 /etc/xdg/autostart/paladin-seeker.desktop
 /etc/X11/Xsession.d/85paladin-seeker-global-menu
-/etc/apparmor.d/paladin-seeker

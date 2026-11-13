@@ -110,7 +110,7 @@ class X11:
             log('no X display:', e)
 
     def belongs_to(self, xid, parent):
-        """WM_TRANSIENT_FOR: paladin-sheets then hangs the window under the parent's title bar."""
+        """WM_TRANSIENT_FOR: the window manager then hangs the window under the parent's title bar."""
         if not self.d or not xid or not parent:
             return
         try:

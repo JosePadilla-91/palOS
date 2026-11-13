@@ -27,12 +27,12 @@ function parseIni(text) {
 function currentThemeName() {
   const cfg = config.get().iconTheme;
   if (cfg && themeDirs(cfg).length) return cfg;
-  // The desktop's own setting first (it's what the Appearance settings and GTK apps use)...
+  // The desktop's own setting first (palOS setting interface.icon-theme, what Settings changes)...
   try {
-    const v = execFileSync('gsettings', ['get', 'org.gnome.desktop.interface', 'icon-theme'], { timeout: 1500 }).toString().trim().replace(/'/g, '');
+    const v = execFileSync('palos-pref', ['get', 'interface.icon-theme'], { timeout: 1500 }).toString().trim();
     if (v && themeDirs(v).length) return v;
   } catch {}
-  // ...then GTK's settings files (systems without gsettings).
+  // ...then GTK's settings files.
   const confHome = process.env.XDG_CONFIG_HOME || path.join(HOME, '.config');
   for (const f of [path.join(confHome, 'gtk-3.0/settings.ini'), '/etc/gtk-3.0/settings.ini']) {
     const v = (parseIni(readText(f)).Settings || {})['gtk-icon-theme-name'];

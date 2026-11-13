@@ -242,20 +242,20 @@ def picture_bytes(p):
 
 
 def apply_appearance(username, pw, dark):
-    scheme = "'prefer-dark'" if dark else "'default'"
-    theme = "'Paladin-Dark'" if dark else "'Paladin'"
-    cmd = (f"gsettings set org.gnome.desktop.interface color-scheme {scheme}; "
-           f"gsettings set org.gnome.desktop.interface gtk-theme {theme}; "
-           "gsettings set org.gnome.desktop.interface icon-theme 'palOS'")
+    scheme = 'prefer-dark' if dark else 'default'
+    theme = 'Paladin-Dark' if dark else 'Paladin'
+    cmd = (f"palos-pref set interface.color-scheme {scheme}; "
+           f"palos-pref set interface.gtk-theme {theme}; "
+           "palos-pref set interface.icon-theme palOS")
     env = {'HOME': pw.pw_dir, 'USER': username, 'LOGNAME': username, 'PATH': '/usr/sbin:/usr/bin:/sbin:/bin', 'XDG_RUNTIME_DIR': f'/tmp/palos-fb-{pw.pw_uid}'}
     os.makedirs(env['XDG_RUNTIME_DIR'], mode=0o700, exist_ok=True)
     os.chown(env['XDG_RUNTIME_DIR'], pw.pw_uid, pw.pw_gid)
     try:
-        r = subprocess.run(['/usr/sbin/runuser', '-u', username, '--', '/usr/bin/dbus-run-session', '--', '/bin/sh', '-c', cmd], env=env, capture_output=True, text=True, timeout=30)
+        r = subprocess.run(['/usr/sbin/runuser', '-u', username, '--', '/bin/sh', '-c', cmd], env=env, capture_output=True, text=True, timeout=30)
         if r.returncode:
             log('appearance:', r.stderr.strip())
     except (subprocess.TimeoutExpired, OSError) as e:
-        log('appearance: gsettings failed:', e)
+        log('appearance: palos-pref failed:', e)
     shutil.rmtree(env['XDG_RUNTIME_DIR'], ignore_errors=True)
     # login screen look (LightDM's per-user shared data folder)
     d = f'/var/lib/lightdm-data/{username}'

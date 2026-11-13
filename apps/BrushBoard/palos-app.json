@@ -5,7 +5,6 @@
  "icon": "brushboard",
  "version": "1.0",
  "folder": "",
- "kind": "electron-own",
- "fallback": "own",
+ "kind": "kibble",
  "runtime": "kibble"
 }

@@ -1,6 +1,6 @@
 #!/bin/sh
-# Paladin login screen (Kibble: WebKit, no GTK). If it can't start (or quits straight away), the
-# earlier login screen, then LightDM's standard greeter take over, so there is always a way to log in.
+# Paladin login screen (on Kibble). If it can't start (or quits straight away), it starts once more with
+# plain software drawing (a graphics driver problem is the usual cause), so there is always a way to log in.
 export XCURSOR_THEME=Paladin XCURSOR_SIZE=24 NO_AT_BRIDGE=1 PALOS_NO_THEME=1
 export HOME="${HOME:-/var/lib/lightdm}" XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-/var/lib/lightdm/.config}"
 command -v numlockx >/dev/null 2>&1 && numlockx on
@@ -23,12 +23,11 @@ if [ $(( $(date +%s) - START )) -lt 30 ]; then
     PALOS_SETUP_FROM="login screen launcher" /usr/lib/palos-firstboot/run-setup
     [ -e /var/lib/palos/firstboot ] || exit 0
   fi
-  if python3 -c 'import gi; gi.require_version("Gtk", "3.0")' 2>/dev/null && [ -f /usr/share/paladin-greeter/greeter.py ]; then
-    echo "paladin-greeter: falling back to the previous login screen" >&2
-    GTK_THEME=Paladin /usr/bin/python3 /usr/share/paladin-greeter/greeter.py && exit 0
-  fi
-  for g in /usr/sbin/lightdm-gtk-greeter /usr/sbin/slick-greeter; do
-    [ -x "$g" ] && exec "$g"
-  done
+  echo "paladin-greeter: starting the login screen again with software drawing" >&2
+  LIBGL_ALWAYS_SOFTWARE=1 KIBBLE_NO_DRI3=1 /usr/lib/kibble/kibble /usr/share/paladin-greeter/app &
+  PID=$!
+  trap 'kill -TERM $PID 2>/dev/null; sleep 1; kill -KILL $PID 2>/dev/null; pkill -KILL -f "greeterd.py" 2>/dev/null; exit 0' TERM INT HUP
+  wait $PID
+  CODE=$?
 fi
 exit "$CODE"

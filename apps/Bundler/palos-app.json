@@ -5,7 +5,6 @@
  "icon": "io.github.Bundler",
  "version": "1.0",
  "folder": "Utilities",
- "kind": "electron-own",
- "fallback": "own",
+ "kind": "kibble",
  "runtime": "kibble"
 }

@@ -1399,9 +1399,9 @@ function setupIpc() {
   H('battery:get', () => require('./battery').status());
   H('battery:profile', () => require('./battery').profile());
   H('battery:setProfile', (e, p) => require('./battery').setProfile(p));
-  On('battery:settings', () => { for (const c of [['paladin-settings', 'power'], ['gnome-control-center', 'power']]) if (which(c[0])) return detached(c[0], c.slice(1)); });
+  On('battery:settings', () => { if (which('paladin-settings')) detached('paladin-settings', ['power']); });
   H('wifi:agent', () => { try { return require('./nmagent').active(); } catch { return false; } });
-  On('datetime:settings', () => { for (const c of [['paladin-settings', 'datetime'], ['gnome-control-center', 'datetime'], ['time-admin'], ['xfce4-datetime-settings']]) if (which(c[0])) return detached(c[0], c.slice(1)); });
+  On('datetime:settings', () => { if (which('paladin-settings')) detached('paladin-settings', ['datetime']); });
   H('appearance:get', () => appearance.dark);
 
   // about / force quit
@@ -1541,7 +1541,7 @@ app.whenReady().then(async () => {
   // The icon theme can change while Seeker runs (Settings, or palOS setting its own theme the first time)
   let iconGen = 0;
   try {
-    const mon = spawn('gsettings', ['monitor', 'org.gnome.desktop.interface', 'icon-theme'], { stdio: ['ignore', 'pipe', 'ignore'] });
+    const mon = spawn('palos-pref', ['monitor', 'interface.icon-theme'], { stdio: ['ignore', 'pipe', 'ignore'] });
     mon.stdout.on('data', debounce(() => { icons.reset(); iconGen += 1; broadcast('icons:changed', iconGen); pushMenus(); }, 150));
     mon.on('error', () => {});
     app.on('will-quit', () => { try { mon.kill(); } catch {} });
