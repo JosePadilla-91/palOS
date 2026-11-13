@@ -297,6 +297,12 @@
   "kind": "program"
  },
  {
+  "path": "/usr/lib/paladin-portal/paladin-portal",
+  "size": 39128,
+  "sha256": "4a4acebf3b8dced68d43d734e0a4f703f1c16c6f63a5d0182d96c725fedbc5d2",
+  "kind": "program"
+ },
+ {
   "path": "/usr/lib/paladin-session/xembed-tray",
   "size": 30936,
   "sha256": "b299c70abd8ea80fbc36941e6c02d7bc366d74efcf6a282f15ce1d868a2f19bc",
