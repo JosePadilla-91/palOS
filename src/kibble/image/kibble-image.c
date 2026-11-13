@@ -1,7 +1,11 @@
-/* kibble-image: pictures for Kibble's nativeImage and desktopCapturer (Electron's image API).
-     kibble-image decode FILE|-            any picture GStreamer can read -> "W H\n" + RGBA (straight alpha)
-     kibble-image encode png|jpeg Q W H    RGBA on stdin -> the encoded picture on stdout
-     kibble-image screen                   the whole screen -> "W H\n" + RGBA                                 */
+/* kibble-image: pictures for Kibble's nativeImage and desktopCapturer (Electron's image API), and for apps
+   that show pictures (Fen).
+     kibble-image decode FILE|-              a picture -> "W H\n" + RGBA (straight alpha), turned upright
+     kibble-image convert FILE|- OUT.png [SIZE]   a picture -> PNG (no bigger than SIZE×SIZE when given)
+     kibble-image encode png|jpeg Q W H      RGBA on stdin -> the encoded picture on stdout
+     kibble-image screen                     the whole screen -> "W H\n" + RGBA
+   JPEG, PNG, TIFF, WebP, HEIC/AVIF, JPEG XL, GIF, BMP, PNM and TGA are read by formats.c; anything else
+   GStreamer can read (SVG, say) goes through GStreamer.                                                  */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,6 +15,7 @@
 #include <gst/app/gstappsrc.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include "formats.h"
 
 static int write_all(const void *p, size_t n)
 {
@@ -30,39 +35,68 @@ static GstSample *pull(GstElement *pipe, GstElement *sink)
     return s;
 }
 
-static int decode(const char *file)
+static Image *gst_decode(const guint8 *data, size_t len)
 {
-    char *desc = strcmp(file, "-")
-        ? g_strdup_printf("filesrc name=src ! decodebin ! videoconvert ! video/x-raw,format=RGBA ! appsink name=sink sync=false")
-        : g_strdup("fdsrc fd=0 ! decodebin ! videoconvert ! video/x-raw,format=RGBA ! appsink name=sink sync=false");
     GError *err = NULL;
-    GstElement *pipe = gst_parse_launch(desc, &err);
-    g_free(desc);
-    if (!pipe) { fprintf(stderr, "kibble-image: %s\n", err->message); return 1; }
-    GstElement *src = gst_bin_get_by_name(GST_BIN(pipe), "src");
-    if (src) { g_object_set(src, "location", file, NULL); gst_object_unref(src); }
-    GstElement *sink = gst_bin_get_by_name(GST_BIN(pipe), "sink");
+    GstElement *pipe = gst_parse_launch("appsrc name=src ! decodebin ! videoconvert ! video/x-raw,format=RGBA ! appsink name=sink sync=false", &err);
+    if (!pipe) { fprintf(stderr, "kibble-image: %s\n", err->message); g_error_free(err); return NULL; }
+    GstElement *src = gst_bin_get_by_name(GST_BIN(pipe), "src"), *sink = gst_bin_get_by_name(GST_BIN(pipe), "sink");
+    gst_element_set_state(pipe, GST_STATE_PLAYING);
+    gst_app_src_push_buffer(GST_APP_SRC(src), gst_buffer_new_memdup(data, len));
+    gst_app_src_end_of_stream(GST_APP_SRC(src));
     GstSample *s = pull(pipe, sink);
-    int rc = 1;
+    Image *im = NULL;
     if (s) {
-        GstCaps *caps = gst_sample_get_caps(s);
-        GstStructure *st = gst_caps_get_structure(caps, 0);
+        GstStructure *st = gst_caps_get_structure(gst_sample_get_caps(s), 0);
         int w = 0, h = 0;
         gst_structure_get_int(st, "width", &w); gst_structure_get_int(st, "height", &h);
-        GstBuffer *b = gst_sample_get_buffer(s);
         GstMapInfo m;
-        if (w > 0 && h > 0 && gst_buffer_map(b, &m, GST_MAP_READ)) {
+        if (w > 0 && h > 0 && gst_buffer_map(gst_sample_get_buffer(s), &m, GST_MAP_READ)) {
             size_t stride = m.size / (size_t)h;          /* rows may be padded */
-            char head[64]; int n = snprintf(head, sizeof head, "%d %d\n", w, h);
-            write_all(head, (size_t)n);
-            for (int y = 0; y < h; y++) write_all(m.data + (size_t)y * stride, (size_t)w * 4);
-            gst_buffer_unmap(b, &m);
-            rc = 0;
+            im = g_new0(Image, 1); im->w = w; im->h = h; im->px = g_malloc((size_t)w * h * 4);
+            for (int y = 0; y < h; y++) memcpy(im->px + (size_t)y * w * 4, m.data + (size_t)y * stride, (size_t)w * 4);
+            gst_buffer_unmap(gst_sample_get_buffer(s), &m);
         }
         gst_sample_unref(s);
     }
     gst_element_set_state(pipe, GST_STATE_NULL);
-    gst_object_unref(sink); gst_object_unref(pipe);
+    gst_object_unref(src); gst_object_unref(sink); gst_object_unref(pipe);
+    return im;
+}
+
+static Image *load(const char *file)
+{
+    gchar *data = NULL; gsize len = 0;
+    if (!strcmp(file, "-")) {
+        GByteArray *a = g_byte_array_new(); guint8 buf[65536]; ssize_t n;
+        while ((n = read(0, buf, sizeof buf)) > 0) g_byte_array_append(a, buf, (guint)n);
+        len = a->len; data = (gchar *)g_byte_array_free(a, FALSE);
+    } else if (!g_file_get_contents(file, &data, &len, NULL)) { fprintf(stderr, "kibble-image: %s can't be opened\n", file); return NULL; }
+    Image *im = image_read_bytes((const guint8 *)data, len, file);
+    if (!im) { gst_init(NULL, NULL); im = gst_decode((const guint8 *)data, len); }
+    if (!im) fputs("kibble-image: this picture can't be read\n", stderr);
+    g_free(data);
+    return im;
+}
+
+static int decode(const char *file)
+{
+    Image *im = load(file);
+    if (!im) return 1;
+    char head[64]; int n = snprintf(head, sizeof head, "%d %d\n", im->w, im->h);
+    int rc = write_all(head, (size_t)n) || write_all(im->px, (size_t)im->w * im->h * 4) ? 1 : 0;
+    image_free(im);
+    return rc;
+}
+
+static int convert(const char *file, const char *out, int size)
+{
+    Image *im = load(file);
+    if (!im) return 1;
+    im = image_fit(im, size);
+    int rc = image_write_png(im, out, size ? 1 : 3) ? 0 : 1;
+    if (rc) fprintf(stderr, "kibble-image: can't write %s\n", out);
+    image_free(im);
     return rc;
 }
 
@@ -122,9 +156,10 @@ static int screen(void)
 int main(int argc, char **argv)
 {
     if (argc >= 2 && !strcmp(argv[1], "screen")) return screen();
-    gst_init(NULL, NULL);
     if (argc == 3 && !strcmp(argv[1], "decode")) return decode(argv[2]);
+    if ((argc == 4 || argc == 5) && !strcmp(argv[1], "convert")) return convert(argv[2], argv[3], argc == 5 ? atoi(argv[4]) : 0);
+    gst_init(NULL, NULL);
     if (argc == 6 && !strcmp(argv[1], "encode")) return encode(argv[2], atoi(argv[3]), atoi(argv[4]), atoi(argv[5]));
-    fputs("kibble-image decode FILE|- | encode png|jpeg QUALITY W H | screen\n", stderr);
+    fputs("kibble-image decode FILE|- | convert FILE|- OUT.png [SIZE] | encode png|jpeg QUALITY W H | screen\n", stderr);
     return 2;
 }
